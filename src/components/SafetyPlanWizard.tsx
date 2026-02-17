@@ -88,7 +88,13 @@ const LABEL_MAP: Record<string, string> = {
   supervisors: "氏名リスト",
   locations: "作業所"
 };
-const RELEVANT_MASTER_KEYS: (keyof MasterData)[] = ['projects', 'supervisors', 'locations'];
+
+// ★追加: カテゴリ分けの定義
+const MASTER_GROUPS = {
+  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'subcontractors'],
+  TRAINING: ['goals', 'processes', 'topics', 'cautions']
+};
+
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
 // --- Helpers for Holidays ---
@@ -143,9 +149,10 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   // View State
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previewScale, setPreviewScale] = useState(1);
-  
-  // ★追加: 未保存変更の管理フラグ
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // ★追加: マスタ管理のタブ状態
+  const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
 
   useEffect(() => {
     const loadMaster = async () => {
@@ -219,7 +226,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const updateReport = (updates: Partial<SafetyPlanReportData>) => {
     setReport(prev => ({ ...prev, ...updates }));
     setSaveStatus('idle');
-    setHasUnsavedChanges(true); // ★変更: データ変更時に未保存フラグを立てる
+    setHasUnsavedChanges(true); 
   };
 
   const handleSave = async () => {
@@ -228,7 +235,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
       const newId = await saveDraft(draftId, 'SAFETY_PLAN', report);
       setDraftId(newId);
       setSaveStatus('saved');
-      setHasUnsavedChanges(false); // ★変更: 保存完了時に未保存フラグを下ろす
+      setHasUnsavedChanges(false); 
       setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (e) {
       console.error(e);
@@ -243,7 +250,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
       const newId = await saveDraft(draftId, 'SAFETY_PLAN', report);
       setDraftId(newId);
       setSaveStatus('saved');
-      setHasUnsavedChanges(false); // ★変更: 保存完了時に未保存フラグを下ろす
+      setHasUnsavedChanges(false); 
       setTimeout(() => setSaveStatus('idle'), 2000);
       setTimeout(() => window.print(), 100);
     } catch (e) {
@@ -252,7 +259,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     }
   };
 
-  // ★追加: ホームボタン押下時のチェック処理
   const handleHomeClick = () => {
     if (hasUnsavedChanges) {
       setConfirmModal({
@@ -314,6 +320,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const inputBase = "w-full h-full bg-transparent outline-none text-center font-serif";
   const selectBase = "w-full h-full bg-transparent outline-none text-center appearance-none font-serif text-center-last";
 
+  // ★変更: タブ付きマスタ管理画面
   const renderMasterManager = () => (
     <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
@@ -327,19 +334,38 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
           <i className="fa-solid fa-xmark mr-1"></i>閉じる
         </button>
       </div>
+
+      {/* タブボタン */}
+      <div className="flex gap-4 mb-6">
+        <button 
+          onClick={() => setMasterTab('BASIC')} 
+          className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}
+        >
+          <i className="fa-solid fa-house-chimney mr-2"></i>基本・共通マスタ
+        </button>
+        <button 
+          onClick={() => setMasterTab('TRAINING')} 
+          className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}
+        >
+          <i className="fa-solid fa-clipboard-check mr-2"></i>安全訓練用マスタ
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
-        {RELEVANT_MASTER_KEYS.map((key) => {
+        {MASTER_GROUPS[masterTab].map((key) => {
            const title = LABEL_MAP[key] || key;
+           // 安全管理計画表では、安全訓練用項目が表示されても使わないが、
+           // 「全マスタをどこからでも編集できる」という要件のために表示する
            return (
              <MasterSection 
-               key={key}
-               title={title}
-               items={masterData[key]}
+               key={key} 
+               title={title} 
+               items={masterData[key as keyof MasterData]} 
                onUpdate={async (newItems) => {
                  const newData = { ...masterData, [key]: newItems };
                  setMasterData(newData);
                  await saveMasterData(newData);
-               }}
+               }} 
                onDeleteRequest={(index, item) => {
                  const message = key === 'projects' 
                    ? `「${item}」を削除しますか？\n\n【注意】\nこの現場名で保存されている「全ての一時保存データ」も同時に削除されます。\nこの操作は取り消せません。`
@@ -350,7 +376,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                    message,
                    onConfirm: async () => {
                      if (key === 'projects') await deleteDraftsByProject(item);
-                     const newItems = [...masterData[key]];
+                     const newItems = [...masterData[key as keyof MasterData]];
                      newItems.splice(index, 1);
                      const newData = { ...masterData, [key]: newItems };
                      setMasterData(newData);
@@ -358,7 +384,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                      setConfirmModal(prev => ({ ...prev, isOpen: false }));
                    }
                  });
-               }}
+               }} 
              />
            )
         })}
@@ -645,7 +671,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
         {/* Header */}
         <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-30 flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
-             {/* ★変更: onBackToMenu を handleHomeClick に変更 */}
              <button onClick={handleHomeClick} className="text-white hover:text-gray-300 transition-colors"><i className="fa-solid fa-house"></i></button>
              <h1 className="text-lg font-bold"><i className="fa-solid fa-clipboard-list mr-2"></i>安全管理計画表</h1>
           </div>
@@ -670,7 +695,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
 
         {/* Main Content */}
         <main className="flex-1 overflow-auto p-4 bg-gray-100 flex justify-center">
-            {/* Paper Container - Centered */}
             <div className="bg-white shadow-xl origin-top" style={{ width: '297mm', minHeight: '210mm' }}>
                 {renderReportSheet(false)}
             </div>

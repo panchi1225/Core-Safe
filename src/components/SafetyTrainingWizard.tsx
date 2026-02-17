@@ -60,6 +60,12 @@ const MasterSection: React.FC<{title: string; items: string[]; onUpdate: (items:
 
 const LABEL_MAP: Record<string, string> = { projects: "工事名", contractors: "施工者名", supervisors: "実施者（職長・監督）", locations: "実施場所", goals: "災害防止目標", processes: "作業工程", topics: "周知徹底事項", cautions: "現場内注意事項", subcontractors: "協力会社名" };
 
+// ★追加: カテゴリ分けの定義
+const MASTER_GROUPS = {
+  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'subcontractors'],
+  TRAINING: ['goals', 'processes', 'topics', 'cautions']
+};
+
 const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
   const [step, setStep] = useState(1);
   const [report, setReport] = useState<ReportData>(initialData || INITIAL_REPORT);
@@ -72,6 +78,9 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
   const [previewScale, setPreviewScale] = useState(1);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: () => {} });
+
+  // ★追加: マスタ管理のタブ状態
+  const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
 
   // Plan Selection State
   const [planSelectionModal, setPlanSelectionModal] = useState(false);
@@ -154,7 +163,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const renderStep1 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 1: 表紙情報</h2>
-      {/* 修正: appearance-none を追加してiOSのデフォルトスタイルを解除 */}
       <div className="form-control"><label className="label font-bold text-gray-700">工事名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.project} onChange={(e) => updateReport('project', e.target.value)}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
       <div className="form-control"><label className="label font-bold text-gray-700">実施月</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.month} onChange={(e) => updateReport('month', parseInt(e.target.value))}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}月</option>))}</select></div>
       <div className="form-control"><label className="label font-bold text-gray-700">施工者名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.contractor} onChange={(e) => updateReport('contractor', e.target.value)}>{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
@@ -177,7 +185,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         </div>
         <div>
            <label className="label text-sm font-bold text-gray-700">場所</label>
-           {/* ★修正: appearance-none を追加し、iOS特有の丸みや高さをリセット */}
            <select 
              className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none"
              value={report.location} 
@@ -211,7 +218,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
       <div>
           <label className="label text-sm font-bold text-gray-700">実施者</label>
-          {/* ★修正: appearance-none を追加 */}
           <select 
             className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none"
             value={report.instructor} 
@@ -228,7 +234,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="space-y-3">
            <div className="flex items-center gap-2">
              <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(3)</span>
-             {/* ★修正: appearance-none を追加 */}
              <select 
               className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm appearance-none"
                value={report.topic} 
@@ -240,7 +245,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
            <div className="flex items-center gap-2">
              <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(4)</span>
-             {/* ★修正: appearance-none を追加 */}
              <select 
               className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm appearance-none"
                value={report.caution} 
@@ -268,7 +272,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <h3 className="font-bold text-lg mb-4 text-center">新規署名</h3>
         <div className="mb-4">
           <label className="block text-sm font-bold text-gray-700 mb-1">会社名</label>
-          {/* ★修正: appearance-none を追加 */}
           <select 
             className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-lg text-black outline-none appearance-none"
             value={tempCompany}
@@ -283,16 +286,49 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     </div>
   );
 
+  // ★変更: タブ付きマスタ管理画面
   const renderMasterManager = () => (
     <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b"><h2 className="text-2xl font-bold text-gray-800"><i className="fa-solid fa-database mr-2"></i>マスタ管理</h2><button onClick={() => setIsMasterMode(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button></div>
+      <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
+        <h2 className="text-2xl font-bold text-gray-800"><i className="fa-solid fa-database mr-2"></i>マスタ管理</h2>
+        <button onClick={() => setIsMasterMode(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button>
+      </div>
+      
+      {/* タブボタン */}
+      <div className="flex gap-4 mb-6">
+        <button 
+          onClick={() => setMasterTab('BASIC')} 
+          className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}
+        >
+          <i className="fa-solid fa-house-chimney mr-2"></i>基本・共通マスタ
+        </button>
+        <button 
+          onClick={() => setMasterTab('TRAINING')} 
+          className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}
+        >
+          <i className="fa-solid fa-clipboard-check mr-2"></i>安全訓練用マスタ
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
-        {Object.keys(masterData).map((key) => { const k = key as keyof MasterData; const title = LABEL_MAP[key] || key; return (<MasterSection key={key} title={title} items={masterData[k]} onUpdate={async (newItems) => { const newData = { ...masterData, [k]: newItems }; setMasterData(newData); await saveMasterData(newData); }} onDeleteRequest={(index, item) => { if (key === 'projects') { setConfirmModal({ isOpen: true, message: `「${item}」を削除しますか？\n\n【注意】\nこの現場名で保存されている「全ての一時保存データ」も同時に削除されます。\nこの操作は取り消せません。`, onConfirm: async () => { await deleteDraftsByProject(item); const newItems = [...masterData[key]]; newItems.splice(index, 1); const newData = { ...masterData, [key]: newItems }; setMasterData(newData); await saveMasterData(newData); setConfirmModal(prev => ({ ...prev, isOpen: false })); } }); } else { setConfirmModal({ isOpen: true, message: `「${item}」を削除しますか？`, onConfirm: async () => { const newItems = [...masterData[key]]; newItems.splice(index, 1); const newData = { ...masterData, [key]: newItems }; setMasterData(newData); await saveMasterData(newData); setConfirmModal(prev => ({ ...prev, isOpen: false })); } }); } }} />) })}
+        {MASTER_GROUPS[masterTab].map((key) => {
+           const k = key as keyof MasterData;
+           const title = LABEL_MAP[key] || key;
+           return (
+             <MasterSection 
+               key={key}
+               title={title}
+               items={masterData[k]}
+               onUpdate={async (newItems) => { const newData = { ...masterData, [k]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
+               onDeleteRequest={(index, item) => { if (key === 'projects') { setConfirmModal({ isOpen: true, message: `「${item}」を削除しますか？\n\n【注意】\nこの現場名で保存されている「全ての一時保存データ」も同時に削除されます。\nこの操作は取り消せません。`, onConfirm: async () => { await deleteDraftsByProject(item); const newItems = [...masterData[key]]; newItems.splice(index, 1); const newData = { ...masterData, [key]: newItems }; setMasterData(newData); await saveMasterData(newData); setConfirmModal(prev => ({ ...prev, isOpen: false })); } }); } else { setConfirmModal({ isOpen: true, message: `「${item}」を削除しますか？`, onConfirm: async () => { const newItems = [...masterData[key]]; newItems.splice(index, 1); const newData = { ...masterData, [key]: newItems }; setMasterData(newData); await saveMasterData(newData); setConfirmModal(prev => ({ ...prev, isOpen: false })); } }); } }} 
+             />
+           )
+        })}
       </div>
     </div>
   );
 
-  // --- PREVIEW (Fixed Page Break Logic) ---
+  // --- PREVIEW ---
   const renderPreviewModal = () => (
     <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-90 flex flex-col no-print">
       <div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0">
@@ -303,14 +339,10 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         </div>
       </div>
       
-      {/* Scrollable Area */}
       <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
-        {/* Page 1-3: Safety Training Report */}
         <div className="bg-white shadow-2xl" style={{ width: '794px', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
           <PrintLayout data={report} />
         </div>
-        
-        {/* Page 4: Attached Safety Plan */}
         {selectedPlan && (
           <div className="bg-white shadow-2xl" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
              <SafetyPlanPrintLayout data={selectedPlan} />
@@ -338,14 +370,12 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
   if (isMasterMode) return (<> {renderMasterManager()} <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} /> </>);
 
-  // ★変更: classNameに max-w-3xl を適用
   return (
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
         <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-helmet-safety mr-2"></i>安全訓練報告</h1></div><button onClick={() => setIsMasterMode(true)} className="text-xs bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors"><i className="fa-solid fa-gear mr-1"></i>設定</button></header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-blue-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-blue-600" : ""}>STEP 2</span><span className={step >= 3 ? "text-blue-600" : ""}>STEP 3</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
         
-        {/* ★ここを max-w-3xl に固定 */}
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
@@ -354,7 +384,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
           <div className="flex items-center gap-2"><button onClick={handleBack} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100 hover:bg-gray-200'}`}>戻る</button><button onClick={handleTempSave} className={`px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center transition-colors`}><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
-          {/* Preview Button */}
           {step < 3 ? (<button onClick={handleNext} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
         </footer>
       </div>
@@ -365,7 +394,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {renderPlanSelectionModal()}
       <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} />
 
-      {/* Print View */}
       <div className="hidden print:block">
          <PrintLayout data={report} />
          {selectedPlan && (

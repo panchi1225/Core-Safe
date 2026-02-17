@@ -51,8 +51,13 @@ const MasterSection: React.FC<{title: string; items: string[]; onUpdate: (items:
   );
 };
 
-const LABEL_MAP: Record<string, string> = { projects: "工事名", contractors: "施工者名", supervisors: "実施者（職長・監督）", locations: "実施場所", subcontractors: "協力会社名" };
-const RELEVANT_MASTER_KEYS: (keyof MasterData)[] = ['projects', 'contractors', 'locations', 'supervisors', 'subcontractors'];
+const LABEL_MAP: Record<string, string> = { projects: "工事名", contractors: "施工者名", supervisors: "実施者（職長・監督）", locations: "実施場所", goals: "災害防止目標", processes: "作業工程", topics: "周知徹底事項", cautions: "現場内注意事項", subcontractors: "協力会社名" };
+
+// ★追加: カテゴリ分けの定義
+const MASTER_GROUPS = {
+  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'subcontractors'],
+  TRAINING: ['goals', 'processes', 'topics', 'cautions']
+};
 
 const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
   const [step, setStep] = useState(1);
@@ -69,6 +74,9 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [tempCompany, setTempCompany] = useState("");
   const [tempRole, setTempRole] = useState("職長");
   const [sigKey, setSigKey] = useState(0);
+
+  // ★追加: マスタ管理のタブ状態
+  const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
 
   // Plan Selection State
   const [planSelectionModal, setPlanSelectionModal] = useState(false);
@@ -128,11 +136,44 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
 
   // --- Renders ---
+  
+  // ★変更: タブ付きマスタ管理画面
   const renderMasterManager = () => (
     <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b"><h2 className="text-2xl font-bold text-gray-800"><i className="fa-solid fa-database mr-2"></i>マスタ管理</h2><button onClick={() => setIsMasterMode(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button></div>
+      <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
+        <h2 className="text-2xl font-bold text-gray-800"><i className="fa-solid fa-database mr-2"></i>マスタ管理</h2>
+        <button onClick={() => setIsMasterMode(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button>
+      </div>
+      
+      {/* タブボタン */}
+      <div className="flex gap-4 mb-6">
+        <button 
+          onClick={() => setMasterTab('BASIC')} 
+          className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}
+        >
+          <i className="fa-solid fa-house-chimney mr-2"></i>基本・共通マスタ
+        </button>
+        <button 
+          onClick={() => setMasterTab('TRAINING')} 
+          className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}
+        >
+          <i className="fa-solid fa-clipboard-check mr-2"></i>安全訓練用マスタ
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
-        {Object.keys(masterData).map((key) => { const k = key as keyof MasterData; const title = LABEL_MAP[key] || key; return (<MasterSection key={key} title={title} items={masterData[k]} onUpdate={async (newItems) => { const newData = { ...masterData, [k]: newItems }; setMasterData(newData); await saveMasterData(newData); }} onDeleteRequest={(index, item) => { const message = key === 'projects' ? `「${item}」を削除しますか？\n\n【注意】\nこの現場名で保存されている「全ての一時保存データ」も同時に削除されます。\nこの操作は取り消せません。` : `「${item}」を削除しますか？`; setConfirmModal({ isOpen: true, message, onConfirm: async () => { if (key === 'projects') await deleteDraftsByProject(item); const newItems = [...masterData[key]]; newItems.splice(index, 1); const newData = { ...masterData, [key]: newItems }; setMasterData(newData); await saveMasterData(newData); setConfirmModal(prev => ({ ...prev, isOpen: false })); } }); }} />) })}
+        {MASTER_GROUPS[masterTab].map((key) => {
+           const title = LABEL_MAP[key] || key;
+           return (
+             <MasterSection 
+               key={key} 
+               title={title} 
+               items={masterData[key as keyof MasterData]} 
+               onUpdate={async (newItems) => { const newData = { ...masterData, [key]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
+               onDeleteRequest={(index, item) => { const message = key === 'projects' ? `「${item}」を削除しますか？\n\n【注意】\nこの現場名で保存されている「全ての一時保存データ」も同時に削除されます。\nこの操作は取り消せません。` : `「${item}」を削除しますか？`; setConfirmModal({ isOpen: true, message, onConfirm: async () => { if (key === 'projects') await deleteDraftsByProject(item); const newItems = [...masterData[key as keyof MasterData]]; newItems.splice(index, 1); const newData = { ...masterData, [key]: newItems }; setMasterData(newData); await saveMasterData(newData); setConfirmModal(prev => ({ ...prev, isOpen: false })); } }); }} 
+             />
+           )
+        })}
       </div>
     </div>
   );
@@ -200,14 +241,12 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
 
   if (isMasterMode) return (<> {renderMasterManager()} <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} /> </>);
 
-  // ★変更: classNameに max-w-3xl を適用
   return (
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
         <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-users-rectangle mr-2"></i>災害防止協議会</h1></div><button onClick={() => setIsMasterMode(true)} className="text-xs bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors"><i className="fa-solid fa-gear mr-1"></i>設定</button></header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-green-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-green-600" : ""}>STEP 2</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-green-600 h-full transition-all duration-300" style={{ width: `${step * 50}%` }}></div></div></div>
         
-        {/* ★ここを max-w-3xl に固定 */}
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
@@ -215,7 +254,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
 
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-md z-20">
           <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
-          {/* ★変更: プレビューボタンのハンドラを変更 */}
           {step === 1 ? (<button onClick={() => setStep(2)} className="px-8 py-3 bg-green-600 text-white rounded-lg font-bold shadow hover:bg-green-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
         </footer>
       </div>

@@ -10,7 +10,7 @@ interface Props {
   onBackToMenu: () => void;
 }
 
-// --- 安全装置: データを完全な形に修復する関数 ---
+// --- 安全装置 ---
 const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
   if (!data) return INITIAL_NEWCOMER_SURVEY_REPORT;
   const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
@@ -52,7 +52,12 @@ const MasterSection: React.FC<{title: string; items: string[]; onUpdate: (items:
 };
 
 const LABEL_MAP: Record<string, string> = { projects: "工事名", supervisors: "実施者（職長・監督）", subcontractors: "協力会社名" };
-const RELEVANT_MASTER_KEYS: (keyof MasterData)[] = ['projects', 'supervisors', 'subcontractors'];
+
+// ★追加: カテゴリ分けの定義
+const MASTER_GROUPS = {
+  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'subcontractors'],
+  TRAINING: ['goals', 'processes', 'topics', 'cautions']
+};
 
 const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
   const [step, setStep] = useState(1);
@@ -67,6 +72,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [sigKey, setSigKey] = useState(0);
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
+
+  // ★追加: マスタ管理のタブ状態
+  const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
 
   useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
@@ -186,6 +194,48 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     </div>
   );
 
+  // ★変更: タブ付きマスタ管理画面
+  const renderMasterManager = () => (
+    <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen">
+      <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
+        <h2 className="text-2xl font-bold text-gray-800"><i className="fa-solid fa-database mr-2"></i>マスタ管理</h2>
+        <button onClick={() => setIsMasterMode(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button>
+      </div>
+      
+      {/* タブボタン */}
+      <div className="flex gap-4 mb-6">
+        <button 
+          onClick={() => setMasterTab('BASIC')} 
+          className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}
+        >
+          <i className="fa-solid fa-house-chimney mr-2"></i>基本・共通マスタ
+        </button>
+        <button 
+          onClick={() => setMasterTab('TRAINING')} 
+          className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}
+        >
+          <i className="fa-solid fa-clipboard-check mr-2"></i>安全訓練用マスタ
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
+        {MASTER_GROUPS[masterTab].map((key) => {
+           const k = key as keyof MasterData;
+           const title = LABEL_MAP[key] || key;
+           return (
+             <MasterSection 
+               key={key} 
+               title={title} 
+               items={masterData[k]} 
+               onUpdate={async (newItems) => { const newData = { ...masterData, [k]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
+               onDeleteRequest={(index, item) => { const message = key === 'projects' ? `「${item}」を削除しますか？\n\n【注意】\nこの現場名で保存されている「全ての一時保存データ」も同時に削除されます。\nこの操作は取り消せません。` : `「${item}」を削除しますか？`; setConfirmModal({ isOpen: true, message, onConfirm: async () => { if (key === 'projects') await deleteDraftsByProject(item); const newItems = [...masterData[key as keyof MasterData]]; newItems.splice(index, 1); const newData = { ...masterData, [key]: newItems }; setMasterData(newData); await saveMasterData(newData); setConfirmModal(prev => ({ ...prev, isOpen: false })); } }); }} 
+             />
+           )
+        })}
+      </div>
+    </div>
+  );
+
   const renderPreviewModal = () => (
     <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-90 flex flex-col no-print">
       <div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0">
@@ -207,7 +257,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
   if (isMasterMode) return (<> {renderMasterManager()} <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} /> </>);
 
-  // ★変更: classNameに max-w-3xl を適用
   return (
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
@@ -216,7 +265,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         </header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-purple-600" : ""}>基本情報</span><span className={step >= 2 ? "text-purple-600" : ""}>資格</span><span className={step >= 3 ? "text-purple-600" : ""}>誓約・署名</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-purple-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
         
-        {/* ★ここを max-w-3xl に固定 */}
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">
            {step === 1 && renderStep1()}
            {step === 2 && renderStep2()}
