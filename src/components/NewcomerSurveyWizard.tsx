@@ -13,19 +13,8 @@ interface Props {
 // --- 安全装置: データを完全な形に修復する関数 ---
 const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
   if (!data) return INITIAL_NEWCOMER_SURVEY_REPORT;
-  
-  // 資格情報が欠けている場合に備えて、初期値と合体させる
-  const safeQualifications = {
-    ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications,
-    ...(data.qualifications || {})
-  };
-
-  // 全体を初期値と合体させる（足りない項目を埋める）
-  return {
-    ...INITIAL_NEWCOMER_SURVEY_REPORT,
-    ...data,
-    qualifications: safeQualifications
-  };
+  const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
+  return { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
 };
 
 // --- Modals ---
@@ -67,7 +56,6 @@ const RELEVANT_MASTER_KEYS: (keyof MasterData)[] = ['projects', 'supervisors', '
 
 const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
   const [step, setStep] = useState(1);
-  // ★修正: ここでデータを修復(sanitize)してからセットする
   const [report, setReport] = useState<NewcomerSurveyReportData>(sanitizeReportData(initialData));
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
@@ -103,7 +91,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const handleTempSave = async () => { setSaveStatus('saving'); try { const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', report); setDraftId(newId); setSaveStatus('saved'); setHasUnsavedChanges(false); setTimeout(() => setSaveStatus('idle'), 2000); } catch (e) { console.error(e); alert("保存に失敗しました"); setSaveStatus('idle'); } };
 
-  // ファイル名設定: 新規_所属会社名_氏名
   const handleSaveAndPrint = async () => {
     setSaveStatus('saving');
     try {
@@ -143,9 +130,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   );
 
   const renderStep2 = () => {
-    // ★安全装置: 資格情報がなければ空オブジェクトを使う
     const qual = report.qualifications || {};
-    
     return (
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 2: 資格</h2>
@@ -222,6 +207,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
   if (isMasterMode) return (<> {renderMasterManager()} <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} /> </>);
 
+  // ★変更: classNameに max-w-3xl を適用
   return (
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
@@ -229,17 +215,24 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-person-circle-question mr-2"></i>新規入場者アンケート</h1></div><button onClick={() => setIsMasterMode(true)} className="text-xs bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors"><i className="fa-solid fa-gear mr-1"></i>設定</button>
         </header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-purple-600" : ""}>基本情報</span><span className={step >= 2 ? "text-purple-600" : ""}>資格</span><span className={step >= 3 ? "text-purple-600" : ""}>誓約・署名</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-purple-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
-        <main className="mx-auto p-4 bg-white shadow-lg rounded-lg max-w-lg min-h-[60vh]">{step === 1 && renderStep1()}{step === 2 && renderStep2()}{step === 3 && renderStep3()}</main>
+        
+        {/* ★ここを max-w-3xl に固定 */}
+        <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">
+           {step === 1 && renderStep1()}
+           {step === 2 && renderStep2()}
+           {step === 3 && renderStep3()}
+        </main>
+
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-md z-20">
           <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
           {step < 3 ? (<button onClick={() => setStep(prev => prev + 1)} className="px-8 py-3 bg-purple-600 text-white rounded-lg font-bold shadow hover:bg-purple-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={() => setShowPreview(true)} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
         </footer>
       </div>
+      
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
       
-      {/* 隠し印刷用レイアウト（ここにも安全装置を追加） */}
       <div className="hidden print:block">
          <NewcomerSurveyPrintLayout data={report} />
       </div>
