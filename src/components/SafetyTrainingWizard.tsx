@@ -159,12 +159,66 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <div className="form-control"><label className="label font-bold text-gray-700">施工者名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none" value={report.contractor} onChange={(e) => updateReport('contractor', e.target.value)}>{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
     </div>
   );
+
   const renderStep2 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 2: 実施内容</h2>
-      <div className="grid grid-cols-2 gap-4"><div><label className="label text-sm font-bold text-gray-700">実施日</label><input type="date" className="w-full p-2 border border-gray-300 rounded bg-white text-black outline-none" value={report.date} onChange={(e) => updateReport('date', e.target.value)} /></div><div><label className="label text-sm font-bold text-gray-700">場所</label><select className="w-full p-2 border border-gray-300 rounded bg-white text-black outline-none" value={report.location} onChange={(e) => updateReport('location', e.target.value)}>{masterData.locations.map(s => <option key={s} value={s}>{s}</option>)}</select></div></div>
-      <div className="grid grid-cols-2 gap-4"><div><label className="label text-sm font-bold text-gray-700">開始時間</label><input type="time" className="w-full p-2 border border-gray-300 rounded bg-white text-black outline-none" value={report.startTime} onChange={(e) => updateReport('startTime', e.target.value)} /></div><div><label className="label text-sm font-bold text-gray-700">終了時間</label><input type="time" className="w-full p-2 border border-gray-300 rounded bg-white text-black outline-none" value={report.endTime} onChange={(e) => updateReport('endTime', e.target.value)} /></div></div>
-      <div><label className="label text-sm font-bold text-gray-700">実施者</label><select className="w-full p-2 border border-gray-300 rounded bg-white text-black outline-none" value={report.instructor} onChange={(e) => updateReport('instructor', e.target.value)}>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+      
+      {/* 修正箇所: h-11 を追加して高さを統一 */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="label text-sm font-bold text-gray-700">実施日</label>
+          <input 
+            type="date" 
+            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none"
+            value={report.date} 
+            onChange={(e) => updateReport('date', e.target.value)} 
+          />
+        </div>
+        <div>
+           <label className="label text-sm font-bold text-gray-700">場所</label>
+           <select 
+             className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none"
+             value={report.location} 
+             onChange={(e) => updateReport('location', e.target.value)}
+           >
+             {masterData.locations.map(s => <option key={s} value={s}>{s}</option>)}
+           </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="label text-sm font-bold text-gray-700">開始時間</label>
+          <input 
+            type="time" 
+            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none"
+            value={report.startTime} 
+            onChange={(e) => updateReport('startTime', e.target.value)} 
+          />
+        </div>
+        <div>
+          <label className="label text-sm font-bold text-gray-700">終了時間</label>
+          <input 
+            type="time" 
+            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none"
+            value={report.endTime} 
+            onChange={(e) => updateReport('endTime', e.target.value)} 
+          />
+        </div>
+      </div>
+
+      <div>
+          <label className="label text-sm font-bold text-gray-700">実施者</label>
+          <select 
+            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none"
+            value={report.instructor} 
+            onChange={(e) => updateReport('instructor', e.target.value)}
+          >
+             {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+      </div>
+
       <div className="bg-gray-100 p-4 rounded-lg space-y-4"><h3 className="font-bold text-gray-700 mb-2">訓練内容</h3><div className="text-sm text-gray-600 pl-2 border-l-4 border-gray-300 space-y-2 py-1"><div className="flex gap-2"><span className="font-bold w-8">(1)</span><span>今月の災害防止目標 (固定)</span></div><div className="flex gap-2"><span className="font-bold w-8">(2)</span><span>今月の作業工程 (固定)</span></div></div><div className="space-y-3"><div className="flex items-center gap-2"><span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(3)</span><select className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm" value={report.topic} onChange={(e) => updateReport('topic', e.target.value)}>{masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}</select></div><div className="flex items-center gap-2"><span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(4)</span><select className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm" value={report.caution} onChange={(e) => updateReport('caution', e.target.value)}>{masterData.cautions.map(g => <option key={g} value={g}>{g}</option>)}</select></div></div><div className="text-sm text-gray-600 pl-2 border-l-4 border-gray-300 mt-2 space-y-2 py-1"><div className="flex gap-2"><span className="font-bold w-8">(5)</span><span>web資料・動画による安全教育 (固定)</span></div><div className="flex gap-2"><span className="font-bold w-8">(6)</span><span>質疑応答 (固定)</span></div></div></div>
       <div className="form-control"><label className="label font-bold flex justify-between text-gray-700"><span>現場写真 (黒板入り)</span><span className="text-xs font-normal bg-red-100 text-red-600 px-2 rounded border border-red-200">必須</span></label><input type="file" accept="image/*" className="w-full mt-2 text-sm text-gray-500" onChange={handlePhotoUpload} />{report.photoUrl && (<div className="mt-3"><img src={report.photoUrl} alt="preview" className="h-40 w-full object-contain border bg-gray-50 rounded" /></div>)}</div>
     </div>
@@ -236,7 +290,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
   if (isMasterMode) return (<> {renderMasterManager()} <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} /> </>);
 
-  // ★変更: classNameに max-w-3xl を適用 (Stepによる条件分岐を削除)
+  // ★変更: classNameに max-w-3xl を適用
   return (
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
@@ -256,6 +310,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           {step < 3 ? (<button onClick={handleNext} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
         </footer>
       </div>
+      
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       
       {showPreview && renderPreviewModal()}
