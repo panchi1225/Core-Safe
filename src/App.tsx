@@ -1,0 +1,427 @@
+import React, { useState, useEffect } from 'react';
+import SafetyTrainingWizard from './components/SafetyTrainingWizard';
+import DisasterCouncilWizard from './components/DisasterCouncilWizard';
+import SafetyPlanWizard from './components/SafetyPlanWizard';
+import NewcomerSurveyWizard from './components/NewcomerSurveyWizard';
+
+// ★ここが重要：ニセモノ(Mock)ではなく、本物(Firebase)の機能を読み込みます
+import { fetchDrafts, removeDraft } from './services/firebaseService'; 
+
+import { SavedDraft, ReportData, DisasterCouncilReportData, ReportTypeString, NewcomerSurveyReportData } from './types';
+
+// --- 確認用モーダル（変更なし） ---
+interface ConfirmModalProps {
+  isOpen: boolean;
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onConfirm, onCancel }) => {
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-fade-in">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">確認</h3>
+        <p className="text-gray-600 mb-6 whitespace-pre-wrap">{message}</p>
+        <div className="flex justify-end gap-3">
+          <button 
+            onClick={onCancel}
+            className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 font-bold"
+          >
+            キャンセル
+          </button>
+          <button 
+            onClick={onConfirm}
+            className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700 font-bold"
+          >
+            実行する
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+type ViewState = 'HOME' | ReportTypeString;
+
+const App: React.FC = () => {
+  const [currentView, setCurrentView] = useState<ViewState>('HOME');
+  
+  // Selection Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedReportType, setSelectedReportType] = useState<ReportTypeString | null>(null);
+  const [drafts, setDrafts] = useState<SavedDraft[]>([]);
+  const [selectedDraftProject, setSelectedDraftProject] = useState<string | null>(null);
+  
+  // ★追加：読み込み中かどうかを管理するスイッチ
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Confirmation Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+  });
+  
+  // Data to pass to Wizard
+  const [wizardInitialData, setWizardInitialData] = useState<any>(undefined);
+  const [wizardDraftId, setWizardDraftId] = useState<string | null>(null);
+
+  // ★変更：Firebaseからデータを読み込む処理
+  useEffect(() => {
+    if (isModalOpen) {
+      const loadDrafts = async () => {
+        setIsLoading(true); // 読み込み開始！
+        try {
+          // Firebaseからデータを取ってくる
+          const data = await fetchDrafts();
+          setDrafts(data);
+        } catch (error) {
+          console.error("Failed to load drafts", error);
+          alert("保存データの読み込みに失敗しました。");
+        } finally {
+          setIsLoading(false); // 読み込み終了！
+        }
+      };
+      
+      loadDrafts();
+      setSelectedDraftProject(null);
+    }
+  }, [isModalOpen]);
+
+  // Handlers
+  const openSelectionModal = (type: ReportTypeString) => {
+    setSelectedReportType(type);
+    setIsModalOpen(true);
+  };
+
+  const handleStartNew = () => {
+    if (!selectedReportType) return;
+    setWizardInitialData(undefined);
+    setWizardDraftId(null);
+    setCurrentView(selectedReportType);
+    setIsModalOpen(false);
+  };
+
+  const handleResumeDraft = (draft: SavedDraft) => {
+    setWizardInitialData(draft.data);
+    setWizardDraftId(draft.id);
+    setCurrentView(draft.type);
+    setIsModalOpen(false);
+  };
+
+  // ★変更：Firebaseからデータを削除する処理
+  const handleDeleteDraft = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      message: 'この一時保存データを削除しますか？',
+      onConfirm: async () => { // async = 時間がかかる処理を待てるようにする
+        try {
+          await removeDraft(id); // Firebase削除実行
+          
+          // 削除後に再取得してリストを更新
+          const newDrafts = await fetchDrafts();
+          setDrafts(newDrafts);
+          
+          // もしそのプロジェクトのデータが全部なくなったら、前の画面に戻る
+          if (selectedDraftProject && selectedReportType) {
+             const remaining = newDrafts.filter(d => 
+                 d.type === selectedReportType && (d.data.project || '名称未設定') === selectedDraftProject
+             );
+             if (remaining.length === 0) {
+                 setSelectedDraftProject(null);
+             }
+          }
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        } catch (error) {
+          console.error("Failed to delete draft", error);
+          alert("削除に失敗しました。");
+        }
+      }
+    });
+  };
+
+  // Routing Logic
+  if (currentView === 'SAFETY_TRAINING') {
+    return (
+      <SafetyTrainingWizard 
+        initialData={wizardInitialData}
+        initialDraftId={wizardDraftId}
+        onBackToMenu={() => setCurrentView('HOME')} 
+      />
+    );
+  }
+
+  if (currentView === 'DISASTER_COUNCIL') {
+    return (
+      <DisasterCouncilWizard
+        initialData={wizardInitialData}
+        initialDraftId={wizardDraftId}
+        onBackToMenu={() => setCurrentView('HOME')}
+      />
+    );
+  }
+
+  if (currentView === 'SAFETY_PLAN') {
+    return (
+      <SafetyPlanWizard 
+         initialData={wizardInitialData}
+         initialDraftId={wizardDraftId}
+         onBackToMenu={() => setCurrentView('HOME')}
+      />
+    );
+  }
+
+  if (currentView === 'NEWCOMER_SURVEY') {
+    return (
+      <NewcomerSurveyWizard
+        initialData={wizardInitialData}
+        initialDraftId={wizardDraftId}
+        onBackToMenu={() => setCurrentView('HOME')}
+      />
+    );
+  }
+
+  // --- Modal Component ---
+  const renderSelectionModal = () => {
+    if (!isModalOpen || !selectedReportType) return null;
+
+    // Filter drafts for current type
+    const currentDrafts = drafts.filter(d => d.type === selectedReportType);
+
+    // Group drafts by project
+    const draftsByProject: Record<string, SavedDraft[]> = {};
+    currentDrafts.forEach(draft => {
+      const project = draft.data.project || '名称未設定';
+      if (!draftsByProject[project]) {
+        draftsByProject[project] = [];
+      }
+      draftsByProject[project].push(draft);
+    });
+
+    return (
+      <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+          {/* Header */}
+          <div className="bg-gray-800 text-white p-4 flex justify-between items-center shrink-0">
+            <div className="flex items-center gap-3">
+              {selectedDraftProject && (
+                <button 
+                  onClick={() => setSelectedDraftProject(null)}
+                  className="mr-1 text-gray-300 hover:text-white"
+                >
+                  <i className="fa-solid fa-arrow-left"></i>
+                </button>
+              )}
+              <h3 className="font-bold text-lg">
+                {selectedDraftProject ? '対象データの選択' : '作成方法の選択'}
+              </h3>
+            </div>
+            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white">
+              <i className="fa-solid fa-xmark text-xl"></i>
+            </button>
+          </div>
+          
+          <div className="p-6 overflow-y-auto custom-scrollbar">
+            {/* ★追加：読み込み中のくるくる表示 --- */}
+            {isLoading ? (
+              <div className="flex justify-center items-center py-10">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-gray-500">データを読み込み中...</span>
+              </div>
+            ) : (
+              !selectedDraftProject ? (
+                /* --- VIEW 1: Project List --- */
+                <>
+                  <div className="mb-8">
+                    <button 
+                      onClick={handleStartNew}
+                      className="w-full py-4 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 flex items-center justify-center gap-2 transition-transform transform hover:scale-[1.01]"
+                    >
+                      <i className="fa-solid fa-file-circle-plus text-xl"></i>
+                      新規作成
+                    </button>
+                  </div>
+
+                  <div className="border-t pt-4">
+                    <h4 className="text-gray-500 text-sm font-bold mb-3 uppercase tracking-wide">一時保存データから再開</h4>
+                    
+                    {Object.keys(draftsByProject).length === 0 ? (
+                      <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
+                        保存されたデータはありません
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {Object.entries(draftsByProject).map(([projectName, projectDrafts]) => (
+                          <button
+                            key={projectName}
+                            onClick={() => setSelectedDraftProject(projectName)}
+                            className="w-full text-left border rounded-lg p-4 hover:bg-blue-50 transition-colors flex justify-between items-center group shadow-sm"
+                          >
+                            <div>
+                              <div className="font-bold text-gray-800 text-sm mb-1">{projectName}</div>
+                              <div className="text-xs text-gray-500">
+                                <i className="fa-regular fa-folder-open mr-1"></i>
+                                {projectDrafts.length} 件のデータ
+                              </div>
+                            </div>
+                            <i className="fa-solid fa-chevron-right text-gray-300 group-hover:text-blue-400"></i>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                /* --- VIEW 2: Draft Details --- */
+                <div className="space-y-4">
+                  <div className="bg-gray-50 p-3 rounded border text-sm text-gray-600 mb-4">
+                    <i className="fa-solid fa-building mr-2"></i>
+                    {selectedDraftProject}
+                  </div>
+
+                  <h4 className="text-gray-500 text-sm font-bold mb-2 uppercase tracking-wide">対象データを選択</h4>
+
+                  <div className="space-y-3">
+                    {draftsByProject[selectedDraftProject].map(draft => (
+                      <div key={draft.id} className="border rounded-lg p-3 hover:bg-blue-50 transition-colors flex justify-between items-center group bg-white shadow-sm">
+                        <div className="cursor-pointer flex-1" onClick={() => handleResumeDraft(draft)}>
+                          <div className="font-bold text-blue-800 text-lg">
+                            <i className="fa-regular fa-calendar-check mr-2"></i>
+                            {/* Display logic based on report type */}
+                            {draft.type === 'SAFETY_TRAINING' ? `${(draft.data as ReportData).month}月度` : 
+                             draft.type === 'DISASTER_COUNCIL' ? `第${(draft.data as DisasterCouncilReportData).count}回` :
+                             draft.type === 'NEWCOMER_SURVEY' ? ((draft.data as NewcomerSurveyReportData).name || '氏名未入力') :
+                             `${(draft.data as any).month}月度 計画表`}
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1 pl-7">
+                            最終更新: {new Date(draft.lastModified).toLocaleString('ja-JP')}
+                          </div>
+                        </div>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDraft(draft.id);
+                          }}
+                          className="ml-3 p-3 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors"
+                          title="削除"
+                        >
+                          <i className="fa-solid fa-trash"></i>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Home Screen UI
+  return (
+    <div className="min-h-screen bg-gray-100 font-sans text-gray-800">
+      {/* Home Header */}
+      <header className="bg-slate-800 text-white p-6 shadow-md text-center">
+        <h1 className="text-2xl font-bold tracking-wide">
+          <i className="fa-solid fa-building-shield mr-2"></i>
+          安全書類作成支援システム
+        </h1>
+        <p className="text-slate-400 text-sm mt-2">各種安全書類の作成業務をサポートします</p>
+      </header>
+
+      {/* Menu Grid */}
+      <main className="max-w-4xl mx-auto p-6 mt-8">
+        <h2 className="text-xl font-bold mb-6 text-gray-700 border-l-4 border-slate-800 pl-3">
+          作成する帳票を選択してください
+        </h2>
+        
+        {/* Changed grid cols to handle 4 items nicely */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          {/* Card 1: Safety Training */}
+          <button 
+            onClick={() => openSelectionModal('SAFETY_TRAINING')}
+            className="flex flex-col items-center p-8 bg-white rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-t-4 border-blue-600 group"
+          >
+            <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
+              <i className="fa-solid fa-helmet-safety text-4xl text-blue-600"></i>
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">安全訓練報告書</h3>
+            <p className="text-xs text-gray-500 text-center">
+              日々の安全訓練・朝礼の実施記録を作成します。電子署名対応。
+            </p>
+          </button>
+
+          {/* Card 2: Disaster Council */}
+          <button 
+            onClick={() => openSelectionModal('DISASTER_COUNCIL')}
+            className="flex flex-col items-center p-8 bg-white rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-t-4 border-green-600 group"
+          >
+            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-green-100 transition-colors">
+              <i className="fa-solid fa-users-rectangle text-4xl text-green-600"></i>
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">災害防止協議会</h3>
+            <p className="text-xs text-gray-500 text-center">
+              月次の災害防止協議会の議事録・報告書を作成します。
+            </p>
+          </button>
+
+          {/* Card 3: Safety Plan */}
+          <button 
+            onClick={() => openSelectionModal('SAFETY_PLAN')}
+            className="flex flex-col items-center p-8 bg-white rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-t-4 border-orange-500 group"
+          >
+            <div className="w-20 h-20 bg-orange-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-orange-100 transition-colors">
+              <i className="fa-solid fa-clipboard-list text-4xl text-orange-500"></i>
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">安全管理計画表</h3>
+            <p className="text-xs text-gray-500 text-center">
+              施工安全管理計画表および週間工程の管理を行います。
+            </p>
+          </button>
+
+          {/* Card 4: Newcomer Survey */}
+          <button 
+            onClick={() => openSelectionModal('NEWCOMER_SURVEY')}
+            className="flex flex-col items-center p-8 bg-white rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-t-4 border-purple-600 group"
+          >
+            <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-purple-100 transition-colors">
+              <i className="fa-solid fa-person-circle-question text-4xl text-purple-600"></i>
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">新規入場者アンケート</h3>
+            <p className="text-xs text-gray-500 text-center">
+              新規入場者の健康状態・経歴等を確認するアンケートを作成します。
+            </p>
+          </button>
+
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="mt-12 text-center text-gray-400 text-sm pb-8">
+        &copy; 2024 Safety Reporting App
+      </footer>
+
+      {renderSelectionModal()}
+      
+      {/* Confirmation Modal */}
+      <ConfirmationModal 
+        isOpen={confirmModal.isOpen} 
+        message={confirmModal.message} 
+        onConfirm={confirmModal.onConfirm} 
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
+    </div>
+  );
+};
+
+export default App;

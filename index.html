@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>安全教育・訓練報告書システム</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+      /* --- Layout Definitions (Shared between Screen Preview and Print) --- */
+      
+      /* A4 Portrait Page Container */
+      .print-page {
+        width: 210mm;
+        height: 297mm;
+        background-color: white;
+        position: relative;
+        overflow: hidden;
+        box-sizing: border-box;
+      }
+
+      /* --- Screen (Preview Mode) Specific Styles --- */
+      @media screen {
+        .print-page {
+          margin: 40px auto; /* Center with margin */
+          box-shadow: 0 4px 15px rgba(0,0,0,0.2); /* Paper shadow effect */
+          border: 1px solid #e5e7eb;
+        }
+      }
+
+      /* --- Print Specific Overrides --- */
+      @media print {
+        @page {
+          size: A4 portrait;
+          margin: 0;
+        }
+        body {
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+          margin: 0;
+          padding: 0;
+          background-color: white;
+        }
+        
+        .print-page {
+          margin: 0;
+          box-shadow: none;
+          border: none;
+          page-break-after: always;
+          width: 210mm;
+          height: 297mm;
+        }
+        
+        .print-page:last-child {
+          page-break-after: auto;
+        }
+
+        /* Hide UI elements during print */
+        .no-print {
+          display: none !important;
+        }
+      }
+
+      /* Fonts */
+      @import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol&display=swap');
+      .handwritten {
+        font-family: 'Kaisei Decol', serif;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/",
+    "date-fns": "https://esm.sh/date-fns@^4.1.0",
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+    "firebase/": "https://esm.sh/firebase@^12.9.0/"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-50 text-gray-800 font-sans antialiased">
+    <div id="root"></div>
+  <script type="module" src="/src/index.tsx"></script>
+</body>
+</html>
