@@ -11,14 +11,8 @@ interface Props {
   onBackToMenu: () => void;
 }
 
-// Reusing the modal logic
-interface ConfirmModalProps {
-  isOpen: boolean;
-  message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
-
+// --- Custom Confirmation Modal ---
+interface ConfirmModalProps { isOpen: boolean; message: string; onConfirm: () => void; onCancel: () => void; }
 const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onConfirm, onCancel }) => {
   if (!isOpen) return null;
   return (
@@ -27,15 +21,71 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onCon
         <h3 className="text-lg font-bold text-gray-800 mb-4">確認</h3>
         <p className="text-gray-600 mb-6 whitespace-pre-wrap">{message}</p>
         <div className="flex justify-end gap-3">
-          <button onClick={onCancel} className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600">キャンセル</button>
-          <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold">実行する</button>
+          <button onClick={onCancel} className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 font-bold">キャンセル</button>
+          <button onClick={onConfirm} className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700 font-bold">実行する</button>
         </div>
       </div>
     </div>
   );
 };
 
-// Master Section
+// --- ★追加: 工事名削除専用のパスワード付きモーダル ---
+const ProjectDeleteModal: React.FC<{
+  isOpen: boolean;
+  projectName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}> = ({ isOpen, projectName, onConfirm, onCancel }) => {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => { if (isOpen) { setPassword(""); setError(""); } }, [isOpen]);
+  if (!isOpen) return null;
+
+  const handleConfirm = () => {
+    if (password === "4043") {
+      onConfirm();
+    } else {
+      setError("パスワードが間違っています");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-60 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 animate-fade-in border-l-8 border-red-600">
+        <h3 className="text-xl font-bold text-red-600 mb-4 flex items-center">
+          <i className="fa-solid fa-triangle-exclamation mr-2"></i>重要：削除の確認
+        </h3>
+        <p className="text-gray-800 font-bold mb-2">工事名「{projectName}」を削除しますか？</p>
+        <div className="bg-red-50 p-3 rounded mb-4 text-sm text-red-800 leading-relaxed">
+          <strong>【注意】</strong><br/>
+          この操作を行うと、この工事名で保存されている<br/>
+          <span className="font-bold underline text-red-600 text-base">すべての一時保存データも同時に削除されます。</span><br/>
+          この操作は取り消せません。
+        </div>
+        
+        <div className="mb-6">
+          <label className="block text-xs font-bold text-gray-500 mb-1">管理者パスワードを入力 (4043)</label>
+          <input 
+            type="password" 
+            className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 outline-none text-lg tracking-widest"
+            placeholder="PASS"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          {error && <p className="text-red-500 text-xs mt-1 font-bold"><i className="fa-solid fa-circle-exclamation mr-1"></i>{error}</p>}
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <button onClick={onCancel} className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600">キャンセル</button>
+          <button onClick={handleConfirm} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold shadow-md">完全削除を実行</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Master Section ---
 const MasterSection: React.FC<{title: string; items: string[]; onUpdate: (items: string[]) => void; onDeleteRequest: (index: number, item: string) => void;}> = ({ title, items, onUpdate, onDeleteRequest }) => {
   const [newItem, setNewItem] = useState("");
   const handleAdd = () => { if (newItem.trim()) { onUpdate([...items, newItem.trim()]); setNewItem(""); } };
@@ -51,13 +101,9 @@ const MasterSection: React.FC<{title: string; items: string[]; onUpdate: (items:
   );
 };
 
-const LABEL_MAP: Record<string, string> = { projects: "工事名", contractors: "施工者名", supervisors: "実施者（職長・監督）", locations: "実施場所", goals: "災害防止目標", processes: "作業工程", topics: "周知徹底事項", cautions: "現場内注意事項", subcontractors: "協力会社名" };
-
-// ★追加: カテゴリ分けの定義
-const MASTER_GROUPS = {
-  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'subcontractors'],
-  TRAINING: ['goals', 'processes', 'topics', 'cautions']
-};
+const LABEL_MAP: Record<string, string> = { projects: "工事名", contractors: "施工者名", supervisors: "実施者（職長・監督）", locations: "実施場所", subcontractors: "協力会社名" };
+const MASTER_GROUPS = { BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'subcontractors'], TRAINING: ['goals', 'processes', 'topics', 'cautions'] };
+const RELEVANT_MASTER_KEYS: (keyof MasterData)[] = ['projects', 'contractors', 'locations', 'supervisors', 'subcontractors'];
 
 const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
   const [step, setStep] = useState(1);
@@ -75,13 +121,13 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [tempRole, setTempRole] = useState("職長");
   const [sigKey, setSigKey] = useState(0);
 
-  // ★追加: マスタ管理のタブ状態
-  const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
+  // ★追加: 工事名削除ターゲット
+  const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
 
-  // Plan Selection State
   const [planSelectionModal, setPlanSelectionModal] = useState(false);
   const [availablePlans, setAvailablePlans] = useState<SavedDraft[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<SafetyPlanReportData | null>(null);
+  const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
 
   useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); if (data.subcontractors.length > 0) { setTempCompany(data.subcontractors[0]); } } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
   useEffect(() => { if (masterData.subcontractors.length > 0 && !masterData.subcontractors.includes(tempCompany) && tempCompany !== "") { setTempCompany(masterData.subcontractors[0]); } }, [masterData.subcontractors, tempCompany]);
@@ -123,7 +169,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     setShowPreview(true);
   };
 
-  // ファイル名自動設定
   const handlePrint = () => {
     const d = new Date(report.date);
     const m = d.getMonth() + 1; 
@@ -135,42 +180,43 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
 
   const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
 
-  // --- Renders ---
-  
-  // ★変更: タブ付きマスタ管理画面
   const renderMasterManager = () => (
     <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
-        <h2 className="text-2xl font-bold text-gray-800"><i className="fa-solid fa-database mr-2"></i>マスタ管理</h2>
-        <button onClick={() => setIsMasterMode(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button>
-      </div>
+      <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b"><h2 className="text-2xl font-bold text-gray-800"><i className="fa-solid fa-database mr-2"></i>マスタ管理</h2><button onClick={() => setIsMasterMode(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button></div>
       
-      {/* タブボタン */}
       <div className="flex gap-4 mb-6">
-        <button 
-          onClick={() => setMasterTab('BASIC')} 
-          className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}
-        >
-          <i className="fa-solid fa-house-chimney mr-2"></i>基本・共通マスタ
-        </button>
-        <button 
-          onClick={() => setMasterTab('TRAINING')} 
-          className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}
-        >
-          <i className="fa-solid fa-clipboard-check mr-2"></i>安全訓練用マスタ
-        </button>
+        <button onClick={() => setMasterTab('BASIC')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-house-chimney mr-2"></i>基本・共通マスタ</button>
+        <button onClick={() => setMasterTab('TRAINING')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-clipboard-check mr-2"></i>安全訓練用マスタ</button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
         {MASTER_GROUPS[masterTab].map((key) => {
+           const k = key as keyof MasterData;
            const title = LABEL_MAP[key] || key;
            return (
              <MasterSection 
                key={key} 
                title={title} 
-               items={masterData[key as keyof MasterData]} 
-               onUpdate={async (newItems) => { const newData = { ...masterData, [key]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
-               onDeleteRequest={(index, item) => { const message = key === 'projects' ? `「${item}」を削除しますか？\n\n【注意】\nこの現場名で保存されている「全ての一時保存データ」も同時に削除されます。\nこの操作は取り消せません。` : `「${item}」を削除しますか？`; setConfirmModal({ isOpen: true, message, onConfirm: async () => { if (key === 'projects') await deleteDraftsByProject(item); const newItems = [...masterData[key as keyof MasterData]]; newItems.splice(index, 1); const newData = { ...masterData, [key]: newItems }; setMasterData(newData); await saveMasterData(newData); setConfirmModal(prev => ({ ...prev, isOpen: false })); } }); }} 
+               items={masterData[k]} 
+               onUpdate={async (newItems) => { const newData = { ...masterData, [k]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
+               onDeleteRequest={(index, item) => {
+                 // ★変更: 工事名削除時
+                 if (key === 'projects') {
+                   setProjectDeleteTarget({ index, name: item });
+                 } else {
+                   setConfirmModal({ 
+                     isOpen: true, 
+                     message: `「${item}」を削除しますか？`, 
+                     onConfirm: async () => { 
+                       const newItems = [...masterData[k]]; newItems.splice(index, 1); 
+                       const newData = { ...masterData, [k]: newItems }; 
+                       setMasterData(newData); 
+                       await saveMasterData(newData); 
+                       setConfirmModal(prev => ({ ...prev, isOpen: false })); 
+                     } 
+                   }); 
+                 }
+               }} 
              />
            )
         })}
@@ -197,49 +243,29 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     </div>
   );
 
-  // --- PREVIEW ---
-  const renderPreviewModal = () => (
-    <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-90 flex flex-col no-print">
-      <div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0">
-        <h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i> 印刷プレビュー</h2>
-        <div className="flex gap-4">
-          <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded">閉じる</button>
-          <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center">
-            <i className="fa-solid fa-print mr-2"></i> 保存して印刷
-          </button>
-        </div>
-      </div>
-      
-      <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
-        <div className="bg-white shadow-2xl" style={{ width: '794px', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
-          <DisasterCouncilPrintLayout data={report} />
-        </div>
-        {selectedPlan && (
-          <div className="bg-white shadow-2xl" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
-             <SafetyPlanPrintLayout data={selectedPlan} />
-          </div>
-        )}
-      </div>
-    </div>
+  if (isMasterMode) return (
+    <> 
+      {renderMasterManager()} 
+      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} /> 
+      {/* ★追加: 専用削除モーダル */}
+      {projectDeleteTarget && (
+        <ProjectDeleteModal 
+          isOpen={!!projectDeleteTarget} 
+          projectName={projectDeleteTarget.name}
+          onCancel={() => setProjectDeleteTarget(null)}
+          onConfirm={async () => {
+            const items = [...masterData.projects];
+            items.splice(projectDeleteTarget.index, 1);
+            await deleteDraftsByProject(projectDeleteTarget.name);
+            const newData = { ...masterData, projects: items };
+            setMasterData(newData);
+            await saveMasterData(newData);
+            setProjectDeleteTarget(null);
+          }}
+        />
+      )}
+    </>
   );
-
-  const renderPlanSelectionModal = () => {
-    if (!planSelectionModal) return null;
-    return (
-      <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-80 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 animate-fade-in">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">添付する安全管理計画表を選択</h3>
-          <p className="text-sm text-gray-600 mb-4">工事名「{report.project}」の計画表が見つかりました。</p>
-          <div className="space-y-3 mb-6 max-h-60 overflow-y-auto">
-             {availablePlans.map(plan => { const d = plan.data as SafetyPlanReportData; return ( <button key={plan.id} onClick={() => confirmPlanSelection(plan)} className="w-full text-left border rounded p-3 hover:bg-blue-50 transition-colors flex justify-between items-center"><div><div className="font-bold text-blue-800">{d.month}月度 計画表</div><div className="text-xs text-gray-500">更新: {new Date(plan.lastModified).toLocaleString('ja-JP')}</div></div><i className="fa-solid fa-chevron-right text-gray-400"></i></button> ) })}
-          </div>
-          <button onClick={() => setPlanSelectionModal(false)} className="w-full py-2 bg-gray-200 text-gray-700 rounded font-bold">キャンセル</button>
-        </div>
-      </div>
-    );
-  };
-
-  if (isMasterMode) return (<> {renderMasterManager()} <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} /> </>);
 
   return (
     <>
