@@ -154,9 +154,10 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const renderStep1 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 1: 表紙情報</h2>
-      <div className="form-control"><label className="label font-bold text-gray-700">工事名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none" value={report.project} onChange={(e) => updateReport('project', e.target.value)}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
-      <div className="form-control"><label className="label font-bold text-gray-700">実施月</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none" value={report.month} onChange={(e) => updateReport('month', parseInt(e.target.value))}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}月</option>))}</select></div>
-      <div className="form-control"><label className="label font-bold text-gray-700">施工者名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none" value={report.contractor} onChange={(e) => updateReport('contractor', e.target.value)}>{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+      {/* 修正: appearance-none を追加してiOSのデフォルトスタイルを解除 */}
+      <div className="form-control"><label className="label font-bold text-gray-700">工事名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.project} onChange={(e) => updateReport('project', e.target.value)}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+      <div className="form-control"><label className="label font-bold text-gray-700">実施月</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.month} onChange={(e) => updateReport('month', parseInt(e.target.value))}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}月</option>))}</select></div>
+      <div className="form-control"><label className="label font-bold text-gray-700">施工者名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.contractor} onChange={(e) => updateReport('contractor', e.target.value)}>{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
     </div>
   );
 
@@ -164,21 +165,21 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 2: 実施内容</h2>
       
-      {/* 修正箇所: h-11 を追加して高さを統一 */}
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="label text-sm font-bold text-gray-700">実施日</label>
           <input 
             type="date" 
-            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none"
+            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none"
             value={report.date} 
             onChange={(e) => updateReport('date', e.target.value)} 
           />
         </div>
         <div>
            <label className="label text-sm font-bold text-gray-700">場所</label>
+           {/* ★修正: appearance-none を追加し、iOS特有の丸みや高さをリセット */}
            <select 
-             className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none"
+             className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none"
              value={report.location} 
              onChange={(e) => updateReport('location', e.target.value)}
            >
@@ -192,7 +193,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <label className="label text-sm font-bold text-gray-700">開始時間</label>
           <input 
             type="time" 
-            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none"
+            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none"
             value={report.startTime} 
             onChange={(e) => updateReport('startTime', e.target.value)} 
           />
@@ -201,7 +202,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <label className="label text-sm font-bold text-gray-700">終了時間</label>
           <input 
             type="time" 
-            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none"
+            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none"
             value={report.endTime} 
             onChange={(e) => updateReport('endTime', e.target.value)} 
           />
@@ -210,8 +211,9 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
       <div>
           <label className="label text-sm font-bold text-gray-700">実施者</label>
+          {/* ★修正: appearance-none を追加 */}
           <select 
-            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none"
+            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none"
             value={report.instructor} 
             onChange={(e) => updateReport('instructor', e.target.value)}
           >
@@ -219,7 +221,39 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           </select>
       </div>
 
-      <div className="bg-gray-100 p-4 rounded-lg space-y-4"><h3 className="font-bold text-gray-700 mb-2">訓練内容</h3><div className="text-sm text-gray-600 pl-2 border-l-4 border-gray-300 space-y-2 py-1"><div className="flex gap-2"><span className="font-bold w-8">(1)</span><span>今月の災害防止目標 (固定)</span></div><div className="flex gap-2"><span className="font-bold w-8">(2)</span><span>今月の作業工程 (固定)</span></div></div><div className="space-y-3"><div className="flex items-center gap-2"><span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(3)</span><select className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm" value={report.topic} onChange={(e) => updateReport('topic', e.target.value)}>{masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}</select></div><div className="flex items-center gap-2"><span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(4)</span><select className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm" value={report.caution} onChange={(e) => updateReport('caution', e.target.value)}>{masterData.cautions.map(g => <option key={g} value={g}>{g}</option>)}</select></div></div><div className="text-sm text-gray-600 pl-2 border-l-4 border-gray-300 mt-2 space-y-2 py-1"><div className="flex gap-2"><span className="font-bold w-8">(5)</span><span>web資料・動画による安全教育 (固定)</span></div><div className="flex gap-2"><span className="font-bold w-8">(6)</span><span>質疑応答 (固定)</span></div></div></div>
+      <div className="bg-gray-100 p-4 rounded-lg space-y-4">
+        <h3 className="font-bold text-gray-700 mb-2">訓練内容</h3>
+        <div className="text-sm text-gray-600 pl-2 border-l-4 border-gray-300 space-y-2 py-1"><div className="flex gap-2"><span className="font-bold w-8">(1)</span><span>今月の災害防止目標 (固定)</span></div><div className="flex gap-2"><span className="font-bold w-8">(2)</span><span>今月の作業工程 (固定)</span></div></div>
+        
+        <div className="space-y-3">
+           <div className="flex items-center gap-2">
+             <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(3)</span>
+             {/* ★修正: appearance-none を追加 */}
+             <select 
+              className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm appearance-none"
+               value={report.topic} 
+               onChange={(e) => updateReport('topic', e.target.value)}
+              >
+               {masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+           </div>
+
+           <div className="flex items-center gap-2">
+             <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(4)</span>
+             {/* ★修正: appearance-none を追加 */}
+             <select 
+              className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm appearance-none"
+               value={report.caution} 
+               onChange={(e) => updateReport('caution', e.target.value)}
+              >
+               {masterData.cautions.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+           </div>
+        </div>
+        
+        <div className="text-sm text-gray-600 pl-2 border-l-4 border-gray-300 mt-2 space-y-2 py-1"><div className="flex gap-2"><span className="font-bold w-8">(5)</span><span>web資料・動画による安全教育 (固定)</span></div><div className="flex gap-2"><span className="font-bold w-8">(6)</span><span>質疑応答 (固定)</span></div></div>
+      </div>
+
       <div className="form-control"><label className="label font-bold flex justify-between text-gray-700"><span>現場写真 (黒板入り)</span><span className="text-xs font-normal bg-red-100 text-red-600 px-2 rounded border border-red-200">必須</span></label><input type="file" accept="image/*" className="w-full mt-2 text-sm text-gray-500" onChange={handlePhotoUpload} />{report.photoUrl && (<div className="mt-3"><img src={report.photoUrl} alt="preview" className="h-40 w-full object-contain border bg-gray-50 rounded" /></div>)}</div>
     </div>
   );
@@ -230,7 +264,21 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const renderStep3 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 3: 参加者署名</h2>
-      <div className="bg-white p-6 shadow rounded-lg border border-gray-200"><h3 className="font-bold text-lg mb-4 text-center">新規署名</h3><div className="mb-4"><label className="block text-sm font-bold text-gray-700 mb-1">会社名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-lg text-black outline-none" value={tempCompany} onChange={(e) => setTempCompany(e.target.value)}>{masterData.subcontractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div><div className="mb-2"><label className="block text-sm font-bold text-gray-700 mb-2 text-center">氏名 (手書き)</label><div className="w-full"><SignatureCanvas key={sigKey} onSave={(dataUrl) => { addSignature(tempCompany, dataUrl); }} onClear={() => {}} lineWidth={6} keepOpenOnSave={true} /></div></div></div>
+      <div className="bg-white p-6 shadow rounded-lg border border-gray-200">
+        <h3 className="font-bold text-lg mb-4 text-center">新規署名</h3>
+        <div className="mb-4">
+          <label className="block text-sm font-bold text-gray-700 mb-1">会社名</label>
+          {/* ★修正: appearance-none を追加 */}
+          <select 
+            className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-lg text-black outline-none appearance-none"
+            value={tempCompany}
+            onChange={(e) => setTempCompany(e.target.value)}
+          >
+             {masterData.subcontractors.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="mb-2"><label className="block text-sm font-bold text-gray-700 mb-2 text-center">氏名 (手書き)</label><div className="w-full"><SignatureCanvas key={sigKey} onSave={(dataUrl) => { addSignature(tempCompany, dataUrl); }} onClear={() => {}} lineWidth={6} keepOpenOnSave={true} /></div></div>
+      </div>
       <div className="mt-6"><h3 className="font-bold text-gray-700 mb-2">署名済みリスト ({report.signatures.length}名)</h3><div className="bg-white border rounded divide-y max-h-60 overflow-y-auto">{report.signatures.length === 0 && <div className="p-4 text-center text-gray-400">署名はまだありません</div>}{report.signatures.map((sig, idx) => (<div key={sig.id} className="p-3 flex items-center justify-between"><div className="flex items-center gap-3 flex-1 min-w-0"><span className="w-6 h-6 shrink-0 rounded-full bg-gray-200 text-xs flex items-center justify-center text-gray-700">{idx + 1}</span><div className="flex items-center gap-4 flex-1 min-w-0"><div className="text-sm font-bold text-gray-700 truncate flex-1">{sig.company}</div><div className="h-10 border border-gray-200 bg-gray-50 rounded cursor-pointer hover:border-blue-400 transition-colors flex items-center justify-center px-2 shrink-0" onClick={() => setPreviewSigUrl(sig.signatureDataUrl)} title="タップして拡大"><img src={sig.signatureDataUrl} alt="sig" className="h-full object-contain" /></div></div></div><button onClick={() => { setConfirmModal({ isOpen: true, message: `著名リスト${idx + 1}を削除しますか？`, onConfirm: () => { setReport(prev => ({...prev, signatures: prev.signatures.filter(s => s.id !== sig.id)})); setConfirmModal(prev => ({ ...prev, isOpen: false })); setHasUnsavedChanges(true); } }); }} className="ml-3 text-red-400 hover:text-red-600 p-2 shrink-0"><i className="fa-solid fa-trash"></i></button></div>))}</div></div>
     </div>
   );
