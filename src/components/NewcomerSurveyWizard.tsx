@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+Copyimport React, { useState, useEffect } from 'react';
 import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA } from '../types';
 import { getMasterData, saveDraft, saveMasterData, deleteDraftsByProject } from '../services/firebaseService';
 import SignatureCanvas from './SignatureCanvas';
@@ -12,9 +12,26 @@ interface Props {
 
 // --- 安全装置 ---
 const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
-  if (!data) return INITIAL_NEWCOMER_SURVEY_REPORT;
-  const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
-  return { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
+  let base = INITIAL_NEWCOMER_SURVEY_REPORT;
+  if (data) {
+    const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
+    base = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
+  }
+
+  // ★修正: 健康診断受診日の初期値設定 (未設定の場合のみ)
+  if (!base.healthCheckYear && !base.healthCheckMonth) {
+    const now = new Date();
+    // 令和変換: 西暦 - 2018
+    // 1年前の年
+    const lastYearReiwa = (now.getFullYear() - 1) - 2018; 
+    const currentMonth = now.getMonth() + 1;
+    
+    // 令和1年は1年とする
+    base.healthCheckYear = Math.max(1, lastYearReiwa);
+    base.healthCheckMonth = currentMonth;
+  }
+
+  return base;
 };
 
 // --- Modals ---
@@ -54,7 +71,7 @@ const MasterSection: React.FC<{title: string; items: string[]; onUpdate: (items:
 const LABEL_MAP: Record<string, string> = { projects: "工事名", supervisors: "実施者（職長・監督）", subcontractors: "協力会社名" };
 const MASTER_GROUPS: Record<string, string[]> = {
   BASIC: ['projects', 'supervisors', 'subcontractors'],
-  TRAINING: [] // 必要に応じて追加
+  TRAINING: []
 };
 
 const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
@@ -71,13 +88,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [sigKey, setSigKey] = useState(0);
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
   
-  // ★追加: エラー状態の管理
   const [errors, setErrors] = useState<Record<string, boolean>>({});
-
-  // ★追加: マスタ管理のタブ状態
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
-
-  // ★追加: 削除対象の管理
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
 
   useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
@@ -102,7 +114,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     setReport(prev => ({ ...prev, ...updates })); 
     setSaveStatus('idle'); 
     setHasUnsavedChanges(true); 
-    // 入力されたらエラーを解除
     const newErrors = { ...errors };
     Object.keys(updates).forEach(key => delete newErrors[key]);
     setErrors(newErrors);
@@ -110,7 +121,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const updateQual = (key: keyof Qualifications, value: any) => { setReport(prev => ({ ...prev, qualifications: { ...prev.qualifications, [key]: value } })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
-  // ★追加: STEP1のバリデーション
   const validateStep1 = () => {
     const newErrors: Record<string, boolean> = {};
     const r = report;
@@ -126,11 +136,12 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     if (!r.birthDay) newErrors.birthDay = true;
     if (!r.company) newErrors.company = true;
     
-    // subContractorRankは任意でも良いかもしれないが、一旦必須とするなら以下
-    if (!r.subcontractorRank) newErrors.subcontractorRank = true;
+    // subcontractorRankは任意
     
-    // 経験年数は0でもOKだが、空文字扱いでないか確認
-    if (r.experienceYears === undefined) newErrors.experienceYears = true;
+    // ★修正: 経験年数の「年」のみ必須
+    if (r.experienceYears === undefined || r.experienceYears === null || isNaN(Number(r.experienceYears))) {
+      newErrors.experienceYears = true;
+    }
     
     if (!r.jobType) newErrors.jobType = true;
     if (r.jobType === 'その他' && !r.jobTypeOther) newErrors.jobTypeOther = true;
@@ -144,12 +155,13 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     if (!r.emergencyContactPhone) newErrors.emergencyContactPhone = true;
     
     if (!r.healthCheckYear) newErrors.healthCheckYear = true;
+    // ★修正: 月も必須
+    if (!r.healthCheckMonth) newErrors.healthCheckMonth = true;
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // ★変更: バリデーション付きのNextハンドラ
   const handleNext = () => {
     if (step === 1) {
       if (!validateStep1()) {
@@ -161,7 +173,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   };
 
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => { /* 画像圧縮ロジック等は省略 */ };
   const handleTempSave = async () => { setSaveStatus('saving'); try { const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', report); setDraftId(newId); setSaveStatus('saved'); setHasUnsavedChanges(false); setTimeout(() => setSaveStatus('idle'), 2000); } catch (e) { console.error(e); alert("保存に失敗しました"); setSaveStatus('idle'); } };
 
   const handleSaveAndPrint = async () => {
@@ -184,7 +195,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
   const handleSignatureSave = (dataUrl: string) => { updateReport({ signatureDataUrl: dataUrl }); setSigKey(prev => prev + 1); };
 
-  // --- Helper for Error Styling ---
   const getErrorClass = (key: string) => errors[key] ? "border-red-500 bg-red-50 ring-1 ring-red-500" : "border-gray-300 bg-white";
 
   // --- RENDER STEPS ---
@@ -259,11 +269,12 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="form-control">
           <label className="label font-bold text-gray-700">現住所・電話番号</label>
           <input type="text" className={`w-full p-2 border rounded mb-2 ${getErrorClass('address')}`} placeholder="住所" value={report.address} onChange={(e) => updateReport({address: e.target.value})} />
-          <input type="text" className={`w-full p-2 border rounded ${getErrorClass('phone')}`} placeholder="電話番号" value={report.phone} onChange={(e) => updateReport({phone: e.target.value})} />
+          <input type="text" className={`w-48 p-2 border rounded ${getErrorClass('phone')}`} placeholder="電話番号" value={report.phone} onChange={(e) => updateReport({phone: e.target.value})} />
         </div>
 
-        {/* --- 緊急連絡先 (ここを修正) --- */}
-        <div className="form-control bg-gray-50 p-3 rounded">
+        {/* --- 緊急連絡先 (修正版) --- */}
+        {/* ★修正: w-fit, border-2 border-red-500 */}
+        <div className="form-control bg-gray-50 p-3 rounded border-2 border-red-500 w-fit">
           <label className="label font-bold text-gray-700 mb-2 block">緊急連絡先</label>
           
           <div className="mb-2">
@@ -286,7 +297,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="flex flex-wrap gap-3">
             <div>
               <label className="text-xs text-gray-500 font-bold mb-1 block">続柄</label>
               <select 
@@ -328,7 +339,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             <label className="label font-bold text-gray-700">健康診断受診日 (令和)</label>
             <div className="flex gap-1 items-center">
               <input type="number" className={`w-14 p-2 border rounded text-center ${getErrorClass('healthCheckYear')}`} value={report.healthCheckYear} onChange={(e)=>updateReport({healthCheckYear: parseInt(e.target.value)})} /><span>年</span>
-              <input type="number" className="w-12 p-2 border rounded text-center bg-white" value={report.healthCheckMonth} onChange={(e)=>updateReport({healthCheckMonth: parseInt(e.target.value)})} /><span>月</span>
+              <input type="number" className={`w-12 p-2 border rounded text-center ${getErrorClass('healthCheckMonth')}`} value={report.healthCheckMonth} onChange={(e)=>updateReport({healthCheckMonth: parseInt(e.target.value)})} /><span>月</span>
               <input type="number" className="w-12 p-2 border rounded text-center bg-white" value={report.healthCheckDay} onChange={(e)=>updateReport({healthCheckDay: parseInt(e.target.value)})} /><span>日</span>
             </div>
           </div>
@@ -515,8 +526,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   );
 };
 
-// --- Missing Component Definition for ProjectDeleteModal ---
-// (Previously missing in your snippet, re-adding just in case)
+// --- ProjectDeleteModal ---
 const ProjectDeleteModal: React.FC<{ isOpen: boolean; projectName: string; onConfirm: () => void; onCancel: () => void }> = ({ isOpen, projectName, onConfirm, onCancel }) => {
   const [pass, setPass] = useState('');
   if (!isOpen) return null;
