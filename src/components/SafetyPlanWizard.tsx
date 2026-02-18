@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  MasterData, SafetyPlanReportData, INITIAL_SAFETY_PLAN_REPORT, INITIAL_MASTER_DATA 
-} from '../types';
+import { MasterData, SafetyPlanReportData, INITIAL_SAFETY_PLAN_REPORT, INITIAL_MASTER_DATA } from '../types';
 import { getMasterData, saveDraft, saveMasterData, deleteDraftsByProject } from '../services/firebaseService';
 import { getDaysInMonth, getDay } from 'date-fns';
 
@@ -29,106 +27,49 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onCon
   );
 };
 
-// --- ★追加: 工事名削除専用のパスワード付きモーダル ---
-const ProjectDeleteModal: React.FC<{
-  isOpen: boolean;
-  projectName: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}> = ({ isOpen, projectName, onConfirm, onCancel }) => {
+const ProjectDeleteModal: React.FC<{ isOpen: boolean; projectName: string; onConfirm: () => void; onCancel: () => void; }> = ({ isOpen, projectName, onConfirm, onCancel }) => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-
   useEffect(() => { if (isOpen) { setPassword(""); setError(""); } }, [isOpen]);
   if (!isOpen) return null;
-
-  const handleConfirm = () => {
-    if (password === "4043") {
-      onConfirm();
-    } else {
-      setError("パスワードが間違っています");
-    }
-  };
-
+  const handleConfirm = () => { if (password === "4043") { onConfirm(); } else { setError("パスワードが間違っています"); } };
   return (
     <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-60 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 animate-fade-in border-l-8 border-red-600">
-        <h3 className="text-xl font-bold text-red-600 mb-4 flex items-center">
-          <i className="fa-solid fa-triangle-exclamation mr-2"></i>重要：削除の確認
-        </h3>
+        <h3 className="text-xl font-bold text-red-600 mb-4 flex items-center"><i className="fa-solid fa-triangle-exclamation mr-2"></i>重要：削除の確認</h3>
         <p className="text-gray-800 font-bold mb-2">工事名「{projectName}」を削除しますか？</p>
-        <div className="bg-red-50 p-3 rounded mb-4 text-sm text-red-800 leading-relaxed">
-          <strong>【注意】</strong><br/>
-          この操作を行うと、この工事名で保存されている<br/>
-          <span className="font-bold underline text-red-600 text-base">すべての一時保存データも同時に削除されます。</span><br/>
-          この操作は取り消せません。
-        </div>
-        
-        <div className="mb-6">
-          <label className="block text-xs font-bold text-gray-500 mb-1">管理者パスワードを入力 (4043)</label>
-          <input 
-            type="password" 
-            className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 outline-none text-lg tracking-widest"
-            placeholder="PASS"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          {error && <p className="text-red-500 text-xs mt-1 font-bold"><i className="fa-solid fa-circle-exclamation mr-1"></i>{error}</p>}
-        </div>
-
-        <div className="flex justify-end gap-3">
-          <button onClick={onCancel} className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600">キャンセル</button>
-          <button onClick={handleConfirm} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold shadow-md">完全削除を実行</button>
-        </div>
+        <div className="bg-red-50 p-3 rounded mb-4 text-sm text-red-800 leading-relaxed"><strong>【注意】</strong><br/>この操作を行うと、この工事名で保存されている<br/><span className="font-bold underline text-red-600 text-base">すべての一時保存データも同時に削除されます。</span><br/>この操作は取り消せません。</div>
+        <div className="mb-6"><label className="block text-xs font-bold text-gray-500 mb-1">管理者パスワードを入力 (4043)</label><input type="password" className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 outline-none text-lg tracking-widest" placeholder="PASS" value={password} onChange={(e) => setPassword(e.target.value)} />{error && <p className="text-red-500 text-xs mt-1 font-bold"><i className="fa-solid fa-circle-exclamation mr-1"></i>{error}</p>}</div>
+        <div className="flex justify-end gap-3"><button onClick={onCancel} className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600">キャンセル</button><button onClick={handleConfirm} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold shadow-md">完全削除を実行</button></div>
       </div>
     </div>
   );
 };
 
-// --- Master Manager ---
+// --- Master Manager (Updated) ---
 const MasterSection: React.FC<{
   title: string;
   items: string[];
   onUpdate: (items: string[]) => void;
   onDeleteRequest: (index: number, item: string) => void;
-}> = ({ title, items, onUpdate, onDeleteRequest }) => {
+  onBack: () => void;
+}> = ({ title, items, onUpdate, onDeleteRequest, onBack }) => {
   const [newItem, setNewItem] = useState("");
-  const handleAdd = () => {
-    if (newItem.trim()) {
-      onUpdate([...items, newItem.trim()]);
-      setNewItem("");
-    }
-  };
+  const handleAdd = () => { if (newItem.trim()) { onUpdate([...items, newItem.trim()]); setNewItem(""); } };
   return (
-    <div className="border border-gray-200 p-4 rounded-lg bg-white shadow-sm break-inside-avoid">
-      <h3 className="font-bold mb-3 text-lg text-gray-800 border-b pb-2 flex justify-between items-center">
-        {title}
-        <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{items.length}件</span>
-      </h3>
-      <ul className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-        {items.map((item, idx) => (
-          <li key={idx} className="flex justify-between items-center bg-gray-50 p-2 rounded hover:bg-gray-100 transition-colors">
-            <span className="text-sm text-gray-800 break-all mr-2">{item}</span>
-            <button 
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }}
-              className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors"
-            >
-              <i className="fa-solid fa-trash"></i>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <div className="flex gap-2">
-        <input 
-          type="text" 
-          className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm outline-none"
-          placeholder="新規項目..."
-          value={newItem}
-          onChange={(e) => setNewItem(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-        />
-        <button onClick={handleAdd} className="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 whitespace-nowrap"><i className="fa-solid fa-plus"></i></button>
+    <div className="bg-white rounded-lg shadow-sm h-full flex flex-col">
+      <div className="p-4 border-b flex items-center gap-3">
+        <button onClick={onBack} className="text-gray-500 hover:text-blue-600"><i className="fa-solid fa-arrow-left text-xl"></i></button>
+        <h3 className="font-bold text-lg text-gray-800 flex-1">{title} <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-2">{items.length}件</span></h3>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+        <ul className="space-y-2">
+          {items.map((item, idx) => (<li key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded hover:bg-gray-100 transition-colors"><span className="text-sm text-gray-800 break-all mr-2">{item}</span><button type="button" onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }} className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors"><i className="fa-solid fa-trash"></i></button></li>))}
+          {items.length === 0 && <li className="text-gray-400 text-sm italic text-center py-8">データがありません</li>}
+        </ul>
+      </div>
+      <div className="p-4 border-t bg-gray-50">
+        <div className="flex gap-2"><input type="text" className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white text-black outline-none focus:ring-2 focus:ring-blue-500" placeholder="新規項目を追加..." value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} /><button onClick={handleAdd} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md"><i className="fa-solid fa-plus mr-1"></i>追加</button></div>
       </div>
     </div>
   );
@@ -141,37 +82,12 @@ const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
 // --- Helpers for Holidays ---
 const isJapaneseHoliday = (date: Date): boolean => {
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  const day = date.getDate();
-
-  if (month === 1 && day === 1) return true; 
-  if (month === 2 && day === 11) return true; 
-  if (month === 2 && day === 23) return true; 
-  if (month === 4 && day === 29) return true; 
-  if (month === 5 && day === 3) return true; 
-  if (month === 5 && day === 4) return true; 
-  if (month === 5 && day === 5) return true; 
-  if (month === 8 && day === 11) return true; 
-  if (month === 11 && day === 3) return true; 
-  if (month === 11 && day === 23) return true; 
-
-  const getNthMonday = (y: number, m: number, n: number) => {
-    const firstDay = new Date(y, m - 1, 1).getDay();
-    const offset = firstDay === 1 ? 0 : (8 - firstDay) % 7;
-    return 1 + offset + (n - 1) * 7;
-  };
-
-  if (month === 1 && day === getNthMonday(year, 1, 2)) return true; 
-  if (month === 7 && day === getNthMonday(year, 7, 3)) return true; 
-  if (month === 9 && day === getNthMonday(year, 9, 3)) return true; 
-  if (month === 10 && day === getNthMonday(year, 10, 2)) return true; 
-
-  const vernal = Math.floor(20.8431 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
-  const autumnal = Math.floor(23.2488 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
-  if (month === 3 && day === vernal) return true;
-  if (month === 9 && day === autumnal) return true;
-
+  const year = date.getFullYear(); const month = date.getMonth() + 1; const day = date.getDate();
+  if (month === 1 && day === 1) return true; if (month === 2 && day === 11) return true; if (month === 2 && day === 23) return true; if (month === 4 && day === 29) return true; if (month === 5 && day === 3) return true; if (month === 5 && day === 4) return true; if (month === 5 && day === 5) return true; if (month === 8 && day === 11) return true; if (month === 11 && day === 3) return true; if (month === 11 && day === 23) return true;
+  const getNthMonday = (y: number, m: number, n: number) => { const firstDay = new Date(y, m - 1, 1).getDay(); const offset = firstDay === 1 ? 0 : (8 - firstDay) % 7; return 1 + offset + (n - 1) * 7; };
+  if (month === 1 && day === getNthMonday(year, 1, 2)) return true; if (month === 7 && day === getNthMonday(year, 7, 3)) return true; if (month === 9 && day === getNthMonday(year, 9, 3)) return true; if (month === 10 && day === getNthMonday(year, 10, 2)) return true;
+  const vernal = Math.floor(20.8431 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4)); const autumnal = Math.floor(23.2488 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+  if (month === 3 && day === vernal) return true; if (month === 9 && day === autumnal) return true;
   return false;
 };
 
@@ -188,222 +104,54 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previewScale, setPreviewScale] = useState(1);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
   
-  // ★追加: 工事名削除ターゲット
+  // Master Management State
+  const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
+  const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
 
   useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
+  useEffect(() => { const handleResize = () => { const A4_WIDTH_MM = 297; const MM_TO_PX = 3.78; const A4_WIDTH_PX = A4_WIDTH_MM * MM_TO_PX; const MARGIN = 40; const availableWidth = window.innerWidth - MARGIN; let scale = availableWidth / A4_WIDTH_PX; if (scale > 1.2) scale = 1.2; setPreviewScale(scale); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, []);
 
-  useEffect(() => {
-    const handleResize = () => {
-      const A4_WIDTH_MM = 297; 
-      const MM_TO_PX = 3.78; 
-      const A4_WIDTH_PX = A4_WIDTH_MM * MM_TO_PX; 
-      const MARGIN = 40; 
-      
-      const availableWidth = window.innerWidth - MARGIN;
-      let scale = availableWidth / A4_WIDTH_PX;
-      if (scale > 1.2) scale = 1.2; 
-      
-      setPreviewScale(scale);
-    };
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const daysInMonth = useMemo(() => { const date = new Date(report.year, report.month - 1, 1); const totalDays = getDaysInMonth(date); const days = []; for (let i = 1; i <= totalDays; i++) { const current = new Date(report.year, report.month - 1, i); const isSun = getDay(current) === 0; const isSat = getDay(current) === 6; const isHol = isJapaneseHoliday(current); let colorClass = ""; let bgClass = ""; if (isSun || isHol) { colorClass = "text-red-600"; bgClass = "bg-red-50"; } else if (isSat) { colorClass = "text-blue-600"; bgClass = "bg-blue-50"; } days.push({ date: i, dayOfWeek: WEEKDAYS[getDay(current)], colorClass, bgClass }); } return days; }, [report.year, report.month]);
+  const bottomColSpans = useMemo(() => { const totalDays = daysInMonth.length; const baseSpan = Math.floor(totalDays / 5); const remainder = totalDays % 5; return Array.from({length: 5}).map((_, i) => baseSpan + (i < remainder ? 1 : 0)); }, [daysInMonth.length]);
 
-  // --- Helpers ---
-  const daysInMonth = useMemo(() => {
-    const date = new Date(report.year, report.month - 1, 1);
-    const totalDays = getDaysInMonth(date);
-    const days = [];
-    for (let i = 1; i <= totalDays; i++) {
-      const current = new Date(report.year, report.month - 1, i);
-      const isSun = getDay(current) === 0;
-      const isSat = getDay(current) === 6;
-      const isHol = isJapaneseHoliday(current);
-      
-      let colorClass = "";
-      let bgClass = "";
+  const updateReport = (updates: Partial<SafetyPlanReportData>) => { setReport(prev => ({ ...prev, ...updates })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
+  const handleSave = async () => { setSaveStatus('saving'); try { const newId = await saveDraft(draftId, 'SAFETY_PLAN', report); setDraftId(newId); setSaveStatus('saved'); setHasUnsavedChanges(false); setTimeout(() => setSaveStatus('idle'), 2000); } catch (e) { console.error(e); alert("保存に失敗しました"); setSaveStatus('idle'); } };
+  const handlePrint = async () => { setSaveStatus('saving'); try { const newId = await saveDraft(draftId, 'SAFETY_PLAN', report); setDraftId(newId); setSaveStatus('saved'); setHasUnsavedChanges(false); setTimeout(() => setSaveStatus('idle'), 2000); setTimeout(() => window.print(), 100); } catch (e) { alert("保存に失敗しました"); setSaveStatus('idle'); } };
+  const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
 
-      if (isSun || isHol) {
-         colorClass = "text-red-600";
-         bgClass = "bg-red-50";
-      } else if (isSat) {
-         colorClass = "text-blue-600";
-         bgClass = "bg-blue-50";
-      }
+  const handleCellClick = (rowId: string, day: number) => { if (drawingRowId === null) { setDrawingRowId(rowId); setDrawStartDay(day); } else { if (drawingRowId !== rowId) { setDrawingRowId(rowId); setDrawStartDay(day); } else { if (drawStartDay !== null) { const start = Math.min(drawStartDay, day); const end = Math.max(drawStartDay, day); const newRows = report.processRows.map(row => { if (row.id === rowId) { const cleanedBars = row.bars.filter(b => b.endDay < start || b.startDay > end); return { ...row, bars: [...cleanedBars, { startDay: start, endDay: end }] }; } return row; }); updateReport({ processRows: newRows }); } setDrawingRowId(null); setDrawStartDay(null); } } };
+  const isCellActive = (rowId: string, day: number) => { const row = report.processRows.find(r => r.id === rowId); if (!row) return false; return row.bars.some(b => day >= b.startDay && day <= b.endDay); };
+  const isCellInDraft = (rowId: string, day: number) => { if (drawingRowId !== rowId || drawStartDay === null) return false; return day === drawStartDay; };
 
-      days.push({
-        date: i,
-        dayOfWeek: WEEKDAYS[getDay(current)],
-        colorClass,
-        bgClass
-      });
-    }
-    return days;
-  }, [report.year, report.month]);
+  const borderOuter = "border-2 border-black"; const borderThin = "border border-black"; const headerBg = "bg-cyan-100"; const inputBase = "w-full h-full bg-transparent outline-none text-center font-serif"; const selectBase = "w-full h-full bg-transparent outline-none text-center appearance-none font-serif text-center-last";
 
-  const bottomColSpans = useMemo(() => {
-    const totalDays = daysInMonth.length;
-    const baseSpan = Math.floor(totalDays / 5);
-    const remainder = totalDays % 5;
-    return Array.from({length: 5}).map((_, i) => baseSpan + (i < remainder ? 1 : 0));
-  }, [daysInMonth.length]);
-
-  const updateReport = (updates: Partial<SafetyPlanReportData>) => {
-    setReport(prev => ({ ...prev, ...updates }));
-    setSaveStatus('idle');
-    setHasUnsavedChanges(true); 
-  };
-
-  const handleSave = async () => {
-    setSaveStatus('saving');
-    try {
-      const newId = await saveDraft(draftId, 'SAFETY_PLAN', report);
-      setDraftId(newId);
-      setSaveStatus('saved');
-      setHasUnsavedChanges(false); 
-      setTimeout(() => setSaveStatus('idle'), 2000);
-    } catch (e) {
-      console.error(e);
-      alert("保存に失敗しました");
-      setSaveStatus('idle');
-    }
-  };
-
-  const handlePrint = async () => {
-    setSaveStatus('saving');
-    try {
-      const newId = await saveDraft(draftId, 'SAFETY_PLAN', report);
-      setDraftId(newId);
-      setSaveStatus('saved');
-      setHasUnsavedChanges(false); 
-      setTimeout(() => setSaveStatus('idle'), 2000);
-      setTimeout(() => window.print(), 100);
-    } catch (e) {
-      alert("保存に失敗しました");
-      setSaveStatus('idle');
-    }
-  };
-
-  const handleHomeClick = () => {
-    if (hasUnsavedChanges) {
-      setConfirmModal({
-        isOpen: true,
-        message: "保存されていない変更があります。\n保存せずにホームに戻りますか？",
-        onConfirm: () => {
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
-          onBackToMenu();
-        }
-      });
-    } else {
-      onBackToMenu();
-    }
-  };
-
-  // Drawing Logic
-  const handleCellClick = (rowId: string, day: number) => {
-    if (drawingRowId === null) {
-      setDrawingRowId(rowId);
-      setDrawStartDay(day);
-    } else {
-      if (drawingRowId !== rowId) {
-        setDrawingRowId(rowId);
-        setDrawStartDay(day);
-      } else {
-        if (drawStartDay !== null) {
-          const start = Math.min(drawStartDay, day);
-          const end = Math.max(drawStartDay, day);
-          const newRows = report.processRows.map(row => {
-            if (row.id === rowId) {
-              const cleanedBars = row.bars.filter(b => b.endDay < start || b.startDay > end);
-              return { ...row, bars: [...cleanedBars, { startDay: start, endDay: end }] };
-            }
-            return row;
-          });
-          updateReport({ processRows: newRows });
-        }
-        setDrawingRowId(null);
-        setDrawStartDay(null);
-      }
-    }
-  };
-
-  const isCellActive = (rowId: string, day: number) => {
-    const row = report.processRows.find(r => r.id === rowId);
-    if (!row) return false;
-    return row.bars.some(b => day >= b.startDay && day <= b.endDay);
-  };
-
-  const isCellInDraft = (rowId: string, day: number) => {
-    if (drawingRowId !== rowId || drawStartDay === null) return false;
-    return day === drawStartDay;
-  };
-
-  // --- Styles ---
-  const borderOuter = "border-2 border-black";
-  const borderThin = "border border-black";
-  const headerBg = "bg-cyan-100";
-  const inputBase = "w-full h-full bg-transparent outline-none text-center font-serif";
-  const selectBase = "w-full h-full bg-transparent outline-none text-center appearance-none font-serif text-center-last";
-
+  // --- RENDER MASTER MANAGER ---
   const renderMasterManager = () => (
-    <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
-        <h2 className="text-2xl font-bold text-gray-800">
-          <i className="fa-solid fa-database mr-2"></i>マスタ管理
-        </h2>
-        <button 
-          onClick={() => setIsMasterMode(false)} 
-          className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"
-        >
-          <i className="fa-solid fa-xmark mr-1"></i>閉じる
-        </button>
-      </div>
-
-      <div className="flex gap-4 mb-6">
-        <button onClick={() => setMasterTab('BASIC')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-house-chimney mr-2"></i>基本・共通マスタ</button>
-        <button onClick={() => setMasterTab('TRAINING')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-clipboard-check mr-2"></i>安全訓練用マスタ</button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
-        {MASTER_GROUPS[masterTab].map((key) => {
-           const title = LABEL_MAP[key] || key;
-           return (
-             <MasterSection 
-               key={key} 
-               title={title} 
-               items={masterData[key as keyof MasterData]} 
-               onUpdate={async (newItems) => {
-                 const newData = { ...masterData, [key]: newItems };
-                 setMasterData(newData);
-                 await saveMasterData(newData);
-               }} 
-               onDeleteRequest={(index, item) => {
-                 // ★変更: 工事名削除時
-                 if (key === 'projects') {
-                   setProjectDeleteTarget({ index, name: item });
-                 } else {
-                   setConfirmModal({
-                     isOpen: true,
-                     message: `「${item}」を削除しますか？`,
-                     onConfirm: async () => {
-                       const newItems = [...masterData[key as keyof MasterData]];
-                       newItems.splice(index, 1);
-                       const newData = { ...masterData, [key]: newItems };
-                       setMasterData(newData);
-                       await saveMasterData(newData);
-                       setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                     }
-                   });
-                 }
-               }} 
-             />
-           )
-        })}
-      </div>
+    <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen flex flex-col">
+      <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b"><h2 className="text-2xl font-bold text-gray-800"><i className="fa-solid fa-database mr-2"></i>マスタ管理</h2><button onClick={() => { setIsMasterMode(false); setSelectedMasterKey(null); }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button></div>
+      {selectedMasterKey ? (
+        <div className="flex-1 overflow-hidden">
+          <MasterSection 
+            title={LABEL_MAP[selectedMasterKey]} items={masterData[selectedMasterKey]} onBack={() => setSelectedMasterKey(null)}
+            onUpdate={async (newItems) => { const newData = { ...masterData, [selectedMasterKey]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
+            onDeleteRequest={(index, item) => { if (selectedMasterKey === 'projects') { setProjectDeleteTarget({ index, name: item }); } else { setConfirmModal({ isOpen: true, message: `「${item}」を削除しますか？`, onConfirm: async () => { const newItems = [...masterData[selectedMasterKey]]; newItems.splice(index, 1); const newData = { ...masterData, [selectedMasterKey]: newItems }; setMasterData(newData); await saveMasterData(newData); setConfirmModal(prev => ({ ...prev, isOpen: false })); } }); } }} 
+          />
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-4 mb-6 shrink-0">
+            <button onClick={() => setMasterTab('BASIC')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-house-chimney mr-2"></i>基本・共通マスタ</button>
+            <button onClick={() => setMasterTab('TRAINING')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-list-check mr-2"></i>各種項目マスタ</button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
+            {MASTER_GROUPS[masterTab].map((key) => (
+              <button key={key} onClick={() => setSelectedMasterKey(key as keyof MasterData)} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group"><div><h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3><p className="text-xs text-gray-500">{masterData[key as keyof MasterData].length} 件の登録</p></div><div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors"><i className="fa-solid fa-chevron-right"></i></div></button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 
@@ -411,23 +159,11 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     <div className="p-[10mm] w-full h-full flex flex-col font-serif">
       <div className="flex justify-between items-start mb-2 h-[38mm]">
         <div className="flex-1 flex flex-col justify-center pb-2 h-full">
-           <div className="flex items-end mb-4 pl-4">
-              <span className="text-xl">令和</span>
-              <select className="w-12 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.year - 2018} onChange={(e)=>updateReport({year: 2018 + parseInt(e.target.value||'0')})}>{Array.from({length: 30}, (_, i) => i + 1).map(y => (<option key={y} value={y}>{y}</option>))}</select><span className="text-xl mr-4">年</span>
-              <select className="w-10 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.month} onChange={(e)=>updateReport({month: parseInt(e.target.value||'0')})}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}</option>))}</select><span className="text-xl mr-2">月度</span>
-              <h1 className="text-3xl font-bold border-b-2 border-black ml-4 px-2 tracking-widest">工事施工安全管理計画表</h1>
-           </div>
-           <div className="flex flex-col gap-1 pl-4 text-sm">
-              <div className="flex items-center"><span className="font-bold mr-2 w-16 text-right">工事名 :</span><select className="border-b border-black outline-none bg-transparent min-w-[300px] max-w-[500px]" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
-              <div className="flex items-center"><span className="font-bold mr-2 w-16 text-right">作業所 :</span><select className="border-b border-black outline-none bg-transparent min-w-[200px]" value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>{masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
-           </div>
+           <div className="flex items-end mb-4 pl-4"><span className="text-xl">令和</span><select className="w-12 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.year - 2018} onChange={(e)=>updateReport({year: 2018 + parseInt(e.target.value||'0')})}>{Array.from({length: 30}, (_, i) => i + 1).map(y => (<option key={y} value={y}>{y}</option>))}</select><span className="text-xl mr-4">年</span><select className="w-10 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.month} onChange={(e)=>updateReport({month: parseInt(e.target.value||'0')})}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}</option>))}</select><span className="text-xl mr-2">月度</span><h1 className="text-3xl font-bold border-b-2 border-black ml-4 px-2 tracking-widest">工事施工安全管理計画表</h1></div>
+           <div className="flex flex-col gap-1 pl-4 text-sm"><div className="flex items-center"><span className="font-bold mr-2 w-16 text-right">工事名 :</span><select className="border-b border-black outline-none bg-transparent min-w-[300px] max-w-[500px]" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div><div className="flex items-center"><span className="font-bold mr-2 w-16 text-right">作業所 :</span><select className="border-b border-black outline-none bg-transparent min-w-[200px]" value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>{masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}</select></div></div>
         </div>
-        <div className="w-[100mm] h-full flex flex-col justify-end">
-           <div className="text-[10px] text-right mb-0.5">（作成日：<input type="date" className="bg-transparent text-[10px] w-24 text-right font-serif" value={report.createdDate} onChange={(e)=>updateReport({createdDate: e.target.value})} />）</div>
-           <table className={`w-full ${borderOuter} text-[10px] border-collapse`}><colgroup><col className="w-[15%]" /><col className="w-[25%]" /><col className="w-[35%]" /><col className="w-[25%]" /></colgroup><thead><tr className={headerBg}><th className={`${borderThin} py-0.5 font-normal`}>行事予定</th><th className={`${borderThin} py-0.5 font-normal`}>月日</th><th className={`${borderThin} py-0.5 font-normal`}>役職</th><th className={`${borderThin} py-0.5 font-normal`}>氏名</th></tr></thead><tbody><tr><td className={`${borderThin} text-center`}>安全訓練</td><td className={`${borderThin}`}><input type="date" className={inputBase} value={report.trainingDate} onChange={(e)=>updateReport({trainingDate: e.target.value})} /></td><td className={`${borderThin} text-center`}>統括安全衛生責任者</td><td className={`${borderThin}`}><select className={selectBase} value={report.trainingLeader} onChange={(e)=>updateReport({trainingLeader: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select></td></tr><tr><td className={`${borderThin} text-center`}>災害防止協議会</td><td className={`${borderThin}`}><input type="date" className={inputBase} value={report.councilDate} onChange={(e)=>updateReport({councilDate: e.target.value})} /></td><td className={`${borderThin} text-center`}>副統括安全衛生責任者</td><td className={`${borderThin}`}><select className={selectBase} value={report.councilLeader} onChange={(e)=>updateReport({councilLeader: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select></td></tr><tr><td className={`${borderThin} text-center`}>社内パトロール</td><td className={`${borderThin}`}><input type="date" className={inputBase} value={report.patrolDate} onChange={(e)=>updateReport({patrolDate: e.target.value})} /></td><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td></tr><tr><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} text-center`}>作成者</td><td className={`${borderThin}`}><select className={selectBase} value={report.author} onChange={(e)=>updateReport({author: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select></td></tr></tbody></table>
-        </div>
+        <div className="w-[100mm] h-full flex flex-col justify-end"><div className="text-[10px] text-right mb-0.5">（作成日：<input type="date" className="bg-transparent text-[10px] w-24 text-right font-serif" value={report.createdDate} onChange={(e)=>updateReport({createdDate: e.target.value})} />）</div><table className={`w-full ${borderOuter} text-[10px] border-collapse`}><colgroup><col className="w-[15%]" /><col className="w-[25%]" /><col className="w-[35%]" /><col className="w-[25%]" /></colgroup><thead><tr className={headerBg}><th className={`${borderThin} py-0.5 font-normal`}>行事予定</th><th className={`${borderThin} py-0.5 font-normal`}>月日</th><th className={`${borderThin} py-0.5 font-normal`}>役職</th><th className={`${borderThin} py-0.5 font-normal`}>氏名</th></tr></thead><tbody><tr><td className={`${borderThin} text-center`}>安全訓練</td><td className={`${borderThin}`}><input type="date" className={inputBase} value={report.trainingDate} onChange={(e)=>updateReport({trainingDate: e.target.value})} /></td><td className={`${borderThin} text-center`}>統括安全衛生責任者</td><td className={`${borderThin}`}><select className={selectBase} value={report.trainingLeader} onChange={(e)=>updateReport({trainingLeader: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select></td></tr><tr><td className={`${borderThin} text-center`}>災害防止協議会</td><td className={`${borderThin}`}><input type="date" className={inputBase} value={report.councilDate} onChange={(e)=>updateReport({councilDate: e.target.value})} /></td><td className={`${borderThin} text-center`}>副統括安全衛生責任者</td><td className={`${borderThin}`}><select className={selectBase} value={report.councilLeader} onChange={(e)=>updateReport({councilLeader: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select></td></tr><tr><td className={`${borderThin} text-center`}>社内パトロール</td><td className={`${borderThin}`}><input type="date" className={inputBase} value={report.patrolDate} onChange={(e)=>updateReport({patrolDate: e.target.value})} /></td><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td></tr><tr><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} text-center`}>作成者</td><td className={`${borderThin}`}><select className={selectBase} value={report.author} onChange={(e)=>updateReport({author: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select></td></tr></tbody></table></div>
       </div>
-
       <div className="flex-1 flex flex-col border-2 border-black overflow-hidden relative">
          <table className="w-full h-full border-collapse table-fixed text-[10px]">
            <colgroup><col className="w-[35mm]" />{daysInMonth.map(d => <col key={d.date} />)}<col className="w-[10mm]" /></colgroup>
@@ -462,8 +198,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   if (isMasterMode) return (
     <>
       {renderMasterManager()}
-      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
-      {/* ★追加: 専用削除モーダル */}
+      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} />
       {projectDeleteTarget && (
         <ProjectDeleteModal 
           isOpen={!!projectDeleteTarget} 
@@ -492,7 +227,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
       {showPreview && (<div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-95 flex flex-col no-print"><div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0"><h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i>印刷プレビュー</h2><div className="flex gap-4"><button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500 transition-colors">閉じる</button><button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center hover:bg-green-500 transition-colors"><i className="fa-solid fa-print mr-2"></i> 保存して印刷</button></div></div><div className="flex-1 overflow-y-auto p-8 flex justify-center items-start bg-gray-800"><div style={{ width: '297mm', transform: `scale(${previewScale})`, transformOrigin: 'top center', marginBottom: `${(previewScale - 1) * 100}%` }}><div className="bg-white shadow-2xl">{renderReportSheet(true)}</div></div></div></div>)}
       <div className="hidden print:block"><style>{`@media print { @page { size: landscape; } }`}</style><div className="print-page-landscape">{renderReportSheet(true)}</div></div>
       <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
-      
       {/* ★追加: 専用削除モーダル */}
       {projectDeleteTarget && (
         <ProjectDeleteModal 
