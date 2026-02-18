@@ -12,7 +12,7 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
   const borderClass = "border-b border-r border-black";
   
   const CheckBox = ({ checked, label }: { checked: boolean | undefined; label: string }) => (
-    <div className="flex items-center text-[11px] leading-tight mb-0.5">
+    <div className="flex items-center text-[10px] leading-tight mb-0.5">
       <div className={`w-3.5 h-3.5 border border-black flex items-center justify-center mr-1.5 text-[10px] shrink-0 font-sans`}>
         {checked ? "✔" : ""}
       </div>
@@ -37,7 +37,6 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
               <span className="font-bold text-base">氏　　　名</span>
             </div>
             <div className={`w-64 ${borderClass} p-1 flex flex-col justify-center`}>
-               {/* ★変更: 分割された氏名をスペース繋ぎで表示 */}
                <div className="text-xs text-center w-full mb-0.5">{data.furiganaSei}　{data.furiganaMei}</div>
                <div className="text-xl text-center font-bold">{data.nameSei}　{data.nameMei}</div>
             </div>
@@ -147,7 +146,6 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                氏名
              </div>
              <div className={`flex-1 ${borderClass} px-3 flex items-center text-sm`}>
-               {/* ★変更: 分割された氏名をスペース繋ぎで表示 */}
                {data.emergencyContactSei}　{data.emergencyContactMei}
              </div>
              <div className={`w-12 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-[10px]`}>
@@ -174,7 +172,6 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
               <span className="text-lg font-bold w-6 text-center">{data.bloodType}</span>
               <span className="text-xs">型</span>
               <span className="ml-4 text-xs font-bold">（ ＲＨ </span>
-              {/* ★変更: 不明の場合は空欄 */}
               <span className="w-10 text-center border-b border-black text-lg font-bold">
                 {data.bloodTypeRh === 'Plus' ? '+' : data.bloodTypeRh === 'Minus' ? '-' : ''}
               </span>
@@ -215,7 +212,7 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
              </div>
           </div>
 
-          {/* --- QUALIFICATIONS SECTION --- */}
+          {/* --- QUALIFICATIONS SECTION (★修正: 資格項目の追加) --- */}
           <div className="p-4 flex-1 flex flex-col border-b border-black">
              <div className="font-bold text-xs mb-3">あなたが現在取得している資格にレを記入して下さい。</div>
              
@@ -254,6 +251,13 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                 <div className="flex flex-col pl-2">
                    <div className="font-bold text-[10px] mb-2 text-center bg-gray-100 py-0.5">【 その他 】</div>
                    <CheckBox checked={qual.foreman} label="職長教育" />
+                   
+                   {/* ★追加: 運転免許系の表示 */}
+                   <div className="mt-1 pt-1 border-t border-dashed border-gray-300"></div>
+                   <CheckBox checked={(qual as any).license_regular} label="普通自動車免許" />
+                   <CheckBox checked={(qual as any).license_large} label="大型自動車免許" />
+                   <CheckBox checked={(qual as any).license_large_special} label="大型特殊自動車免許" />
+                   <CheckBox checked={(qual as any).license_towing} label="牽引自動車免許" />
                    
                    <div className="mt-auto pt-2">
                       <div className="text-[9px] font-bold mb-1 text-gray-600">
