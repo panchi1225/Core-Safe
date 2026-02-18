@@ -1,4 +1,4 @@
-Copyimport React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA } from '../types';
 import { getMasterData, saveDraft, saveMasterData, deleteDraftsByProject } from '../services/firebaseService';
 import SignatureCanvas from './SignatureCanvas';
