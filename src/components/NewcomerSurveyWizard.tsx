@@ -17,6 +17,7 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
     const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
     base = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
   }
+  // ★修正: 自動設定ロジックを削除し、初期状態を空にする
   return base;
 };
 
@@ -73,7 +74,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [sigKey, setSigKey] = useState(0);
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
-  const [showSigModal, setShowSigModal] = useState(false);
   
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
@@ -123,6 +123,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     if (!r.birthDay) newErrors.birthDay = true;
     if (!r.company) newErrors.company = true;
     
+    // subcontractorRankは任意
+    
+    // 経験年数の「年」のみ必須
     if (r.experienceYears === undefined || r.experienceYears === null || isNaN(Number(r.experienceYears))) {
       newErrors.experienceYears = true;
     }
@@ -156,44 +159,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   };
 
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
-  
-  // ★修正: 一時保存時の署名チェック
-  const handleTempSave = async () => { 
-    if (!report.signatureDataUrl) {
-      alert("署名がありません。\nSTEP3で署名を行ってください。");
-      return;
-    }
-
-    setSaveStatus('saving'); 
-    try { 
-      const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', report); 
-      setDraftId(newId); 
-      setSaveStatus('saved'); 
-      setHasUnsavedChanges(false); 
-      setTimeout(() => setSaveStatus('idle'), 2000); 
-    } catch (e) { 
-      console.error(e); 
-      alert("保存に失敗しました"); 
-      setSaveStatus('idle'); 
-    } 
-  };
-
-  const handlePreviewClick = () => {
-    // ★修正: プレビューボタン押下時の署名チェック
-    if (!report.signatureDataUrl) {
-      alert("署名がありません。\nSTEP3で署名を行ってください。");
-      return;
-    }
-    setShowPreview(true);
-  };
+  const handleTempSave = async () => { setSaveStatus('saving'); try { const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', report); setDraftId(newId); setSaveStatus('saved'); setHasUnsavedChanges(false); setTimeout(() => setSaveStatus('idle'), 2000); } catch (e) { console.error(e); alert("保存に失敗しました"); setSaveStatus('idle'); } };
 
   const handleSaveAndPrint = async () => {
-    // ★修正: 署名チェック
-    if (!report.signatureDataUrl) {
-      alert("署名がありません。\nSTEP3で署名を行ってください。");
-      return;
-    }
-
     setSaveStatus('saving');
     try {
       const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', report);
@@ -211,12 +179,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   };
 
   const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
-  
-  const handleSignatureSave = (dataUrl: string) => { 
-    updateReport({ signatureDataUrl: dataUrl }); 
-    setSigKey(prev => prev + 1); 
-    setShowSigModal(false); 
-  };
+  const handleSignatureSave = (dataUrl: string) => { updateReport({ signatureDataUrl: dataUrl }); setSigKey(prev => prev + 1); };
 
   const getErrorClass = (key: string) => errors[key] ? "border-red-500 bg-red-50 ring-1 ring-red-500" : "border-gray-300 bg-white";
 
@@ -292,10 +255,11 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="form-control">
           <label className="label font-bold text-gray-700">現住所・電話番号</label>
           <input type="text" className={`w-full p-2 border rounded mb-2 ${getErrorClass('address')}`} placeholder="住所" value={report.address} onChange={(e) => updateReport({address: e.target.value})} />
-          {/* ★修正: プレースホルダー変更 */}
-          <input type="text" className={`w-48 p-2 border rounded ${getErrorClass('phone')}`} placeholder="090-0000-0000" value={report.phone} onChange={(e) => updateReport({phone: e.target.value})} />
+          <input type="text" className={`w-48 p-2 border rounded ${getErrorClass('phone')}`} placeholder="電話番号" value={report.phone} onChange={(e) => updateReport({phone: e.target.value})} />
         </div>
 
+        {/* --- 緊急連絡先 (修正版) --- */}
+        {/* ★修正: w-fit, border-2 border-red-500 */}
         <div className="form-control bg-gray-50 p-3 rounded border-2 border-red-500 w-fit">
           <label className="label font-bold text-gray-700 mb-2 block">緊急連絡先</label>
           
@@ -346,6 +310,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             </div>
           </div>
         </div>
+        {/* --- 緊急連絡先 終了 --- */}
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
@@ -406,14 +371,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
              </div>
              <div className="bg-white p-4 rounded border shadow-sm">
                <h3 className="font-bold border-b mb-3">その他</h3>
-               <label className="flex items-center gap-2 cursor-pointer mb-2"><input type="checkbox" checked={qual.foreman} onChange={(e)=>updateQual('foreman', e.target.checked)} />職長教育</label>
-               
-               {/* ★修正: 運転免許4種追加 */}
-               <label className="flex items-center gap-2 cursor-pointer mb-1"><input type="checkbox" checked={(qual as any).license_regular} onChange={(e)=>updateQual('license_regular' as any, e.target.checked)} />普通自動車免許</label>
-               <label className="flex items-center gap-2 cursor-pointer mb-1"><input type="checkbox" checked={(qual as any).license_large} onChange={(e)=>updateQual('license_large' as any, e.target.checked)} />大型自動車免許</label>
-               <label className="flex items-center gap-2 cursor-pointer mb-1"><input type="checkbox" checked={(qual as any).license_large_special} onChange={(e)=>updateQual('license_large_special' as any, e.target.checked)} />大型特殊自動車免許</label>
-               <label className="flex items-center gap-2 cursor-pointer mb-4"><input type="checkbox" checked={(qual as any).license_towing} onChange={(e)=>updateQual('license_towing' as any, e.target.checked)} />牽引自動車免許</label>
-
+               <label className="flex items-center gap-2 cursor-pointer mb-4"><input type="checkbox" checked={qual.foreman} onChange={(e)=>updateQual('foreman', e.target.checked)} />職長教育</label>
                <div className="text-sm font-bold mb-2">上記以外の資格</div>
                <div className="space-y-2">
                   <input type="text" className="w-full p-2 border rounded" placeholder="資格名" value={qual.otherText1} onChange={(e)=>updateQual('otherText1', e.target.value)} />
@@ -430,7 +388,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const renderStep3 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 3: 誓約・署名</h2>
-      <div className="bg-gray-50 p-6 rounded-lg border leading-relaxed text-gray-800"><h3 className="font-bold text-lg mb-4 text-center">新規入場時誓約</h3><ul className="list-disc pl-5 space-y-2 mb-6"><li>私は当作業所の新規入場時教育を受けました。</li><li>作業所の遵守事項やルールを厳守し作業します。</li><li>どんな小さなケガでも、必ず当日に報告します。</li><li>自分の身を守り、また周囲の人の安全にも気を配ります。</li><li>危険個所を発見したときは、直ちに現場責任者もしくは元請職員に連絡します。</li><li>作業中は有資格者証を携帯します。</li><li>記載した個人情報を緊急時連絡等、労務・安全衛生管理に使用することに同意します。</li><li>上記の事項を相違なく報告します。</li></ul><div className="bg-white p-4 rounded border text-center"><div className="mb-4"><label className="font-bold mr-2">誓約日 (令和)</label><input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateYear} onChange={(e)=>updateReport({pledgeDateYear: parseInt(e.target.value)})} />年<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateMonth} onChange={(e)=>updateReport({pledgeDateMonth: parseInt(e.target.value)})} />月<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateDay} onChange={(e)=>updateReport({pledgeDateDay: parseInt(e.target.value)})} />日</div><label className="block font-bold text-gray-700 mb-2">本人署名</label><div className="mx-auto w-full max-w-sm"><button type="button" onClick={() => setShowSigModal(true)} className="w-full h-32 border-2 border-dashed border-gray-400 rounded bg-gray-50 flex flex-col items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors"><i className="fa-solid fa-pen-nib text-2xl mb-2"></i><span className="font-bold">タップして署名する</span></button></div>{report.signatureDataUrl && (<div className="mt-4"><p className="text-xs text-green-600 font-bold mb-1">署名済み</p><div className="cursor-pointer hover:opacity-80 transition-opacity inline-block border border-transparent hover:border-blue-300 rounded p-1" onClick={() => setPreviewSigUrl(report.signatureDataUrl)} title="タップして拡大"><img src={report.signatureDataUrl} alt="Signature" className="h-10 mx-auto border" /></div><button onClick={()=>updateReport({signatureDataUrl: null})} className="ml-4 text-xs text-red-500 underline">削除</button></div>)}</div></div>
+      <div className="bg-gray-50 p-6 rounded-lg border leading-relaxed text-gray-800"><h3 className="font-bold text-lg mb-4 text-center">新規入場時誓約</h3><ul className="list-disc pl-5 space-y-2 mb-6"><li>私は当作業所の新規入場時教育を受けました。</li><li>作業所の遵守事項やルールを厳守し作業します。</li><li>どんな小さなケガでも、必ず当日に報告します。</li><li>自分の身を守り、また周囲の人の安全にも気を配ります。</li><li>危険個所を発見したときは、直ちに現場責任者もしくは元請職員に連絡します。</li><li>作業中は有資格者証を携帯します。</li><li>記載した個人情報を緊急時連絡等、労務・安全衛生管理に使用することに同意します。</li><li>上記の事項を相違なく報告します。</li></ul><div className="bg-white p-4 rounded border text-center"><div className="mb-4"><label className="font-bold mr-2">誓約日 (令和)</label><input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateYear} onChange={(e)=>updateReport({pledgeDateYear: parseInt(e.target.value)})} />年<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateMonth} onChange={(e)=>updateReport({pledgeDateMonth: parseInt(e.target.value)})} />月<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateDay} onChange={(e)=>updateReport({pledgeDateDay: parseInt(e.target.value)})} />日</div><label className="block font-bold text-gray-700 mb-2">本人署名</label><div className="mx-auto w-full max-w-sm"><SignatureCanvas key={sigKey} onSave={handleSignatureSave} onClear={()=>{ updateReport({signatureDataUrl: null}) }} lineWidth={6} /></div>{report.signatureDataUrl && (<div className="mt-4"><p className="text-xs text-green-600 font-bold mb-1">署名済み</p><div className="cursor-pointer hover:opacity-80 transition-opacity inline-block border border-transparent hover:border-blue-300 rounded p-1" onClick={() => setPreviewSigUrl(report.signatureDataUrl)} title="タップして拡大"><img src={report.signatureDataUrl} alt="Signature" className="h-10 mx-auto border" /></div></div>)}</div></div>
     </div>
   );
 
@@ -539,35 +497,13 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           {step < 3 ? (
              <button onClick={handleNext} className="px-8 py-3 bg-purple-600 text-white rounded-lg font-bold shadow hover:bg-purple-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>
           ) : (
-             <button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>
+             <button onClick={() => setShowPreview(true)} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>
           )}
         </footer>
       </div>
       
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
-      
-      {/* 署名モーダル */}
-      {showSigModal && (
-        <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col">
-            {/* ★修正: 注意書きを大きく */}
-            <div className="bg-red-600 text-white p-4 text-center font-bold text-lg animate-pulse">
-              必ずフルネームで記入してください
-            </div>
-            <div className="p-4 bg-gray-100 text-center text-sm text-gray-600">
-              枠内に大きく崩さずに書いてください
-            </div>
-            <div className="flex-1 bg-white p-4 h-64 border-y border-gray-200">
-               <SignatureCanvas key={sigKey} onSave={handleSignatureSave} onClear={()=>{}} lineWidth={5} />
-            </div>
-            <div className="p-4 bg-gray-800 flex justify-end">
-              <button onClick={() => setShowSigModal(false)} className="px-6 py-2 text-white bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
       <div className="hidden print:block">
          <NewcomerSurveyPrintLayout data={report} />
