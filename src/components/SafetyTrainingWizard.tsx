@@ -35,20 +35,56 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onCon
 };
 
 // --- Project Delete Modal ---
-const ProjectDeleteModal: React.FC<{ isOpen: boolean; projectName: string; onConfirm: () => void; onCancel: () => void; }> = ({ isOpen, projectName, onConfirm, onCancel }) => {
+const ProjectDeleteModal: React.FC<{
+  isOpen: boolean;
+  projectName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}> = ({ isOpen, projectName, onConfirm, onCancel }) => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+
   useEffect(() => { if (isOpen) { setPassword(""); setError(""); } }, [isOpen]);
   if (!isOpen) return null;
-  const handleConfirm = () => { if (password === "4043") { onConfirm(); } else { setError("パスワードが間違っています"); } };
+
+  const handleConfirm = () => {
+    if (password === "4043") {
+      onConfirm();
+    } else {
+      setError("パスワードが間違っています");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-60 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 animate-fade-in border-l-8 border-red-600">
-        <h3 className="text-xl font-bold text-red-600 mb-4 flex items-center"><i className="fa-solid fa-triangle-exclamation mr-2"></i>重要：削除の確認</h3>
+        <h3 className="text-xl font-bold text-red-600 mb-4 flex items-center">
+          <i className="fa-solid fa-triangle-exclamation mr-2"></i>重要：削除の確認
+        </h3>
         <p className="text-gray-800 font-bold mb-2">工事名「{projectName}」を削除しますか？</p>
-        <div className="bg-red-50 p-3 rounded mb-4 text-sm text-red-800 leading-relaxed"><strong>【注意】</strong><br/>この操作を行うと、この工事名で保存されている<br/><span className="font-bold underline text-red-600 text-base">すべての一時保存データも同時に削除されます。</span><br/>この操作は取り消せません。</div>
-        <div className="mb-6"><label className="block text-xs font-bold text-gray-500 mb-1">管理者パスワードを入力 (4043)</label><input type="password" className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 outline-none text-lg tracking-widest" placeholder="PASS" value={password} onChange={(e) => setPassword(e.target.value)} />{error && <p className="text-red-500 text-xs mt-1 font-bold"><i className="fa-solid fa-circle-exclamation mr-1"></i>{error}</p>}</div>
-        <div className="flex justify-end gap-3"><button onClick={onCancel} className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600">キャンセル</button><button onClick={handleConfirm} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold shadow-md">完全削除を実行</button></div>
+        <div className="bg-red-50 p-3 rounded mb-4 text-sm text-red-800 leading-relaxed">
+          <strong>【注意】</strong><br/>
+          この操作を行うと、この工事名で保存されている<br/>
+          <span className="font-bold underline text-red-600 text-base">すべての一時保存データも同時に削除されます。</span><br/>
+          この操作は取り消せません。
+        </div>
+        
+        <div className="mb-6">
+          <label className="block text-xs font-bold text-gray-500 mb-1">管理者パスワードを入力 (4043)</label>
+          <input 
+            type="password" 
+            className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-red-500 outline-none text-lg tracking-widest"
+            placeholder="PASS"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          {error && <p className="text-red-500 text-xs mt-1 font-bold"><i className="fa-solid fa-circle-exclamation mr-1"></i>{error}</p>}
+        </div>
+
+        <div className="flex justify-end gap-3">
+          <button onClick={onCancel} className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600">キャンセル</button>
+          <button onClick={handleConfirm} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold shadow-md">完全削除を実行</button>
+        </div>
       </div>
     </div>
   );
@@ -93,10 +129,22 @@ const MasterSection: React.FC<{
 };
 
 const LABEL_MAP: Record<string, string> = { 
-  projects: "工事名", contractors: "会社名", supervisors: "現場責任者", locations: "場所", workplaces: "作業所名",
-  subcontractors: "協力会社名", roles: "役職", topics: "安全訓練内容", jobTypes: "工種", goals: "安全衛生目標", predictions: "予想災害", countermeasures: "防止対策",
-  processes: "作業工程", cautions: "注意事項"
+  projects: "工事名", 
+  contractors: "会社名", 
+  supervisors: "現場責任者", 
+  locations: "場所", 
+  workplaces: "作業所名",
+  subcontractors: "協力会社名", 
+  roles: "役職",
+  topics: "安全訓練内容",
+  jobTypes: "工種",
+  goals: "安全衛生目標",
+  predictions: "予想災害",
+  countermeasures: "防止対策",
+  processes: "作業工程", // 既存の残り
+  cautions: "注意事項"   // 既存の残り
 };
+
 const MASTER_GROUPS = { 
   BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
   TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
@@ -157,9 +205,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {selectedMasterKey ? (
         <div className="flex-1 overflow-hidden">
           <MasterSection 
-            title={LABEL_MAP[selectedMasterKey]} 
-            items={masterData[selectedMasterKey]} 
-            onBack={() => setSelectedMasterKey(null)}
+            title={LABEL_MAP[selectedMasterKey]} items={masterData[selectedMasterKey]} onBack={() => setSelectedMasterKey(null)}
             onUpdate={async (newItems) => { const newData = { ...masterData, [selectedMasterKey]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
             onDeleteRequest={(index, item) => {
               if (selectedMasterKey === 'projects') { setProjectDeleteTarget({ index, name: item }); } 
@@ -175,7 +221,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
             {MASTER_GROUPS[masterTab].map((key) => {
-              const list = masterData[key as keyof MasterData] || []; // 安全装置
+              const list = masterData[key as keyof MasterData] || [];
               return (
                 <button 
                   key={key}
@@ -210,24 +256,94 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const renderStep2 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 2: 実施内容</h2>
+      
       <div className="grid grid-cols-2 gap-4">
-        <div><label className="label text-sm font-bold text-gray-700">実施日</label><input type="date" className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.date} onChange={(e) => updateReport('date', e.target.value)} /></div>
-        <div><label className="label text-sm font-bold text-gray-700">場所</label><select className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.location} onChange={(e) => updateReport('location', e.target.value)}>{masterData.locations.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+        <div>
+          <label className="label text-sm font-bold text-gray-700">実施日</label>
+          <input 
+            type="date" 
+            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none"
+            value={report.date} 
+            onChange={(e) => updateReport('date', e.target.value)} 
+          />
+        </div>
+        <div>
+           <label className="label text-sm font-bold text-gray-700">場所</label>
+           <select 
+             className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none"
+             value={report.location} 
+             onChange={(e) => updateReport('location', e.target.value)}
+           >
+             {masterData.locations.map(s => <option key={s} value={s}>{s}</option>)}
+           </select>
+        </div>
       </div>
+
       <div className="grid grid-cols-2 gap-4">
-        <div><label className="label text-sm font-bold text-gray-700">開始時間</label><input type="time" className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.startTime} onChange={(e) => updateReport('startTime', e.target.value)} /></div>
-        <div><label className="label text-sm font-bold text-gray-700">終了時間</label><input type="time" className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.endTime} onChange={(e) => updateReport('endTime', e.target.value)} /></div>
+        <div>
+          <label className="label text-sm font-bold text-gray-700">開始時間</label>
+          <input 
+            type="time" 
+            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none"
+            value={report.startTime} 
+            onChange={(e) => updateReport('startTime', e.target.value)} 
+          />
+        </div>
+        <div>
+          <label className="label text-sm font-bold text-gray-700">終了時間</label>
+          <input 
+            type="time" 
+            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none"
+            value={report.endTime} 
+            onChange={(e) => updateReport('endTime', e.target.value)} 
+          />
+        </div>
       </div>
-      <div><label className="label text-sm font-bold text-gray-700">実施者</label><select className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.instructor} onChange={(e) => updateReport('instructor', e.target.value)}>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+
+      <div>
+          <label className="label text-sm font-bold text-gray-700">実施者</label>
+          <select 
+            className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none"
+            value={report.instructor} 
+            onChange={(e) => updateReport('instructor', e.target.value)}
+          >
+             {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+      </div>
+
       <div className="bg-gray-100 p-4 rounded-lg space-y-4">
         <h3 className="font-bold text-gray-700 mb-2">訓練内容</h3>
         <div className="text-sm text-gray-600 pl-2 border-l-4 border-gray-300 space-y-2 py-1"><div className="flex gap-2"><span className="font-bold w-8">(1)</span><span>今月の災害防止目標 (固定)</span></div><div className="flex gap-2"><span className="font-bold w-8">(2)</span><span>今月の作業工程 (固定)</span></div></div>
+        
         <div className="space-y-3">
-           <div className="flex items-center gap-2"><span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(3)</span><select className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm appearance-none" value={report.topic} onChange={(e) => updateReport('topic', e.target.value)}>{masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}</select></div>
-           <div className="flex items-center gap-2"><span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(4)</span><select className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm appearance-none" value={report.caution} onChange={(e) => updateReport('caution', e.target.value)}>{masterData.cautions.map(g => <option key={g} value={g}>{g}</option>)}</select></div>
+           <div className="flex items-center gap-2">
+             <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(3)</span>
+             {/* ★変更: 両方とも topics (安全訓練内容) を使用するように変更 */}
+             <select 
+              className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm appearance-none"
+               value={report.topic} 
+               onChange={(e) => updateReport('topic', e.target.value)}
+              >
+               {masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+           </div>
+
+           <div className="flex items-center gap-2">
+             <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(4)</span>
+             {/* ★変更: 両方とも topics (安全訓練内容) を使用するように変更 */}
+             <select 
+              className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm appearance-none"
+               value={report.caution} 
+               onChange={(e) => updateReport('caution', e.target.value)}
+              >
+               {masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+           </div>
         </div>
+        
         <div className="text-sm text-gray-600 pl-2 border-l-4 border-gray-300 mt-2 space-y-2 py-1"><div className="flex gap-2"><span className="font-bold w-8">(5)</span><span>web資料・動画による安全教育 (固定)</span></div><div className="flex gap-2"><span className="font-bold w-8">(6)</span><span>質疑応答 (固定)</span></div></div>
       </div>
+
       <div className="form-control"><label className="label font-bold flex justify-between text-gray-700"><span>現場写真 (黒板入り)</span><span className="text-xs font-normal bg-red-100 text-red-600 px-2 rounded border border-red-200">必須</span></label><input type="file" accept="image/*" className="w-full mt-2 text-sm text-gray-500" onChange={handlePhotoUpload} />{report.photoUrl && (<div className="mt-3"><img src={report.photoUrl} alt="preview" className="h-40 w-full object-contain border bg-gray-50 rounded" /></div>)}</div>
     </div>
   );
@@ -242,7 +358,13 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <h3 className="font-bold text-lg mb-4 text-center">新規署名</h3>
         <div className="mb-4">
           <label className="block text-sm font-bold text-gray-700 mb-1">会社名</label>
-          <select className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-lg text-black outline-none appearance-none" value={tempCompany} onChange={(e) => setTempCompany(e.target.value)}>{masterData.subcontractors.map(s => <option key={s} value={s}>{s}</option>)}</select>
+          <select 
+            className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-lg text-black outline-none appearance-none"
+            value={tempCompany}
+            onChange={(e) => setTempCompany(e.target.value)}
+          >
+             {masterData.subcontractors.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
         </div>
         <div className="mb-2"><label className="block text-sm font-bold text-gray-700 mb-2 text-center">氏名 (手書き)</label><div className="w-full"><SignatureCanvas key={sigKey} onSave={(dataUrl) => { addSignature(tempCompany, dataUrl); }} onClear={() => {}} lineWidth={6} keepOpenOnSave={true} /></div></div>
       </div>
@@ -250,7 +372,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     </div>
   );
 
-  // --- PREVIEW ---
   const renderPreviewModal = () => (
     <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-90 flex flex-col no-print">
       <div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0">
@@ -260,10 +381,14 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
         </div>
       </div>
+      
+      {/* Scrollable Area */}
       <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
         <div className="bg-white shadow-2xl" style={{ width: '794px', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
           <PrintLayout data={report} />
         </div>
+        
+        {/* Page 4: Attached Safety Plan */}
         {selectedPlan && (
           <div className="bg-white shadow-2xl" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
              <SafetyPlanPrintLayout data={selectedPlan} />
@@ -273,7 +398,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     </div>
   );
 
-  // ★重要: ここが抜けていた関数です
   const renderPlanSelectionModal = () => {
     if (!planSelectionModal) return null;
     return (
@@ -316,9 +440,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   return (
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
-        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
-          <div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-helmet-safety mr-2"></i>安全訓練報告</h1></div><button onClick={() => setIsMasterMode(true)} className="text-xs bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors"><i className="fa-solid fa-gear mr-1"></i>設定</button>
-        </header>
+        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-helmet-safety mr-2"></i>安全訓練報告</h1></div><button onClick={() => setIsMasterMode(true)} className="text-xs bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors"><i className="fa-solid fa-gear mr-1"></i>設定</button></header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-blue-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-blue-600" : ""}>STEP 2</span><span className={step >= 3 ? "text-blue-600" : ""}>STEP 3</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
         
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">
@@ -327,17 +449,20 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           {step === 3 && renderStep3()}
         </main>
 
-        <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-md z-20">
+        <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
           <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
-          {step < 3 ? (<button onClick={() => setStep(prev => prev + 1)} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
+          {/* Preview Button */}
+          {step < 3 ? (<button onClick={handleNext} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
         </footer>
       </div>
       
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
+      
       {showPreview && renderPreviewModal()}
       {renderPlanSelectionModal()}
-      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
-      
+      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} />
+
+      {/* Print View */}
       <div className="hidden print:block">
          <PrintLayout data={report} />
          {selectedPlan && (
