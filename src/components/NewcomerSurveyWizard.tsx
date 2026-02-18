@@ -16,45 +16,22 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
   if (data) {
     const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
     base = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
-  } else {
-    base = {
-      ...base,
-      experienceYears: undefined,
-      healthCheckDay: undefined,
-      healthCheckYear: undefined, 
-      healthCheckMonth: undefined 
-    };
   }
   return base;
 };
 
 // --- Modals ---
-interface ConfirmModalProps { 
-  isOpen: boolean; 
-  message: string; 
-  onLeftButtonClick: () => void; 
-  onRightButtonClick: () => void;
-  leftButtonLabel: string;
-  rightButtonLabel: string;
-  leftButtonClass: string;
-  rightButtonClass: string;
-}
-
-const ConfirmationModal: React.FC<ConfirmModalProps> = ({ 
-  isOpen, message, 
-  onLeftButtonClick, onRightButtonClick,
-  leftButtonLabel, rightButtonLabel,
-  leftButtonClass, rightButtonClass
-}) => {
+interface ConfirmModalProps { isOpen: boolean; message: string; onConfirm: () => void; onCancel: () => void; }
+const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onConfirm, onCancel }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[60] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
         <h3 className="text-lg font-bold text-gray-800 mb-4">確認</h3>
-        <p className="text-gray-600 mb-6 whitespace-pre-wrap font-bold text-red-600">{message}</p>
+        <p className="text-gray-600 mb-6 whitespace-pre-wrap">{message}</p>
         <div className="flex justify-end gap-3">
-          <button onClick={onLeftButtonClick} className={leftButtonClass}>{leftButtonLabel}</button>
-          <button onClick={onRightButtonClick} className={rightButtonClass}>{rightButtonLabel}</button>
+          <button onClick={onCancel} className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600">キャンセル</button>
+          <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold">実行する</button>
         </div>
       </div>
     </div>
@@ -92,23 +69,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [showPreview, setShowPreview] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previewScale, setPreviewScale] = useState(1);
-  
-  const [confirmModal, setConfirmModal] = useState<{
-    isOpen: boolean;
-    message: string;
-    onLeftButtonClick: () => void;
-    onRightButtonClick: () => void;
-    leftButtonLabel: string;
-    rightButtonLabel: string;
-    leftButtonClass: string;
-    rightButtonClass: string;
-  }>({ 
-    isOpen: false, message: '', 
-    onLeftButtonClick: () => {}, onRightButtonClick: () => {}, 
-    leftButtonLabel: '', rightButtonLabel: '',
-    leftButtonClass: '', rightButtonClass: ''
-  });
-
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: () => {} });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [sigKey, setSigKey] = useState(0);
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
@@ -196,9 +157,10 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
   
-  const handleSave = async () => { 
+  // ★修正: 一時保存時の署名チェック
+  const handleTempSave = async () => { 
     if (!report.signatureDataUrl) {
-      alert("署名がありません。\n署名を行ってください。");
+      alert("署名がありません。\nSTEP3で署名を行ってください。");
       return;
     }
 
@@ -208,7 +170,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       setDraftId(newId); 
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
-      alert("保存しました");
       setTimeout(() => setSaveStatus('idle'), 2000); 
     } catch (e) { 
       console.error(e); 
@@ -218,16 +179,18 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   };
 
   const handlePreviewClick = () => {
+    // ★修正: プレビューボタン押下時の署名チェック
     if (!report.signatureDataUrl) {
-      alert("署名がありません。\n署名を行ってください。");
+      alert("署名がありません。\nSTEP3で署名を行ってください。");
       return;
     }
     setShowPreview(true);
   };
 
   const handleSaveAndPrint = async () => {
+    // ★修正: 署名チェック
     if (!report.signatureDataUrl) {
-      alert("署名がありません。\n署名を行ってください。");
+      alert("署名がありません。\nSTEP3で署名を行ってください。");
       return;
     }
 
@@ -247,29 +210,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     } catch (e) { alert("保存に失敗しました"); setSaveStatus('idle'); }
   };
 
-  const handleHomeClick = () => { 
-    if (hasUnsavedChanges) { 
-      setConfirmModal({ 
-        isOpen: true, 
-        message: "データが保存されていません！\n保存ボタンを押してください！", 
-        // 左: ホームに戻る (グレー)
-        leftButtonLabel: "ホームに戻る",
-        leftButtonClass: "px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300",
-        onLeftButtonClick: () => { 
-          setConfirmModal(prev => ({ ...prev, isOpen: false })); 
-          onBackToMenu(); 
-        },
-        // 右: 編集を続ける (赤)
-        rightButtonLabel: "編集を続ける",
-        rightButtonClass: "px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700",
-        onRightButtonClick: () => {
-          setConfirmModal(prev => ({ ...prev, isOpen: false })); 
-        }
-      }); 
-    } else { 
-      onBackToMenu(); 
-    } 
-  };
+  const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
   
   const handleSignatureSave = (dataUrl: string) => { 
     updateReport({ signatureDataUrl: dataUrl }); 
@@ -286,12 +227,14 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 1: 基本情報</h2>
         <p className="text-sm text-red-500 font-bold"><i className="fa-solid fa-circle-exclamation mr-1"></i>全ての項目が必須です</p>
         
+        {/* Project Info */}
         <div className="bg-purple-50 p-4 rounded border border-purple-100 grid grid-cols-1 md:grid-cols-2 gap-4">
            <div className="col-span-1 md:col-span-2 text-sm text-purple-700 font-bold mb-1"><i className="fa-solid fa-circle-info mr-1"></i>はじめに現場を選択してください</div>
            <div><label className="block text-xs font-bold text-gray-700 mb-1">作業所名 (マスタ選択)</label><select className={`w-full p-2 border rounded font-bold ${getErrorClass('project')}`} value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
            <div><label className="block text-xs font-bold text-gray-700 mb-1">作業所長名 (マスタ選択)</label><select className={`w-full p-2 border rounded ${getErrorClass('director')}`} value={report.director} onChange={(e)=>updateReport({director: e.target.value})}>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
         </div>
 
+        {/* Name */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label font-bold text-gray-700">氏名（フリガナ）</label>
@@ -332,8 +275,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="form-control">
             <label className="label font-bold text-gray-700">経験年数</label>
             <div className="flex items-center gap-2 mt-2">
-              <input type="number" className={`w-16 p-2 border rounded text-center ${getErrorClass('experienceYears')}`} value={report.experienceYears ?? ''} onChange={(e)=>updateReport({experienceYears: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>年</span>
-              <input type="number" className="w-16 p-2 border rounded text-center bg-white" value={report.experienceMonths ?? ''} onChange={(e)=>updateReport({experienceMonths: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>ヶ月</span>
+              <input type="number" className={`w-16 p-2 border rounded text-center ${getErrorClass('experienceYears')}`} value={report.experienceYears} onChange={(e)=>updateReport({experienceYears: parseInt(e.target.value)})} /><span>年</span>
+              <input type="number" className="w-16 p-2 border rounded text-center bg-white" value={report.experienceMonths} onChange={(e)=>updateReport({experienceMonths: parseInt(e.target.value)})} /><span>ヶ月</span>
             </div>
           </div>
         </div>
@@ -349,6 +292,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="form-control">
           <label className="label font-bold text-gray-700">現住所・電話番号</label>
           <input type="text" className={`w-full p-2 border rounded mb-2 ${getErrorClass('address')}`} placeholder="住所" value={report.address} onChange={(e) => updateReport({address: e.target.value})} />
+          {/* ★修正: プレースホルダー変更 */}
           <input type="text" className={`w-48 p-2 border rounded ${getErrorClass('phone')}`} placeholder="090-0000-0000" value={report.phone} onChange={(e) => updateReport({phone: e.target.value})} />
         </div>
 
@@ -415,9 +359,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="form-control">
             <label className="label font-bold text-gray-700">健康診断受診日 (令和)</label>
             <div className="flex gap-1 items-center">
-              <input type="number" className={`w-14 p-2 border rounded text-center ${getErrorClass('healthCheckYear')}`} value={report.healthCheckYear ?? ''} onChange={(e)=>updateReport({healthCheckYear: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>年</span>
-              <input type="number" className={`w-12 p-2 border rounded text-center ${getErrorClass('healthCheckMonth')}`} value={report.healthCheckMonth ?? ''} onChange={(e)=>updateReport({healthCheckMonth: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>月</span>
-              <input type="number" className="w-12 p-2 border rounded text-center bg-white" value={report.healthCheckDay ?? ''} onChange={(e)=>updateReport({healthCheckDay: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>日</span>
+              <input type="number" className={`w-14 p-2 border rounded text-center ${getErrorClass('healthCheckYear')}`} value={report.healthCheckYear} onChange={(e)=>updateReport({healthCheckYear: parseInt(e.target.value)})} /><span>年</span>
+              <input type="number" className={`w-12 p-2 border rounded text-center ${getErrorClass('healthCheckMonth')}`} value={report.healthCheckMonth} onChange={(e)=>updateReport({healthCheckMonth: parseInt(e.target.value)})} /><span>月</span>
+              <input type="number" className="w-12 p-2 border rounded text-center bg-white" value={report.healthCheckDay} onChange={(e)=>updateReport({healthCheckDay: parseInt(e.target.value)})} /><span>日</span>
             </div>
           </div>
         </div>
@@ -464,6 +408,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                <h3 className="font-bold border-b mb-3">その他</h3>
                <label className="flex items-center gap-2 cursor-pointer mb-2"><input type="checkbox" checked={qual.foreman} onChange={(e)=>updateQual('foreman', e.target.checked)} />職長教育</label>
                
+               {/* ★修正: 運転免許4種追加 */}
                <label className="flex items-center gap-2 cursor-pointer mb-1"><input type="checkbox" checked={(qual as any).license_regular} onChange={(e)=>updateQual('license_regular' as any, e.target.checked)} />普通自動車免許</label>
                <label className="flex items-center gap-2 cursor-pointer mb-1"><input type="checkbox" checked={(qual as any).license_large} onChange={(e)=>updateQual('license_large' as any, e.target.checked)} />大型自動車免許</label>
                <label className="flex items-center gap-2 cursor-pointer mb-1"><input type="checkbox" checked={(qual as any).license_large_special} onChange={(e)=>updateQual('license_large_special' as any, e.target.checked)} />大型特殊自動車免許</label>
@@ -517,12 +462,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                    setConfirmModal({ 
                      isOpen: true, 
                      message: `「${item}」を削除しますか？`, 
-                     leftButtonLabel: 'キャンセル',
-                     leftButtonClass: 'px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600',
-                     onLeftButtonClick: () => setConfirmModal(prev => ({ ...prev, isOpen: false })),
-                     rightButtonLabel: '削除する',
-                     rightButtonClass: 'px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold',
-                     onRightButtonClick: async () => { 
+                     onConfirm: async () => { 
                        const newItems = [...(masterData[key as keyof MasterData] || [])]; 
                        newItems.splice(index, 1); 
                        const newData = { ...masterData, [key]: newItems }; 
@@ -562,16 +502,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   if (isMasterMode) return (
     <>
       {renderMasterManager()}
-      <ConfirmationModal 
-        isOpen={confirmModal.isOpen} 
-        message={confirmModal.message} 
-        onLeftButtonClick={confirmModal.onLeftButtonClick} 
-        onRightButtonClick={confirmModal.onRightButtonClick}
-        leftButtonLabel={confirmModal.leftButtonLabel}
-        rightButtonLabel={confirmModal.rightButtonLabel}
-        leftButtonClass={confirmModal.leftButtonClass}
-        rightButtonClass={confirmModal.rightButtonClass}
-      />
+      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} />
       {projectDeleteTarget && (
         <ProjectDeleteModal 
           isOpen={!!projectDeleteTarget} 
@@ -604,14 +535,11 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
            {step === 3 && renderStep3()}
         </main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-md z-20">
-          <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button></div>
+          <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
           {step < 3 ? (
              <button onClick={handleNext} className="px-8 py-3 bg-purple-600 text-white rounded-lg font-bold shadow hover:bg-purple-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>
           ) : (
-             <div className="flex gap-4">
-               <button onClick={handleSave} className="px-8 py-3 bg-red-600 text-white rounded-lg font-bold shadow hover:bg-red-700 flex items-center"><i className="fa-solid fa-save mr-2"></i> 保存</button>
-               <button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>
-             </div>
+             <button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>
           )}
         </footer>
       </div>
@@ -619,48 +547,28 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       
-      {/* ★修正: 署名モーダル (即座に全画面表示) */}
+      {/* 署名モーダル */}
       {showSigModal && (
-        <div className="fixed inset-0 z-[90] bg-gray-100 flex flex-col">
-          {/* Header */}
-          <div className="bg-white p-4 shadow-sm flex justify-between items-center shrink-0">
-             <div className="flex items-center">
-                <button onClick={() => setShowSigModal(false)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded font-bold hover:bg-gray-300">
-                  閉じる
-                </button>
-             </div>
-             <h3 className="font-bold text-xl text-gray-800 flex items-center">
-               <i className="fa-solid fa-pen-nib mr-2"></i> 署名記入
-             </h3>
-             <div className="w-20"></div>
-          </div>
-          
-          <div className="flex-1 p-2 md:p-6 flex flex-col items-center justify-center">
-             <div className="w-full h-full bg-white rounded-lg shadow-md border overflow-hidden relative">
-                <SignatureCanvas 
-                  key={sigKey} 
-                  onSave={handleSignatureSave} 
-                  onClear={()=>{}} 
-                  lineWidth={4} 
-                />
-             </div>
-             <p className="mt-2 text-red-500 font-bold text-lg animate-pulse">
-               必ずフルネームで記入してください
-             </p>
+        <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col">
+            {/* ★修正: 注意書きを大きく */}
+            <div className="bg-red-600 text-white p-4 text-center font-bold text-lg animate-pulse">
+              必ずフルネームで記入してください
+            </div>
+            <div className="p-4 bg-gray-100 text-center text-sm text-gray-600">
+              枠内に大きく崩さずに書いてください
+            </div>
+            <div className="flex-1 bg-white p-4 h-64 border-y border-gray-200">
+               <SignatureCanvas key={sigKey} onSave={handleSignatureSave} onClear={()=>{}} lineWidth={5} />
+            </div>
+            <div className="p-4 bg-gray-800 flex justify-end">
+              <button onClick={() => setShowSigModal(false)} className="px-6 py-2 text-white bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
+            </div>
           </div>
         </div>
       )}
 
-      <ConfirmationModal 
-        isOpen={confirmModal.isOpen} 
-        message={confirmModal.message} 
-        onLeftButtonClick={confirmModal.onLeftButtonClick} 
-        onRightButtonClick={confirmModal.onRightButtonClick}
-        leftButtonLabel={confirmModal.leftButtonLabel}
-        rightButtonLabel={confirmModal.rightButtonLabel}
-        leftButtonClass={confirmModal.leftButtonClass}
-        rightButtonClass={confirmModal.rightButtonClass}
-      />
+      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
       <div className="hidden print:block">
          <NewcomerSurveyPrintLayout data={report} />
       </div>
