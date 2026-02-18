@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { QRCodeCanvas } from 'qrcode.react'; // ★追加: QRコード描画用
 import SafetyTrainingWizard from './components/SafetyTrainingWizard';
 import DisasterCouncilWizard from './components/DisasterCouncilWizard';
 import SafetyPlanWizard from './components/SafetyPlanWizard';
 import NewcomerSurveyWizard from './components/NewcomerSurveyWizard';
 
-// ★ここが重要：ニセモノ(Mock)ではなく、本物(Firebase)の機能を読み込みます
+// Firebase機能
 import { fetchDrafts, removeDraft } from './services/firebaseService'; 
 
 import { SavedDraft, ReportData, DisasterCouncilReportData, ReportTypeString, NewcomerSurveyReportData } from './types';
@@ -44,6 +45,24 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onCon
   );
 };
 
+// --- ★追加: QRコード表示モーダル ---
+const QRCodeModal: React.FC<{ isOpen: boolean; onClose: () => void; url: string }> = ({ isOpen, onClose, url }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-80 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center animate-fade-in" onClick={e => e.stopPropagation()}>
+        <h3 className="text-xl font-bold text-gray-800 mb-2">作業員用 入力フォーム</h3>
+        <p className="text-sm text-gray-500 mb-6 text-center">作業員自身の端末で読み取ってください。<br/>自動的に入力画面が開きます。</p>
+        <div className="p-4 border-4 border-gray-200 rounded-lg bg-white mb-6">
+          <QRCodeCanvas value={url} size={250} level={"H"} includeMargin={true} />
+        </div>
+        <p className="text-xs text-gray-400 break-all text-center mb-6">{url}</p>
+        <button onClick={onClose} className="w-full py-3 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-700">閉じる</button>
+      </div>
+    </div>
+  );
+};
+
 type ViewState = 'HOME' | ReportTypeString;
 
 const App: React.FC = () => {
@@ -55,8 +74,10 @@ const App: React.FC = () => {
   const [drafts, setDrafts] = useState<SavedDraft[]>([]);
   const [selectedDraftProject, setSelectedDraftProject] = useState<string | null>(null);
   
-  // ★追加：読み込み中かどうかを管理するスイッチ
   const [isLoading, setIsLoading] = useState(false);
+
+  // ★追加: QRモーダル開閉ステート
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
 
   // Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -73,20 +94,32 @@ const App: React.FC = () => {
   const [wizardInitialData, setWizardInitialData] = useState<any>(undefined);
   const [wizardDraftId, setWizardDraftId] = useState<string | null>(null);
 
-  // ★変更：Firebaseからデータを読み込む処理
+  // ★追加: URLパラメータ判定（QRコードからのアクセス時）
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const formType = params.get('form');
+    
+    if (formType === 'newcomer') {
+      // パラメータがある場合、直接新規入場者アンケートを開く
+      setWizardInitialData(undefined);
+      setWizardDraftId(null);
+      setCurrentView('NEWCOMER_SURVEY');
+    }
+  }, []);
+
+  // Firebaseからデータを読み込む処理
   useEffect(() => {
     if (isModalOpen) {
       const loadDrafts = async () => {
-        setIsLoading(true); // 読み込み開始！
+        setIsLoading(true);
         try {
-          // Firebaseからデータを取ってくる
           const data = await fetchDrafts();
           setDrafts(data);
         } catch (error) {
           console.error("Failed to load drafts", error);
           alert("保存データの読み込みに失敗しました。");
         } finally {
-          setIsLoading(false); // 読み込み終了！
+          setIsLoading(false);
         }
       };
       
@@ -116,20 +149,16 @@ const App: React.FC = () => {
     setIsModalOpen(false);
   };
 
-  // ★変更：Firebaseからデータを削除する処理
   const handleDeleteDraft = (id: string) => {
     setConfirmModal({
       isOpen: true,
       message: 'この一時保存データを削除しますか？',
-      onConfirm: async () => { // async = 時間がかかる処理を待てるようにする
+      onConfirm: async () => {
         try {
-          await removeDraft(id); // Firebase削除実行
-          
-          // 削除後に再取得してリストを更新
+          await removeDraft(id);
           const newDrafts = await fetchDrafts();
           setDrafts(newDrafts);
           
-          // もしそのプロジェクトのデータが全部なくなったら、前の画面に戻る
           if (selectedDraftProject && selectedReportType) {
              const remaining = newDrafts.filter(d => 
                  d.type === selectedReportType && (d.data.project || '名称未設定') === selectedDraftProject
@@ -192,10 +221,7 @@ const App: React.FC = () => {
   const renderSelectionModal = () => {
     if (!isModalOpen || !selectedReportType) return null;
 
-    // Filter drafts for current type
     const currentDrafts = drafts.filter(d => d.type === selectedReportType);
-
-    // Group drafts by project
     const draftsByProject: Record<string, SavedDraft[]> = {};
     currentDrafts.forEach(draft => {
       const project = draft.data.project || '名称未設定';
@@ -229,7 +255,6 @@ const App: React.FC = () => {
           </div>
           
           <div className="p-6 overflow-y-auto custom-scrollbar">
-            {/* ★追加：読み込み中のくるくる表示 --- */}
             {isLoading ? (
               <div className="flex justify-center items-center py-10">
                 <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
@@ -239,7 +264,7 @@ const App: React.FC = () => {
               !selectedDraftProject ? (
                 /* --- VIEW 1: Project List --- */
                 <>
-                  <div className="mb-8">
+                  <div className="mb-8 space-y-3">
                     <button 
                       onClick={handleStartNew}
                       className="w-full py-4 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 flex items-center justify-center gap-2 transition-transform transform hover:scale-[1.01]"
@@ -247,6 +272,17 @@ const App: React.FC = () => {
                       <i className="fa-solid fa-file-circle-plus text-xl"></i>
                       新規作成
                     </button>
+
+                    {/* ★追加: 新規入場者アンケートの場合のみQRコードボタンを表示 */}
+                    {selectedReportType === 'NEWCOMER_SURVEY' && (
+                      <button 
+                        onClick={() => setIsQRModalOpen(true)}
+                        className="w-full py-4 bg-purple-600 text-white rounded-lg font-bold shadow-md hover:bg-purple-700 flex items-center justify-center gap-2 transition-transform transform hover:scale-[1.01]"
+                      >
+                        <i className="fa-solid fa-qrcode text-xl"></i>
+                        作業員用QRコードを表示
+                      </button>
+                    )}
                   </div>
 
                   <div className="border-t pt-4">
@@ -294,7 +330,6 @@ const App: React.FC = () => {
                         <div className="cursor-pointer flex-1" onClick={() => handleResumeDraft(draft)}>
                           <div className="font-bold text-blue-800 text-lg">
                             <i className="fa-regular fa-calendar-check mr-2"></i>
-                            {/* Display logic based on report type */}
                             {draft.type === 'SAFETY_TRAINING' ? `${(draft.data as ReportData).month}月度` : 
                              draft.type === 'DISASTER_COUNCIL' ? `第${(draft.data as DisasterCouncilReportData).count}回` :
                              draft.type === 'NEWCOMER_SURVEY' ? ((draft.data as NewcomerSurveyReportData).name || '氏名未入力') :
@@ -326,10 +361,13 @@ const App: React.FC = () => {
     );
   };
 
+  // ★追加: 生成するQRコードのURL
+  // 現在のURLに ?form=newcomer をつけたもの
+  const qrUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?form=newcomer`;
+
   // Home Screen UI
   return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-800">
-      {/* Home Header */}
       <header className="bg-slate-800 text-white p-6 shadow-md text-center">
         <h1 className="text-2xl font-bold tracking-wide">
           <i className="fa-solid fa-building-shield mr-2"></i>
@@ -338,15 +376,12 @@ const App: React.FC = () => {
         <p className="text-slate-400 text-sm mt-2">各種安全書類の作成業務をサポートします</p>
       </header>
 
-      {/* Menu Grid */}
       <main className="max-w-4xl mx-auto p-6 mt-8">
         <h2 className="text-xl font-bold mb-6 text-gray-700 border-l-4 border-slate-800 pl-3">
           作成する帳票を選択してください
         </h2>
         
-        {/* Changed grid cols to handle 4 items nicely */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
           {/* Card 1: Safety Training */}
           <button 
             onClick={() => openSelectionModal('SAFETY_TRAINING')}
@@ -402,23 +437,27 @@ const App: React.FC = () => {
               新規入場者の健康状態・経歴等を確認するアンケートを作成します。
             </p>
           </button>
-
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="mt-12 text-center text-gray-400 text-sm pb-8">
         &copy; 2024 Safety Reporting App
       </footer>
 
       {renderSelectionModal()}
       
-      {/* Confirmation Modal */}
       <ConfirmationModal 
         isOpen={confirmModal.isOpen} 
         message={confirmModal.message} 
         onConfirm={confirmModal.onConfirm} 
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* ★追加: QRコード表示モーダル */}
+      <QRCodeModal 
+        isOpen={isQRModalOpen}
+        onClose={() => setIsQRModalOpen(false)}
+        url={qrUrl}
       />
     </div>
   );
