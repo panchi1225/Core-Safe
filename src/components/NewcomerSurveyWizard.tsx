@@ -28,7 +28,7 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
   return base;
 };
 
-// --- Modals (ボタン配置と色を柔軟に対応) ---
+// --- Modals ---
 interface ConfirmModalProps { 
   isOpen: boolean; 
   message: string; 
@@ -93,7 +93,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previewScale, setPreviewScale] = useState(1);
   
-  // モーダル状態管理
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     message: string;
@@ -248,20 +247,17 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     } catch (e) { alert("保存に失敗しました"); setSaveStatus('idle'); }
   };
 
-  // ★修正: ホームボタンの警告（色とラベルの変更）
   const handleHomeClick = () => { 
     if (hasUnsavedChanges) { 
       setConfirmModal({ 
         isOpen: true, 
         message: "データが保存されていません！\n保存ボタンを押してください！", 
-        // 左ボタン: ホームに戻る (グレー/色なし)
         leftButtonLabel: "ホームに戻る",
         leftButtonClass: "px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300",
         onLeftButtonClick: () => { 
           setConfirmModal(prev => ({ ...prev, isOpen: false })); 
           onBackToMenu(); 
         },
-        // 右ボタン: 編集を続ける (赤色)
         rightButtonLabel: "編集を続ける",
         rightButtonClass: "px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700",
         onRightButtonClick: () => {
@@ -288,14 +284,12 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 1: 基本情報</h2>
         <p className="text-sm text-red-500 font-bold"><i className="fa-solid fa-circle-exclamation mr-1"></i>全ての項目が必須です</p>
         
-        {/* Project Info */}
         <div className="bg-purple-50 p-4 rounded border border-purple-100 grid grid-cols-1 md:grid-cols-2 gap-4">
            <div className="col-span-1 md:col-span-2 text-sm text-purple-700 font-bold mb-1"><i className="fa-solid fa-circle-info mr-1"></i>はじめに現場を選択してください</div>
            <div><label className="block text-xs font-bold text-gray-700 mb-1">作業所名 (マスタ選択)</label><select className={`w-full p-2 border rounded font-bold ${getErrorClass('project')}`} value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
            <div><label className="block text-xs font-bold text-gray-700 mb-1">作業所長名 (マスタ選択)</label><select className={`w-full p-2 border rounded ${getErrorClass('director')}`} value={report.director} onChange={(e)=>updateReport({director: e.target.value})}>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
         </div>
 
-        {/* Name */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label font-bold text-gray-700">氏名（フリガナ）</label>
@@ -518,12 +512,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                  if (key === 'projects') {
                    setProjectDeleteTarget({ index, name: item });
                  } else {
-                   // 汎用削除モーダルの使用 (ボタンラベルなどはデフォルト)
-                   // ※MasterSection内ではシンプルな削除確認のため、ここではConfirmationModalを直接制御せず、
-                   // 簡易版として実装するか、またはsetConfirmModalを使ってメインのモーダルを呼び出す。
-                   // ここでは親コンポーネントの状態を使うため、MasterSectionを修正して親からコールバックをもらうのが綺麗ですが、
-                   // 既存コードを大きく変えないため、ここではalertで代用せず、setConfirmModalを使います。
-                   // (MasterSectionの引数を修正する必要がありますが、今回は上書き指示なのでOK)
                    setConfirmModal({ 
                      isOpen: true, 
                      message: `「${item}」を削除しますか？`, 
@@ -629,21 +617,17 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       
-      {/* 署名モーダル (★修正: 即座に開く・注意書きとキャンバスを一体化) */}
+      {/* ★修正: 署名モーダル (即座に表示、余計なメッセージなし) */}
       {showSigModal && (
         <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center p-4">
           <div className="w-full max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col">
-            <div className="bg-white p-6 border-b border-gray-200">
-              <h3 className="text-3xl font-bold text-red-600 text-center animate-pulse">
-                必ずフルネームで<br/>記入してください
-              </h3>
+            <div className="bg-gray-800 text-white p-3 flex justify-between items-center shrink-0">
+               <span className="font-bold">署名記入</span>
+               <button onClick={() => setShowSigModal(false)} className="text-gray-400 hover:text-white"><i className="fa-solid fa-xmark text-xl"></i></button>
             </div>
             
-            <div className="flex-1 bg-white p-4 h-64">
-               <SignatureCanvas key={sigKey} onSave={handleSignatureSave} onClear={()=>{}} lineWidth={5} />
-            </div>
-            <div className="p-4 bg-gray-100 flex justify-end">
-              <button onClick={() => setShowSigModal(false)} className="px-6 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300 font-bold">閉じる</button>
+            <div className="flex-1 bg-white p-2 h-64">
+               <SignatureCanvas key={sigKey} onSave={handleSignatureSave} onClear={()=>{ updateReport({signatureDataUrl: null}) }} lineWidth={5} />
             </div>
           </div>
         </div>
