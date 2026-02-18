@@ -17,20 +17,7 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
     const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
     base = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
   }
-
-  // ★修正: 健康診断受診日の初期値設定 (未設定の場合のみ)
-  if (!base.healthCheckYear && !base.healthCheckMonth) {
-    const now = new Date();
-    // 令和変換: 西暦 - 2018
-    // 1年前の年
-    const lastYearReiwa = (now.getFullYear() - 1) - 2018; 
-    const currentMonth = now.getMonth() + 1;
-    
-    // 令和1年は1年とする
-    base.healthCheckYear = Math.max(1, lastYearReiwa);
-    base.healthCheckMonth = currentMonth;
-  }
-
+  // ★修正: 自動設定ロジックを削除し、初期状態を空にする
   return base;
 };
 
@@ -138,7 +125,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     
     // subcontractorRankは任意
     
-    // ★修正: 経験年数の「年」のみ必須
+    // 経験年数の「年」のみ必須
     if (r.experienceYears === undefined || r.experienceYears === null || isNaN(Number(r.experienceYears))) {
       newErrors.experienceYears = true;
     }
@@ -155,7 +142,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     if (!r.emergencyContactPhone) newErrors.emergencyContactPhone = true;
     
     if (!r.healthCheckYear) newErrors.healthCheckYear = true;
-    // ★修正: 月も必須
     if (!r.healthCheckMonth) newErrors.healthCheckMonth = true;
     
     setErrors(newErrors);
