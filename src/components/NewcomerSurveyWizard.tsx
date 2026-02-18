@@ -28,25 +28,23 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
   return base;
 };
 
-// --- Modals (カスタマイズ可能に修正) ---
+// --- Modals (ボタン配置と色を柔軟に対応) ---
 interface ConfirmModalProps { 
   isOpen: boolean; 
   message: string; 
-  onConfirm: () => void; 
-  onCancel: () => void;
-  // 追加: ボタンのラベルとスタイルをカスタマイズ可能に
-  confirmLabel?: string;
-  cancelLabel?: string;
-  confirmClass?: string;
-  cancelClass?: string;
+  onLeftButtonClick: () => void; 
+  onRightButtonClick: () => void;
+  leftButtonLabel: string;
+  rightButtonLabel: string;
+  leftButtonClass: string;
+  rightButtonClass: string;
 }
 
 const ConfirmationModal: React.FC<ConfirmModalProps> = ({ 
-  isOpen, message, onConfirm, onCancel,
-  confirmLabel = "実行する",
-  cancelLabel = "キャンセル",
-  confirmClass = "px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold",
-  cancelClass = "px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600"
+  isOpen, message, 
+  onLeftButtonClick, onRightButtonClick,
+  leftButtonLabel, rightButtonLabel,
+  leftButtonClass, rightButtonClass
 }) => {
   if (!isOpen) return null;
   return (
@@ -55,10 +53,8 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({
         <h3 className="text-lg font-bold text-gray-800 mb-4">確認</h3>
         <p className="text-gray-600 mb-6 whitespace-pre-wrap font-bold text-red-600">{message}</p>
         <div className="flex justify-end gap-3">
-          {/* キャンセルボタン (左) */}
-          <button onClick={onCancel} className={cancelClass}>{cancelLabel}</button>
-          {/* 実行ボタン (右) */}
-          <button onClick={onConfirm} className={confirmClass}>{confirmLabel}</button>
+          <button onClick={onLeftButtonClick} className={leftButtonClass}>{leftButtonLabel}</button>
+          <button onClick={onRightButtonClick} className={rightButtonClass}>{rightButtonLabel}</button>
         </div>
       </div>
     </div>
@@ -96,9 +92,24 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [showPreview, setShowPreview] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previewScale, setPreviewScale] = useState(1);
-  const [confirmModal, setConfirmModal] = useState<ConfirmModalProps & { isOpen: boolean }>({ 
-    isOpen: false, message: '', onConfirm: () => {}, onCancel: () => {} 
+  
+  // モーダル状態管理
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    message: string;
+    onLeftButtonClick: () => void;
+    onRightButtonClick: () => void;
+    leftButtonLabel: string;
+    rightButtonLabel: string;
+    leftButtonClass: string;
+    rightButtonClass: string;
+  }>({ 
+    isOpen: false, message: '', 
+    onLeftButtonClick: () => {}, onRightButtonClick: () => {}, 
+    leftButtonLabel: '', rightButtonLabel: '',
+    leftButtonClass: '', rightButtonClass: ''
   });
+
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [sigKey, setSigKey] = useState(0);
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
@@ -237,23 +248,23 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     } catch (e) { alert("保存に失敗しました"); setSaveStatus('idle'); }
   };
 
-  // ★修正: ホームボタンの警告をカスタマイズ
+  // ★修正: ホームボタンの警告（色とラベルの変更）
   const handleHomeClick = () => { 
     if (hasUnsavedChanges) { 
       setConfirmModal({ 
         isOpen: true, 
         message: "データが保存されていません！\n保存ボタンを押してください！", 
-        // 「ホームに戻る」は色なし（グレー）
-        confirmLabel: "ホームに戻る",
-        confirmClass: "px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300",
-        // 「編集を続ける」は赤色
-        cancelLabel: "編集を続ける",
-        cancelClass: "px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700",
-        onConfirm: () => { 
+        // 左ボタン: ホームに戻る (グレー/色なし)
+        leftButtonLabel: "ホームに戻る",
+        leftButtonClass: "px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300",
+        onLeftButtonClick: () => { 
           setConfirmModal(prev => ({ ...prev, isOpen: false })); 
           onBackToMenu(); 
         },
-        onCancel: () => {
+        // 右ボタン: 編集を続ける (赤色)
+        rightButtonLabel: "編集を続ける",
+        rightButtonClass: "px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700",
+        onRightButtonClick: () => {
           setConfirmModal(prev => ({ ...prev, isOpen: false })); 
         }
       }); 
@@ -507,10 +518,21 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                  if (key === 'projects') {
                    setProjectDeleteTarget({ index, name: item });
                  } else {
+                   // 汎用削除モーダルの使用 (ボタンラベルなどはデフォルト)
+                   // ※MasterSection内ではシンプルな削除確認のため、ここではConfirmationModalを直接制御せず、
+                   // 簡易版として実装するか、またはsetConfirmModalを使ってメインのモーダルを呼び出す。
+                   // ここでは親コンポーネントの状態を使うため、MasterSectionを修正して親からコールバックをもらうのが綺麗ですが、
+                   // 既存コードを大きく変えないため、ここではalertで代用せず、setConfirmModalを使います。
+                   // (MasterSectionの引数を修正する必要がありますが、今回は上書き指示なのでOK)
                    setConfirmModal({ 
                      isOpen: true, 
                      message: `「${item}」を削除しますか？`, 
-                     onConfirm: async () => { 
+                     leftButtonLabel: 'キャンセル',
+                     leftButtonClass: 'px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600',
+                     onLeftButtonClick: () => setConfirmModal(prev => ({ ...prev, isOpen: false })),
+                     rightButtonLabel: '削除する',
+                     rightButtonClass: 'px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold',
+                     onRightButtonClick: async () => { 
                        const newItems = [...(masterData[key as keyof MasterData] || [])]; 
                        newItems.splice(index, 1); 
                        const newData = { ...masterData, [key]: newItems }; 
@@ -553,12 +575,12 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <ConfirmationModal 
         isOpen={confirmModal.isOpen} 
         message={confirmModal.message} 
-        onConfirm={confirmModal.onConfirm} 
-        onCancel={confirmModal.onCancel}
-        confirmLabel={confirmModal.confirmLabel}
-        cancelLabel={confirmModal.cancelLabel}
-        confirmClass={confirmModal.confirmClass}
-        cancelClass={confirmModal.cancelClass}
+        onLeftButtonClick={confirmModal.onLeftButtonClick} 
+        onRightButtonClick={confirmModal.onRightButtonClick}
+        leftButtonLabel={confirmModal.leftButtonLabel}
+        rightButtonLabel={confirmModal.rightButtonLabel}
+        leftButtonClass={confirmModal.leftButtonClass}
+        rightButtonClass={confirmModal.rightButtonClass}
       />
       {projectDeleteTarget && (
         <ProjectDeleteModal 
@@ -607,13 +629,13 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       
+      {/* 署名モーダル (★修正: 即座に開く・注意書きとキャンバスを一体化) */}
       {showSigModal && (
         <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center p-4">
           <div className="w-full max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col">
-            {/* ★修正: 署名モーダル上部の注意書きをシンプルに強調 */}
             <div className="bg-white p-6 border-b border-gray-200">
-              <h3 className="text-2xl font-bold text-red-600 text-center">
-                必ずフルネームで記入してください
+              <h3 className="text-3xl font-bold text-red-600 text-center animate-pulse">
+                必ずフルネームで<br/>記入してください
               </h3>
             </div>
             
@@ -630,12 +652,12 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <ConfirmationModal 
         isOpen={confirmModal.isOpen} 
         message={confirmModal.message} 
-        onConfirm={confirmModal.onConfirm} 
-        onCancel={confirmModal.onCancel}
-        confirmLabel={confirmModal.confirmLabel}
-        cancelLabel={confirmModal.cancelLabel}
-        confirmClass={confirmModal.confirmClass}
-        cancelClass={confirmModal.cancelClass}
+        onLeftButtonClick={confirmModal.onLeftButtonClick} 
+        onRightButtonClick={confirmModal.onRightButtonClick}
+        leftButtonLabel={confirmModal.leftButtonLabel}
+        rightButtonLabel={confirmModal.rightButtonLabel}
+        leftButtonClass={confirmModal.leftButtonClass}
+        rightButtonClass={confirmModal.rightButtonClass}
       />
       <div className="hidden print:block">
          <NewcomerSurveyPrintLayout data={report} />
