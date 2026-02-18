@@ -17,12 +17,17 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
     const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
     base = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
   } else {
+    // 修正: Firebase保存エラー回避のため、undefined ではなく null を使用
     base = {
       ...base,
-      experienceYears: undefined,
-      healthCheckDay: undefined,
-      healthCheckYear: undefined, 
-      healthCheckMonth: undefined 
+      experienceYears: null as any,
+      experienceMonths: null as any,
+      healthCheckYear: null as any,
+      healthCheckMonth: null as any,
+      healthCheckDay: null as any,
+      pledgeDateYear: null as any,
+      pledgeDateMonth: null as any,
+      pledgeDateDay: null as any
     };
   }
   return base;
@@ -166,6 +171,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     if (!r.birthDay) newErrors.birthDay = true;
     if (!r.company) newErrors.company = true;
     
+    // undefined だけでなく null も考慮
     if (r.experienceYears === undefined || r.experienceYears === null || isNaN(Number(r.experienceYears))) {
       newErrors.experienceYears = true;
     }
@@ -208,7 +214,10 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
     setSaveStatus('saving'); 
     try { 
-      const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', report); 
+      // 修正: 氏名フィールドを明示的に含める
+      const fullName = (report.nameSei || '') + (report.nameMei || '');
+      const dataToSave = { ...report, name: fullName || '氏名未入力' };
+      const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', dataToSave); 
       setDraftId(newId); 
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
@@ -237,13 +246,15 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
     setSaveStatus('saving');
     try {
-      const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', report);
+      // 修正: 氏名フィールドを明示的に含める
+      const fullName = (report.nameSei || '') + (report.nameMei || '');
+      const dataToSave = { ...report, name: fullName || '氏名未入力' };
+      const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', dataToSave);
       setDraftId(newId);
       setSaveStatus('saved');
       setHasUnsavedChanges(false);
       setTimeout(() => setSaveStatus('idle'), 2000);
       const prevTitle = document.title;
-      const fullName = (report.nameSei || '') + (report.nameMei || '');
       const fileName = `新規_${report.company || '未入力'}_${fullName || '未入力'}`;
       document.title = fileName;
       window.print();
@@ -290,7 +301,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         
         <div className="bg-purple-50 p-4 rounded border border-purple-100 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
            <div className="col-span-1 md:col-span-2 text-sm text-purple-700 font-bold mb-1"><i className="fa-solid fa-circle-info mr-1"></i>はじめに現場を選択してください</div>
-           {/* ★修正: max-w-full を適用して横幅を制限 */}
            <div className="w-full overflow-hidden"><label className="block text-xs font-bold text-gray-700 mb-1">作業所名 (マスタ選択)</label><select className={`w-full p-2 border rounded font-bold max-w-full text-ellipsis ${getErrorClass('project')}`} value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
            <div className="w-full overflow-hidden"><label className="block text-xs font-bold text-gray-700 mb-1">作業所長名 (マスタ選択)</label><select className={`w-full p-2 border rounded max-w-full text-ellipsis ${getErrorClass('director')}`} value={report.director} onChange={(e)=>updateReport({director: e.target.value})}>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
         </div>
@@ -336,8 +346,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="form-control">
             <label className="label font-bold text-gray-700">経験年数</label>
             <div className="flex items-center gap-2 mt-2">
-              <input type="number" className={`w-16 p-2 border rounded text-center ${getErrorClass('experienceYears')}`} value={report.experienceYears ?? ''} onChange={(e)=>updateReport({experienceYears: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>年</span>
-              <input type="number" className="w-16 p-2 border rounded text-center bg-white" value={report.experienceMonths ?? ''} onChange={(e)=>updateReport({experienceMonths: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>ヶ月</span>
+              {/* 修正: undefined -> null */}
+              <input type="number" className={`w-16 p-2 border rounded text-center ${getErrorClass('experienceYears')}`} value={report.experienceYears ?? ''} onChange={(e)=>updateReport({experienceYears: e.target.value === '' ? null : parseInt(e.target.value)})} /><span>年</span>
+              <input type="number" className="w-16 p-2 border rounded text-center bg-white" value={report.experienceMonths ?? ''} onChange={(e)=>updateReport({experienceMonths: e.target.value === '' ? null : parseInt(e.target.value)})} /><span>ヶ月</span>
             </div>
           </div>
         </div>
@@ -419,9 +430,10 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="form-control">
             <label className="label font-bold text-gray-700">健康診断受診日 (令和)</label>
             <div className="flex gap-1 items-center">
-              <input type="number" className={`w-14 p-2 border rounded text-center ${getErrorClass('healthCheckYear')}`} value={report.healthCheckYear ?? ''} onChange={(e)=>updateReport({healthCheckYear: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>年</span>
-              <input type="number" className={`w-12 p-2 border rounded text-center ${getErrorClass('healthCheckMonth')}`} value={report.healthCheckMonth ?? ''} onChange={(e)=>updateReport({healthCheckMonth: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>月</span>
-              <input type="number" className="w-12 p-2 border rounded text-center bg-white" value={report.healthCheckDay ?? ''} onChange={(e)=>updateReport({healthCheckDay: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>日</span>
+              {/* 修正: undefined -> null */}
+              <input type="number" className={`w-14 p-2 border rounded text-center ${getErrorClass('healthCheckYear')}`} value={report.healthCheckYear ?? ''} onChange={(e)=>updateReport({healthCheckYear: e.target.value === '' ? null : parseInt(e.target.value)})} /><span>年</span>
+              <input type="number" className={`w-12 p-2 border rounded text-center ${getErrorClass('healthCheckMonth')}`} value={report.healthCheckMonth ?? ''} onChange={(e)=>updateReport({healthCheckMonth: e.target.value === '' ? null : parseInt(e.target.value)})} /><span>月</span>
+              <input type="number" className="w-12 p-2 border rounded text-center bg-white" value={report.healthCheckDay ?? ''} onChange={(e)=>updateReport({healthCheckDay: e.target.value === '' ? null : parseInt(e.target.value)})} /><span>日</span>
             </div>
           </div>
         </div>
@@ -489,7 +501,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const renderStep3 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 3: 誓約・署名</h2>
-      <div className="bg-gray-50 p-6 rounded-lg border leading-relaxed text-gray-800"><h3 className="font-bold text-lg mb-4 text-center">新規入場時誓約</h3><ul className="list-disc pl-5 space-y-2 mb-6"><li>私は当作業所の新規入場時教育を受けました。</li><li>作業所の遵守事項やルールを厳守し作業します。</li><li>どんな小さなケガでも、必ず当日に報告します。</li><li>自分の身を守り、また周囲の人の安全にも気を配ります。</li><li>危険個所を発見したときは、直ちに現場責任者もしくは元請職員に連絡します。</li><li>作業中は有資格者証を携帯します。</li><li>記載した個人情報を緊急時連絡等、労務・安全衛生管理に使用することに同意します。</li><li>上記の事項を相違なく報告します。</li></ul><div className="bg-white p-4 rounded border text-center"><div className="mb-4"><label className="font-bold mr-2">誓約日 (令和)</label><input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateYear} onChange={(e)=>updateReport({pledgeDateYear: parseInt(e.target.value)})} />年<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateMonth} onChange={(e)=>updateReport({pledgeDateMonth: parseInt(e.target.value)})} />月<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateDay} onChange={(e)=>updateReport({pledgeDateDay: parseInt(e.target.value)})} />日</div><label className="block font-bold text-gray-700 mb-2">本人署名</label><div className="mx-auto w-full max-w-sm"><button type="button" onClick={() => setShowSigModal(true)} className="w-full h-32 border-2 border-dashed border-gray-400 rounded bg-gray-50 flex flex-col items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors"><i className="fa-solid fa-pen-nib text-2xl mb-2"></i><span className="font-bold">タップして署名する</span></button></div>{report.signatureDataUrl && (<div className="mt-4"><p className="text-xs text-green-600 font-bold mb-1">署名済み</p><div className="cursor-pointer hover:opacity-80 transition-opacity inline-block border border-transparent hover:border-blue-300 rounded p-1" onClick={() => setPreviewSigUrl(report.signatureDataUrl)} title="タップして拡大"><img src={report.signatureDataUrl} alt="Signature" className="h-10 mx-auto border" /></div><button onClick={()=>updateReport({signatureDataUrl: null})} className="ml-4 text-xs text-red-500 underline">削除</button></div>)}</div></div>
+      <div className="bg-gray-50 p-6 rounded-lg border leading-relaxed text-gray-800"><h3 className="font-bold text-lg mb-4 text-center">新規入場時誓約</h3><ul className="list-disc pl-5 space-y-2 mb-6"><li>私は当作業所の新規入場時教育を受けました。</li><li>作業所の遵守事項やルールを厳守し作業します。</li><li>どんな小さなケガでも、必ず当日に報告します。</li><li>自分の身を守り、また周囲の人の安全にも気を配ります。</li><li>危険個所を発見したときは、直ちに現場責任者もしくは元請職員に連絡します。</li><li>作業中は有資格者証を携帯します。</li><li>記載した個人情報を緊急時連絡等、労務・安全衛生管理に使用することに同意します。</li><li>上記の事項を相違なく報告します。</li></ul><div className="bg-white p-4 rounded border text-center"><div className="mb-4"><label className="font-bold mr-2">誓約日 (令和)</label>
+      {/* 修正: NaN/undefined 回避のため null を使用 */}
+      <input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateYear ?? ''} onChange={(e)=>updateReport({pledgeDateYear: e.target.value === '' ? null : parseInt(e.target.value)})} />年<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateMonth ?? ''} onChange={(e)=>updateReport({pledgeDateMonth: e.target.value === '' ? null : parseInt(e.target.value)})} />月<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateDay ?? ''} onChange={(e)=>updateReport({pledgeDateDay: e.target.value === '' ? null : parseInt(e.target.value)})} />日</div><label className="block font-bold text-gray-700 mb-2">本人署名</label><div className="mx-auto w-full max-w-sm"><button type="button" onClick={() => setShowSigModal(true)} className="w-full h-32 border-2 border-dashed border-gray-400 rounded bg-gray-50 flex flex-col items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors"><i className="fa-solid fa-pen-nib text-2xl mb-2"></i><span className="font-bold">タップして署名する</span></button></div>{report.signatureDataUrl && (<div className="mt-4"><p className="text-xs text-green-600 font-bold mb-1">署名済み</p><div className="cursor-pointer hover:opacity-80 transition-opacity inline-block border border-transparent hover:border-blue-300 rounded p-1" onClick={() => setPreviewSigUrl(report.signatureDataUrl)} title="タップして拡大"><img src={report.signatureDataUrl} alt="Signature" className="h-10 mx-auto border" /></div><button onClick={()=>updateReport({signatureDataUrl: null})} className="ml-4 text-xs text-red-500 underline">削除</button></div>)}</div></div>
     </div>
   );
 
@@ -621,7 +635,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       
-      {/* ★修正: 署名モーダル (即座に表示、余計なメッセージなし) */}
       {showSigModal && (
         <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center p-4">
           <div className="w-full max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col">
