@@ -17,12 +17,10 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
     const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
     base = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
   } else {
-    // ★修正: 新規作成時、経験年数と健康診断日を明示的に空にする
     base = {
       ...base,
       experienceYears: undefined,
       healthCheckDay: undefined,
-      // 年についても自動入力せず空にする（前回要望との兼ね合いで調整）
       healthCheckYear: undefined, 
       healthCheckMonth: undefined 
     };
@@ -30,9 +28,26 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
   return base;
 };
 
-// --- Modals ---
-interface ConfirmModalProps { isOpen: boolean; message: string; onConfirm: () => void; onCancel: () => void; }
-const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onConfirm, onCancel }) => {
+// --- Modals (カスタマイズ可能に修正) ---
+interface ConfirmModalProps { 
+  isOpen: boolean; 
+  message: string; 
+  onConfirm: () => void; 
+  onCancel: () => void;
+  // 追加: ボタンのラベルとスタイルをカスタマイズ可能に
+  confirmLabel?: string;
+  cancelLabel?: string;
+  confirmClass?: string;
+  cancelClass?: string;
+}
+
+const ConfirmationModal: React.FC<ConfirmModalProps> = ({ 
+  isOpen, message, onConfirm, onCancel,
+  confirmLabel = "実行する",
+  cancelLabel = "キャンセル",
+  confirmClass = "px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold",
+  cancelClass = "px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600"
+}) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[60] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
@@ -40,8 +55,10 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onCon
         <h3 className="text-lg font-bold text-gray-800 mb-4">確認</h3>
         <p className="text-gray-600 mb-6 whitespace-pre-wrap font-bold text-red-600">{message}</p>
         <div className="flex justify-end gap-3">
-          <button onClick={onCancel} className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600">キャンセル</button>
-          <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold">実行する</button>
+          {/* キャンセルボタン (左) */}
+          <button onClick={onCancel} className={cancelClass}>{cancelLabel}</button>
+          {/* 実行ボタン (右) */}
+          <button onClick={onConfirm} className={confirmClass}>{confirmLabel}</button>
         </div>
       </div>
     </div>
@@ -79,7 +96,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [showPreview, setShowPreview] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previewScale, setPreviewScale] = useState(1);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: () => {} });
+  const [confirmModal, setConfirmModal] = useState<ConfirmModalProps & { isOpen: boolean }>({ 
+    isOpen: false, message: '', onConfirm: () => {}, onCancel: () => {} 
+  });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [sigKey, setSigKey] = useState(0);
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
@@ -167,7 +186,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
   
-  // 保存ボタン用（STEP3でのみ使用）
   const handleSave = async () => { 
     if (!report.signatureDataUrl) {
       alert("署名がありません。\n署名を行ってください。");
@@ -219,16 +237,25 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     } catch (e) { alert("保存に失敗しました"); setSaveStatus('idle'); }
   };
 
+  // ★修正: ホームボタンの警告をカスタマイズ
   const handleHomeClick = () => { 
     if (hasUnsavedChanges) { 
-      // ★修正: 警告メッセージを強化
       setConfirmModal({ 
         isOpen: true, 
         message: "データが保存されていません！\n保存ボタンを押してください！", 
+        // 「ホームに戻る」は色なし（グレー）
+        confirmLabel: "ホームに戻る",
+        confirmClass: "px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300",
+        // 「編集を続ける」は赤色
+        cancelLabel: "編集を続ける",
+        cancelClass: "px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700",
         onConfirm: () => { 
           setConfirmModal(prev => ({ ...prev, isOpen: false })); 
           onBackToMenu(); 
-        } 
+        },
+        onCancel: () => {
+          setConfirmModal(prev => ({ ...prev, isOpen: false })); 
+        }
       }); 
     } else { 
       onBackToMenu(); 
@@ -298,7 +325,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="form-control">
             <label className="label font-bold text-gray-700">経験年数</label>
             <div className="flex items-center gap-2 mt-2">
-              {/* ★修正: valueに空文字フォールバックを追加 */}
               <input type="number" className={`w-16 p-2 border rounded text-center ${getErrorClass('experienceYears')}`} value={report.experienceYears ?? ''} onChange={(e)=>updateReport({experienceYears: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>年</span>
               <input type="number" className="w-16 p-2 border rounded text-center bg-white" value={report.experienceMonths ?? ''} onChange={(e)=>updateReport({experienceMonths: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>ヶ月</span>
             </div>
@@ -382,7 +408,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="form-control">
             <label className="label font-bold text-gray-700">健康診断受診日 (令和)</label>
             <div className="flex gap-1 items-center">
-              {/* ★修正: valueに空文字フォールバックを追加 */}
               <input type="number" className={`w-14 p-2 border rounded text-center ${getErrorClass('healthCheckYear')}`} value={report.healthCheckYear ?? ''} onChange={(e)=>updateReport({healthCheckYear: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>年</span>
               <input type="number" className={`w-12 p-2 border rounded text-center ${getErrorClass('healthCheckMonth')}`} value={report.healthCheckMonth ?? ''} onChange={(e)=>updateReport({healthCheckMonth: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>月</span>
               <input type="number" className="w-12 p-2 border rounded text-center bg-white" value={report.healthCheckDay ?? ''} onChange={(e)=>updateReport({healthCheckDay: e.target.value === '' ? undefined : parseInt(e.target.value)})} /><span>日</span>
@@ -525,7 +550,16 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   if (isMasterMode) return (
     <>
       {renderMasterManager()}
-      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} />
+      <ConfirmationModal 
+        isOpen={confirmModal.isOpen} 
+        message={confirmModal.message} 
+        onConfirm={confirmModal.onConfirm} 
+        onCancel={confirmModal.onCancel}
+        confirmLabel={confirmModal.confirmLabel}
+        cancelLabel={confirmModal.cancelLabel}
+        confirmClass={confirmModal.confirmClass}
+        cancelClass={confirmModal.cancelClass}
+      />
       {projectDeleteTarget && (
         <ProjectDeleteModal 
           isOpen={!!projectDeleteTarget} 
@@ -563,7 +597,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
              <button onClick={handleNext} className="px-8 py-3 bg-purple-600 text-white rounded-lg font-bold shadow hover:bg-purple-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>
           ) : (
              <div className="flex gap-4">
-               {/* ★修正: STEP3のみ保存ボタンを表示 */}
                <button onClick={handleSave} className="px-8 py-3 bg-red-600 text-white rounded-lg font-bold shadow hover:bg-red-700 flex items-center"><i className="fa-solid fa-save mr-2"></i> 保存</button>
                <button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>
              </div>
@@ -577,23 +610,33 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {showSigModal && (
         <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center p-4">
           <div className="w-full max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col">
-            <div className="bg-red-600 text-white p-4 text-center font-bold text-lg animate-pulse">
-              必ずフルネームで記入してください
+            {/* ★修正: 署名モーダル上部の注意書きをシンプルに強調 */}
+            <div className="bg-white p-6 border-b border-gray-200">
+              <h3 className="text-2xl font-bold text-red-600 text-center">
+                必ずフルネームで記入してください
+              </h3>
             </div>
-            <div className="p-4 bg-gray-100 text-center text-sm text-gray-600">
-              枠内に大きく崩さずに書いてください
-            </div>
-            <div className="flex-1 bg-white p-4 h-64 border-y border-gray-200">
+            
+            <div className="flex-1 bg-white p-4 h-64">
                <SignatureCanvas key={sigKey} onSave={handleSignatureSave} onClear={()=>{}} lineWidth={5} />
             </div>
-            <div className="p-4 bg-gray-800 flex justify-end">
-              <button onClick={() => setShowSigModal(false)} className="px-6 py-2 text-white bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
+            <div className="p-4 bg-gray-100 flex justify-end">
+              <button onClick={() => setShowSigModal(false)} className="px-6 py-2 text-gray-700 bg-gray-200 rounded hover:bg-gray-300 font-bold">閉じる</button>
             </div>
           </div>
         </div>
       )}
 
-      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
+      <ConfirmationModal 
+        isOpen={confirmModal.isOpen} 
+        message={confirmModal.message} 
+        onConfirm={confirmModal.onConfirm} 
+        onCancel={confirmModal.onCancel}
+        confirmLabel={confirmModal.confirmLabel}
+        cancelLabel={confirmModal.cancelLabel}
+        confirmClass={confirmModal.confirmClass}
+        cancelClass={confirmModal.cancelClass}
+      />
       <div className="hidden print:block">
          <NewcomerSurveyPrintLayout data={report} />
       </div>
