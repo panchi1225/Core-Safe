@@ -17,14 +17,12 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
     const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
     base = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
   } else {
-    // 新規作成時、経験年数と健康診断受診日を空にする
     base = {
       ...base,
       experienceYears: undefined,
-      experienceMonths: undefined,
+      healthCheckDay: undefined,
       healthCheckYear: undefined, 
-      healthCheckMonth: undefined,
-      healthCheckDay: undefined
+      healthCheckMonth: undefined 
     };
   }
   return base;
@@ -120,7 +118,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
 
-  // 初回ロード時およびステップ変更時に画面最上部へスクロール
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [step]);
@@ -291,22 +288,24 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 1: 基本情報</h2>
         <p className="text-sm text-red-500 font-bold"><i className="fa-solid fa-circle-exclamation mr-1"></i>全ての項目が必須です</p>
         
-        <div className="bg-purple-50 p-4 rounded border border-purple-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-purple-50 p-4 rounded border border-purple-100 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
            <div className="col-span-1 md:col-span-2 text-sm text-purple-700 font-bold mb-1"><i className="fa-solid fa-circle-info mr-1"></i>はじめに現場を選択してください</div>
-           <div><label className="block text-xs font-bold text-gray-700 mb-1">作業所名 (マスタ選択)</label><select className={`w-full p-2 border rounded font-bold ${getErrorClass('project')}`} value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
-           <div><label className="block text-xs font-bold text-gray-700 mb-1">作業所長名 (マスタ選択)</label><select className={`w-full p-2 border rounded ${getErrorClass('director')}`} value={report.director} onChange={(e)=>updateReport({director: e.target.value})}>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+           {/* ★修正: max-w-full を適用して横幅を制限 */}
+           <div className="w-full overflow-hidden"><label className="block text-xs font-bold text-gray-700 mb-1">作業所名 (マスタ選択)</label><select className={`w-full p-2 border rounded font-bold max-w-full text-ellipsis ${getErrorClass('project')}`} value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+           <div className="w-full overflow-hidden"><label className="block text-xs font-bold text-gray-700 mb-1">作業所長名 (マスタ選択)</label><select className={`w-full p-2 border rounded max-w-full text-ellipsis ${getErrorClass('director')}`} value={report.director} onChange={(e)=>updateReport({director: e.target.value})}>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
         </div>
 
+        {/* Name */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label font-bold text-gray-700">氏名（フリガナ）</label>
             <div className="flex gap-2 mb-2">
-              <input type="text" className={`w-1/2 p-2 border rounded ${getErrorClass('nameSei')}`} placeholder="氏" value={report.nameSei} onChange={(e) => updateReport({nameSei: e.target.value})} />
-              <input type="text" className={`w-1/2 p-2 border rounded ${getErrorClass('nameMei')}`} placeholder="名" value={report.nameMei} onChange={(e) => updateReport({nameMei: e.target.value})} />
+              <input type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('nameSei')}`} placeholder="氏" value={report.nameSei} onChange={(e) => updateReport({nameSei: e.target.value})} />
+              <input type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('nameMei')}`} placeholder="名" value={report.nameMei} onChange={(e) => updateReport({nameMei: e.target.value})} />
             </div>
             <div className="flex gap-2">
-              <input type="text" className={`w-1/2 p-2 border rounded ${getErrorClass('furiganaSei')}`} placeholder="セイ" value={report.furiganaSei} onChange={(e) => updateReport({furiganaSei: e.target.value})} />
-              <input type="text" className={`w-1/2 p-2 border rounded ${getErrorClass('furiganaMei')}`} placeholder="メイ" value={report.furiganaMei} onChange={(e) => updateReport({furiganaMei: e.target.value})} />
+              <input type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('furiganaSei')}`} placeholder="セイ" value={report.furiganaSei} onChange={(e) => updateReport({furiganaSei: e.target.value})} />
+              <input type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('furiganaMei')}`} placeholder="メイ" value={report.furiganaMei} onChange={(e) => updateReport({furiganaMei: e.target.value})} />
             </div>
           </div>
           
@@ -331,7 +330,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label font-bold text-gray-700">所属会社名 (マスタ選択)</label>
-            <select className={`w-full p-2 border rounded mb-2 ${getErrorClass('company')}`} value={report.company} onChange={(e) => updateReport({company: e.target.value})}>{masterData.subcontractors.map(c => <option key={c} value={c}>{c}</option>)}</select>
+            <select className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} value={report.company} onChange={(e) => updateReport({company: e.target.value})}>{masterData.subcontractors.map(c => <option key={c} value={c}>{c}</option>)}</select>
             <div className="flex items-center gap-2 text-sm"><span>(</span><input type="text" className={`w-10 border-b text-center ${getErrorClass('subcontractorRank')}`} value={report.subcontractorRank} onChange={(e)=>updateReport({subcontractorRank: e.target.value})} /><span>次) 下請け</span></div>
           </div>
           <div className="form-control">
@@ -347,17 +346,16 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <label className="label font-bold text-gray-700">職種</label>
           <div className="flex gap-2">
             <select className={`w-1/2 p-2 border rounded ${getErrorClass('jobType')}`} value={report.jobType} onChange={(e) => updateReport({jobType: e.target.value})}><option value="土工">土工</option><option value="鳶">鳶</option><option value="大工">大工</option><option value="オペ">オペ</option><option value="鉄筋工">鉄筋工</option><option value="交通整理人">交通整理人</option><option value="その他">その他</option></select>
-            {report.jobType === 'その他' && (<input type="text" className={`flex-1 p-2 border rounded ${getErrorClass('jobTypeOther')}`} placeholder="詳細を入力" value={report.jobTypeOther} onChange={(e)=>updateReport({jobTypeOther: e.target.value})} />)}
+            {report.jobType === 'その他' && (<input type="text" className={`flex-1 p-2 border rounded max-w-full ${getErrorClass('jobTypeOther')}`} placeholder="詳細を入力" value={report.jobTypeOther} onChange={(e)=>updateReport({jobTypeOther: e.target.value})} />)}
           </div>
         </div>
 
         <div className="form-control">
           <label className="label font-bold text-gray-700">現住所・電話番号</label>
-          <input type="text" className={`w-full p-2 border rounded mb-2 ${getErrorClass('address')}`} placeholder="住所" value={report.address} onChange={(e) => updateReport({address: e.target.value})} />
-          <input type="text" className={`w-48 p-2 border rounded ${getErrorClass('phone')}`} placeholder="090-0000-0000" value={report.phone} onChange={(e) => updateReport({phone: e.target.value})} />
+          <input type="text" className={`w-full p-2 border rounded mb-2 max-w-full ${getErrorClass('address')}`} placeholder="住所" value={report.address} onChange={(e) => updateReport({address: e.target.value})} />
+          <input type="text" className={`w-48 p-2 border rounded max-w-full ${getErrorClass('phone')}`} placeholder="090-0000-0000" value={report.phone} onChange={(e) => updateReport({phone: e.target.value})} />
         </div>
 
-        {/* --- 緊急連絡先 (修正版: w-full で中身を1/2ずつ) --- */}
         <div className="form-control bg-gray-50 p-3 rounded border-2 border-red-500 w-full">
           <label className="label font-bold text-gray-700 mb-2 block">緊急連絡先</label>
           
@@ -366,14 +364,14 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             <div className="flex gap-2">
               <input 
                 type="text" 
-                className={`w-1/2 p-2 border rounded ${getErrorClass('emergencyContactSei')}`} 
+                className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('emergencyContactSei')}`} 
                 placeholder="氏" 
                 value={report.emergencyContactSei} 
                 onChange={(e) => updateReport({emergencyContactSei: e.target.value})} 
               />
               <input 
                 type="text" 
-                className={`w-1/2 p-2 border rounded ${getErrorClass('emergencyContactMei')}`} 
+                className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('emergencyContactMei')}`} 
                 placeholder="名" 
                 value={report.emergencyContactMei} 
                 onChange={(e) => updateReport({emergencyContactMei: e.target.value})} 
@@ -381,11 +379,11 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             </div>
           </div>
           
-          <div className="flex gap-2">
-            <div className="w-1/2">
+          <div className="flex flex-wrap gap-3">
+            <div className="w-full sm:flex-1">
               <label className="text-xs text-gray-500 font-bold mb-1 block">続柄</label>
               <select 
-                className={`w-full p-2 border rounded ${getErrorClass('emergencyContactRelation')}`} 
+                className={`w-full p-2 border rounded max-w-full ${getErrorClass('emergencyContactRelation')}`} 
                 value={report.emergencyContactRelation} 
                 onChange={(e) => updateReport({emergencyContactRelation: e.target.value})}
               >
@@ -396,11 +394,11 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                 <option value="同居人">同居人</option><option value="その他">その他</option>
               </select>
             </div>
-            <div className="w-1/2">
+            <div className="w-full sm:flex-1">
               <label className="text-xs text-gray-500 font-bold mb-1 block">緊急電話番号</label>
               <input 
                 type="text" 
-                className={`w-full p-2 border rounded ${getErrorClass('emergencyContactPhone')}`} 
+                className={`w-full p-2 border rounded max-w-full ${getErrorClass('emergencyContactPhone')}`} 
                 placeholder="090-0000-0000" 
                 value={report.emergencyContactPhone} 
                 onChange={(e) => updateReport({emergencyContactPhone: e.target.value})} 
@@ -408,7 +406,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             </div>
           </div>
         </div>
-        {/* --- 緊急連絡先 終了 --- */}
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
@@ -428,7 +425,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             </div>
           </div>
         </div>
-        {/* ★修正: 文言変更 */}
         <div className="form-control"><label className="label font-bold text-gray-700">建退共加入状況</label><div className="flex gap-4 mt-1"><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'Joined'} onChange={() => updateReport({kentaikyo: 'Joined'})} />加入している</label><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'NotJoined'} onChange={() => updateReport({kentaikyo: 'NotJoined'})} />加入していない</label></div></div>
       </div>
     );
@@ -525,11 +521,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                    setConfirmModal({ 
                      isOpen: true, 
                      message: `「${item}」を削除しますか？`, 
-                     leftButtonLabel: 'キャンセル',
-                     leftButtonClass: 'px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600',
                      onLeftButtonClick: () => setConfirmModal(prev => ({ ...prev, isOpen: false })),
-                     rightButtonLabel: '削除する',
-                     rightButtonClass: 'px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold',
                      onRightButtonClick: async () => { 
                        const newItems = [...(masterData[key as keyof MasterData] || [])]; 
                        newItems.splice(index, 1); 
@@ -537,7 +529,11 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                        setMasterData(newData); 
                        await saveMasterData(newData); 
                        setConfirmModal(prev => ({ ...prev, isOpen: false })); 
-                     } 
+                     },
+                     leftButtonLabel: 'キャンセル',
+                     rightButtonLabel: '削除する',
+                     leftButtonClass: 'px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600',
+                     rightButtonClass: 'px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold'
                    }); 
                  }
                }} 
@@ -607,9 +603,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         </header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-purple-600" : ""}>基本情報</span><span className={step >= 2 ? "text-purple-600" : ""}>資格</span><span className={step >= 3 ? "text-purple-600" : ""}>誓約・署名</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-purple-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg max-w-3xl min-h-[60vh]">
-           {step === 1 && renderStep1()}
-           {step === 2 && renderStep2()}
-           {step === 3 && renderStep3()}
+           {step === 1 && renderStep1()}{step === 2 && renderStep2()}{step === 3 && renderStep3()}
         </main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-md z-20">
           <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button></div>
@@ -627,6 +621,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       
+      {/* ★修正: 署名モーダル (即座に表示、余計なメッセージなし) */}
       {showSigModal && (
         <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center p-4">
           <div className="w-full max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col">
