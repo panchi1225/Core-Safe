@@ -48,7 +48,7 @@ const ProjectDeleteModal: React.FC<{ isOpen: boolean; projectName: string; onCon
   );
 };
 
-// --- Master Section (List View) ---
+// --- Master Manager (Updated) ---
 const MasterSection: React.FC<{
   title: string;
   items: string[];
@@ -66,20 +66,12 @@ const MasterSection: React.FC<{
       </div>
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
         <ul className="space-y-2">
-          {items.map((item, idx) => (
-            <li key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded hover:bg-gray-100 transition-colors">
-              <span className="text-sm text-gray-800 break-all mr-2">{item}</span>
-              <button type="button" onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }} className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors"><i className="fa-solid fa-trash"></i></button>
-            </li>
-          ))}
+          {items.map((item, idx) => (<li key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded hover:bg-gray-100 transition-colors"><span className="text-sm text-gray-800 break-all mr-2">{item}</span><button type="button" onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }} className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors"><i className="fa-solid fa-trash"></i></button></li>))}
           {items.length === 0 && <li className="text-gray-400 text-sm italic text-center py-8">データがありません</li>}
         </ul>
       </div>
       <div className="p-4 border-t bg-gray-50">
-        <div className="flex gap-2">
-          <input type="text" className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white text-black outline-none focus:ring-2 focus:ring-blue-500" placeholder="新規項目を追加..." value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
-          <button onClick={handleAdd} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md"><i className="fa-solid fa-plus mr-1"></i>追加</button>
-        </div>
+        <div className="flex gap-2"><input type="text" className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white text-black outline-none focus:ring-2 focus:ring-blue-500" placeholder="新規項目を追加..." value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} /><button onClick={handleAdd} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md"><i className="fa-solid fa-plus mr-1"></i>追加</button></div>
       </div>
     </div>
   );
@@ -116,17 +108,13 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const [isMasterMode, setIsMasterMode] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: () => {} });
   const [showPreview, setShowPreview] = useState(false);
-  
-  // Drawing State
   const [drawingRowId, setDrawingRowId] = useState<string | null>(null);
   const [drawStartDay, setDrawStartDay] = useState<number | null>(null);
-  
-  // View State
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previewScale, setPreviewScale] = useState(1);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
-  // Master Management State
+  // ★追加: マスタ管理ステート
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
   const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
@@ -148,7 +136,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
 
   const borderOuter = "border-2 border-black"; const borderThin = "border border-black"; const headerBg = "bg-cyan-100"; const inputBase = "w-full h-full bg-transparent outline-none text-center font-serif"; const selectBase = "w-full h-full bg-transparent outline-none text-center appearance-none font-serif text-center-last";
 
-  // --- RENDER MASTER MANAGER (Updated) ---
+  // --- ★変更: タブ付きマスタ管理画面 ---
   const renderMasterManager = () => (
     <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen flex flex-col">
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
@@ -176,21 +164,24 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
             <button onClick={() => setMasterTab('TRAINING')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-list-check mr-2"></i>各種項目マスタ</button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
-            {MASTER_GROUPS[masterTab].map((key) => (
-              <button 
-                key={key}
-                onClick={() => setSelectedMasterKey(key as keyof MasterData)}
-                className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group"
-              >
-                <div>
-                  <h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3>
-                  <p className="text-xs text-gray-500">{masterData[key as keyof MasterData].length} 件の登録</p>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
-                  <i className="fa-solid fa-chevron-right"></i>
-                </div>
-              </button>
-            ))}
+            {MASTER_GROUPS[masterTab].map((key) => {
+              const list = masterData[key as keyof MasterData] || [];
+              return (
+                <button 
+                  key={key}
+                  onClick={() => setSelectedMasterKey(key as keyof MasterData)}
+                  className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group"
+                >
+                  <div>
+                    <h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3>
+                    <p className="text-xs text-gray-500">{list.length} 件の登録</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+                    <i className="fa-solid fa-chevron-right"></i>
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </>
       )}
@@ -199,6 +190,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
 
   const renderReportSheet = (isPreview: boolean = false) => (
     <div className="p-[10mm] w-full h-full flex flex-col font-serif">
+      {/* ... (renderReportSheetの内容は変更なし) ... */}
       <div className="flex justify-between items-start mb-2 h-[38mm]">
         <div className="flex-1 flex flex-col justify-center pb-2 h-full">
            <div className="flex items-end mb-4 pl-4"><span className="text-xl">令和</span><select className="w-12 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.year - 2018} onChange={(e)=>updateReport({year: 2018 + parseInt(e.target.value||'0')})}>{Array.from({length: 30}, (_, i) => i + 1).map(y => (<option key={y} value={y}>{y}</option>))}</select><span className="text-xl mr-4">年</span><select className="w-10 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.month} onChange={(e)=>updateReport({month: parseInt(e.target.value||'0')})}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}</option>))}</select><span className="text-xl mr-2">月度</span><h1 className="text-3xl font-bold border-b-2 border-black ml-4 px-2 tracking-widest">工事施工安全管理計画表</h1></div>
@@ -240,7 +232,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   if (isMasterMode) return (
     <>
       {renderMasterManager()}
-      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} />
+      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
       {projectDeleteTarget && (
         <ProjectDeleteModal 
           isOpen={!!projectDeleteTarget} 
