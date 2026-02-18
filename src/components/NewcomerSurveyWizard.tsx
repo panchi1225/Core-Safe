@@ -10,20 +10,44 @@ interface Props {
   onBackToMenu: () => void;
 }
 
-// --- 安全装置 ---
+// --- 安全装置 & データ移行 ---
 const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
   if (!data) return INITIAL_NEWCOMER_SURVEY_REPORT;
+  
+  // 古いデータ(name, furigana等)がある場合、簡易的に分割して移行する
+  const safeData = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data };
+  
+  // 氏名の移行 (スペースがあればそこで分割、なければ全角スペースで分割、それもなければそのまま氏に入れる)
+  if (data.name && !data.nameSei) {
+    const parts = data.name.split(/[\s　]+/);
+    safeData.nameSei = parts[0] || "";
+    safeData.nameMei = parts[1] || "";
+  }
+  if (data.furigana && !data.furiganaSei) {
+    const parts = data.furigana.split(/[\s　]+/);
+    safeData.furiganaSei = parts[0] || "";
+    safeData.furiganaMei = parts[1] || "";
+  }
+  if (data.emergencyContactName && !data.emergencyContactSei) {
+    const parts = data.emergencyContactName.split(/[\s　]+/);
+    safeData.emergencyContactSei = parts[0] || "";
+    safeData.emergencyContactMei = parts[1] || "";
+  }
+
+  // 資格情報の安全化
   const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
-  return { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
+  safeData.qualifications = safeQualifications;
+
+  return safeData;
 };
 
-// --- Custom Confirmation Modal ---
+// --- Modals ---
 interface ConfirmModalProps { isOpen: boolean; message: string; onConfirm: () => void; onCancel: () => void; }
 const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onConfirm, onCancel }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[60] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-fade-in">
+      <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
         <h3 className="text-lg font-bold text-gray-800 mb-4">確認</h3>
         <p className="text-gray-600 mb-6 whitespace-pre-wrap">{message}</p>
         <div className="flex justify-end gap-3">
@@ -55,7 +79,7 @@ const ProjectDeleteModal: React.FC<{ isOpen: boolean; projectName: string; onCon
   );
 };
 
-// --- Master Section (List View) ---
+// --- Master Section ---
 const MasterSection: React.FC<{
   title: string;
   items: string[];
@@ -83,17 +107,21 @@ const MasterSection: React.FC<{
         </ul>
       </div>
       <div className="p-4 border-t bg-gray-50">
-        <div className="flex gap-2">
-          <input type="text" className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white text-black outline-none focus:ring-2 focus:ring-blue-500" placeholder="新規項目を追加..." value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
-          <button onClick={handleAdd} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md"><i className="fa-solid fa-plus mr-1"></i>追加</button>
-        </div>
+        <div className="flex gap-2"><input type="text" className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white text-black outline-none focus:ring-2 focus:ring-blue-500" placeholder="新規項目を追加..." value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} /><button onClick={handleAdd} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md"><i className="fa-solid fa-plus mr-1"></i>追加</button></div>
       </div>
     </div>
   );
 };
 
-const LABEL_MAP: Record<string, string> = { projects: "工事名", contractors: "施工者名", supervisors: "実施者（職長・監督）", locations: "実施場所", goals: "災害防止目標", processes: "作業工程", topics: "周知徹底事項", cautions: "現場内注意事項", subcontractors: "協力会社名" };
-const MASTER_GROUPS = { BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'subcontractors'], TRAINING: ['goals', 'processes', 'topics', 'cautions'] };
+const LABEL_MAP: Record<string, string> = { 
+  projects: "工事名", contractors: "会社名", supervisors: "現場責任者", locations: "場所", workplaces: "作業所名",
+  subcontractors: "協力会社名", roles: "役職", topics: "安全訓練内容", jobTypes: "工種", goals: "安全衛生目標", predictions: "予想災害", countermeasures: "防止対策",
+  processes: "作業工程", cautions: "注意事項"
+};
+const MASTER_GROUPS = { 
+  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
+  TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
+};
 const RELEVANT_MASTER_KEYS: (keyof MasterData)[] = ['projects', 'supervisors', 'subcontractors'];
 
 const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
@@ -110,7 +138,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [sigKey, setSigKey] = useState(0);
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
   
-  // Master State
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
   const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
@@ -138,6 +165,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const handleTempSave = async () => { setSaveStatus('saving'); try { const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', report); setDraftId(newId); setSaveStatus('saved'); setHasUnsavedChanges(false); setTimeout(() => setSaveStatus('idle'), 2000); } catch (e) { console.error(e); alert("保存に失敗しました"); setSaveStatus('idle'); } };
 
+  // ファイル名設定: 新規_所属会社名_氏名 (分割された氏名を結合)
   const handleSaveAndPrint = async () => {
     setSaveStatus('saving');
     try {
@@ -147,8 +175,11 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       setHasUnsavedChanges(false);
       setTimeout(() => setSaveStatus('idle'), 2000);
       const prevTitle = document.title;
-      const fileName = `新規_${report.company || '未入力'}_${report.name || '未入力'}`;
+      
+      const fullName = (report.nameSei || '') + (report.nameMei || '');
+      const fileName = `新規_${report.company || '未入力'}_${fullName || '未入力'}`;
       document.title = fileName;
+      
       window.print();
       document.title = prevTitle;
     } catch (e) { alert("保存に失敗しました"); setSaveStatus('idle'); }
@@ -157,7 +188,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
   const handleSignatureSave = (dataUrl: string) => { updateReport({ signatureDataUrl: dataUrl }); setSigKey(prev => prev + 1); };
 
-  // --- RENDER MASTER MANAGER (Updated) ---
+  // --- RENDER MASTER MANAGER ---
   const renderMasterManager = () => (
     <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen flex flex-col">
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
@@ -168,9 +199,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {selectedMasterKey ? (
         <div className="flex-1 overflow-hidden">
           <MasterSection 
-            title={LABEL_MAP[selectedMasterKey]} 
-            items={masterData[selectedMasterKey]} 
-            onBack={() => setSelectedMasterKey(null)}
+            title={LABEL_MAP[selectedMasterKey]} items={masterData[selectedMasterKey]} onBack={() => setSelectedMasterKey(null)}
             onUpdate={async (newItems) => { const newData = { ...masterData, [selectedMasterKey]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
             onDeleteRequest={(index, item) => {
               if (selectedMasterKey === 'projects') { setProjectDeleteTarget({ index, name: item }); } 
@@ -186,18 +215,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
             {MASTER_GROUPS[masterTab].map((key) => (
-              <button 
-                key={key}
-                onClick={() => setSelectedMasterKey(key as keyof MasterData)}
-                className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group"
-              >
-                <div>
-                  <h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3>
-                  <p className="text-xs text-gray-500">{masterData[key as keyof MasterData].length} 件の登録</p>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
-                  <i className="fa-solid fa-chevron-right"></i>
-                </div>
+              <button key={key} onClick={() => setSelectedMasterKey(key as keyof MasterData)} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group">
+                <div><h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3><p className="text-xs text-gray-500">{masterData[key as keyof MasterData].length} 件の登録</p></div>
+                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors"><i className="fa-solid fa-chevron-right"></i></div>
               </button>
             ))}
           </div>
@@ -211,15 +231,50 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 1: 基本情報</h2>
       <div className="bg-purple-50 p-4 rounded border border-purple-100 grid grid-cols-1 md:grid-cols-2 gap-4">
          <div className="col-span-1 md:col-span-2 text-sm text-purple-700 font-bold mb-1"><i className="fa-solid fa-circle-info mr-1"></i>はじめに現場を選択してください</div>
-         <div><label className="block text-xs font-bold text-gray-700 mb-1">作業所名 (マスタ選択)</label><select className="w-full p-2 border border-purple-300 rounded bg-white font-bold" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
-         <div><label className="block text-xs font-bold text-gray-700 mb-1">作業所長名 (マスタ選択)</label><select className="w-full p-2 border border-purple-300 rounded bg-white" value={report.director} onChange={(e)=>updateReport({director: e.target.value})}>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+         <div><label className="block text-xs font-bold text-gray-700 mb-1">作業所名 (マスタ選択)</label><select className="w-full p-2 border border-purple-300 rounded bg-white font-bold appearance-none" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+         <div><label className="block text-xs font-bold text-gray-700 mb-1">作業所長名 (マスタ選択)</label><select className="w-full p-2 border border-purple-300 rounded bg-white appearance-none" value={report.director} onChange={(e)=>updateReport({director: e.target.value})}>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="form-control"><label className="label font-bold text-gray-700">氏名（フリガナ）</label><input type="text" className="w-full p-2 border rounded mb-2" placeholder="氏名" value={report.name} onChange={(e) => updateReport({name: e.target.value})} /><input type="text" className="w-full p-2 border rounded" placeholder="フリガナ" value={report.furigana} onChange={(e) => updateReport({furigana: e.target.value})} /></div><div className="form-control"><label className="label font-bold text-gray-700">生年月日・性別</label><div className="flex gap-2 mb-2 items-center"><select className="p-2 border rounded" value={report.birthEra} onChange={(e)=>updateReport({birthEra: e.target.value as any})}><option value="Showa">昭和</option><option value="Heisei">平成</option></select><input type="number" className="w-14 p-2 border rounded text-center" value={report.birthYear} onChange={(e)=>updateReport({birthYear: e.target.value === '' ? '' : parseInt(e.target.value)})} placeholder="年" /><span>年</span><input type="number" className="w-12 p-2 border rounded text-center" value={report.birthMonth} onChange={(e)=>updateReport({birthMonth: e.target.value === '' ? '' : parseInt(e.target.value)})} placeholder="月" /><span>月</span><input type="number" className="w-12 p-2 border rounded text-center" value={report.birthDay} onChange={(e)=>updateReport({birthDay: e.target.value === '' ? '' : parseInt(e.target.value)})} placeholder="日" /><span>日</span></div><div className="flex gap-4 items-center"><div className="flex gap-2 border p-1 rounded bg-white"><label className="flex items-center gap-1 cursor-pointer"><input type="radio" checked={report.gender === 'Male'} onChange={() => updateReport({gender: 'Male'})} />男</label><label className="flex items-center gap-1 cursor-pointer"><input type="radio" checked={report.gender === 'Female'} onChange={() => updateReport({gender: 'Female'})} />女</label></div><div className="flex items-center gap-2"><input type="number" className="w-16 p-2 border rounded text-center bg-gray-100" readOnly value={report.age} /><span>歳</span></div></div></div></div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="form-control"><label className="label font-bold text-gray-700">所属会社名 (マスタ選択)</label><select className="w-full p-2 border rounded mb-2" value={report.company} onChange={(e) => updateReport({company: e.target.value})}>{masterData.subcontractors.map(c => <option key={c} value={c}>{c}</option>)}</select><div className="flex items-center gap-2 text-sm"><span>(</span><input type="text" className="w-10 border-b text-center" value={report.subcontractorRank} onChange={(e)=>updateReport({subcontractorRank: e.target.value})} /><span>次) 下請け</span></div></div><div className="form-control"><label className="label font-bold text-gray-700">経験年数</label><div className="flex items-center gap-2 mt-2"><input type="number" className="w-16 p-2 border rounded text-center" value={report.experienceYears} onChange={(e)=>updateReport({experienceYears: parseInt(e.target.value)})} /><span>年</span><input type="number" className="w-16 p-2 border rounded text-center" value={report.experienceMonths} onChange={(e)=>updateReport({experienceMonths: parseInt(e.target.value)})} /><span>ヶ月</span></div></div></div>
-      <div className="form-control"><label className="label font-bold text-gray-700">職種</label><div className="flex gap-2"><select className="w-1/2 p-2 border rounded" value={report.jobType} onChange={(e) => updateReport({jobType: e.target.value})}><option value="土工">土工</option><option value="鳶">鳶</option><option value="大工">大工</option><option value="オペ">オペ</option><option value="鉄筋工">鉄筋工</option><option value="交通整理人">交通整理人</option><option value="その他">その他</option></select>{report.jobType === 'その他' && (<input type="text" className="flex-1 p-2 border rounded" placeholder="詳細を入力" value={report.jobTypeOther} onChange={(e)=>updateReport({jobTypeOther: e.target.value})} />)}</div></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* ★変更: 氏名を分割入力 */}
+        <div className="form-control">
+          <label className="label font-bold text-gray-700">氏名（フリガナ）</label>
+          <div className="flex gap-2 mb-2">
+            <input type="text" className="w-1/2 p-2 border rounded" placeholder="氏" value={report.nameSei} onChange={(e) => updateReport({nameSei: e.target.value})} />
+            <input type="text" className="w-1/2 p-2 border rounded" placeholder="名" value={report.nameMei} onChange={(e) => updateReport({nameMei: e.target.value})} />
+          </div>
+          <div className="flex gap-2">
+            <input type="text" className="w-1/2 p-2 border rounded" placeholder="セイ" value={report.furiganaSei} onChange={(e) => updateReport({furiganaSei: e.target.value})} />
+            <input type="text" className="w-1/2 p-2 border rounded" placeholder="メイ" value={report.furiganaMei} onChange={(e) => updateReport({furiganaMei: e.target.value})} />
+          </div>
+        </div>
+        
+        <div className="form-control"><label className="label font-bold text-gray-700">生年月日・性別</label><div className="flex gap-2 mb-2 items-center"><select className="p-2 border rounded appearance-none" value={report.birthEra} onChange={(e)=>updateReport({birthEra: e.target.value as any})}><option value="Showa">昭和</option><option value="Heisei">平成</option></select><input type="number" className="w-14 p-2 border rounded text-center" value={report.birthYear} onChange={(e)=>updateReport({birthYear: e.target.value === '' ? '' : parseInt(e.target.value)})} placeholder="年" /><span>年</span><input type="number" className="w-12 p-2 border rounded text-center" value={report.birthMonth} onChange={(e)=>updateReport({birthMonth: e.target.value === '' ? '' : parseInt(e.target.value)})} placeholder="月" /><span>月</span><input type="number" className="w-12 p-2 border rounded text-center" value={report.birthDay} onChange={(e)=>updateReport({birthDay: e.target.value === '' ? '' : parseInt(e.target.value)})} placeholder="日" /><span>日</span></div><div className="flex gap-4 items-center"><div className="flex gap-2 border p-1 rounded bg-white"><label className="flex items-center gap-1 cursor-pointer"><input type="radio" checked={report.gender === 'Male'} onChange={() => updateReport({gender: 'Male'})} />男</label><label className="flex items-center gap-1 cursor-pointer"><input type="radio" checked={report.gender === 'Female'} onChange={() => updateReport({gender: 'Female'})} />女</label></div><div className="flex items-center gap-2"><input type="number" className="w-16 p-2 border rounded text-center bg-gray-100" readOnly value={report.age} /><span>歳</span></div></div></div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="form-control"><label className="label font-bold text-gray-700">所属会社名 (マスタ選択)</label><select className="w-full p-2 border rounded mb-2 appearance-none" value={report.company} onChange={(e) => updateReport({company: e.target.value})}>{masterData.subcontractors.map(c => <option key={c} value={c}>{c}</option>)}</select><div className="flex items-center gap-2 text-sm"><span>(</span><input type="text" className="w-10 border-b text-center" value={report.subcontractorRank} onChange={(e)=>updateReport({subcontractorRank: e.target.value})} /><span>次) 下請け</span></div></div><div className="form-control"><label className="label font-bold text-gray-700">経験年数</label><div className="flex items-center gap-2 mt-2"><input type="number" className="w-16 p-2 border rounded text-center" value={report.experienceYears} onChange={(e)=>updateReport({experienceYears: parseInt(e.target.value)})} /><span>年</span><input type="number" className="w-16 p-2 border rounded text-center" value={report.experienceMonths} onChange={(e)=>updateReport({experienceMonths: parseInt(e.target.value)})} /><span>ヶ月</span></div></div></div>
+      <div className="form-control"><label className="label font-bold text-gray-700">職種</label><div className="flex gap-2"><select className="w-1/2 p-2 border rounded appearance-none" value={report.jobType} onChange={(e) => updateReport({jobType: e.target.value})}><option value="土工">土工</option><option value="鳶">鳶</option><option value="大工">大工</option><option value="オペ">オペ</option><option value="鉄筋工">鉄筋工</option><option value="交通整理人">交通整理人</option><option value="その他">その他</option></select>{report.jobType === 'その他' && (<input type="text" className="flex-1 p-2 border rounded" placeholder="詳細を入力" value={report.jobTypeOther} onChange={(e)=>updateReport({jobTypeOther: e.target.value})} />)}</div></div>
       <div className="form-control"><label className="label font-bold text-gray-700">現住所・電話番号</label><input type="text" className="w-full p-2 border rounded mb-2" placeholder="住所" value={report.address} onChange={(e) => updateReport({address: e.target.value})} /><input type="text" className="w-full p-2 border rounded" placeholder="電話番号" value={report.phone} onChange={(e) => updateReport({phone: e.target.value})} /></div>
-      <div className="form-control bg-gray-50 p-3 rounded"><label className="label font-bold text-gray-700 mb-2 block">緊急連絡先</label><div className="mb-2"><label className="text-xs text-gray-500 font-bold mb-1 block">氏名</label><input type="text" className="w-full p-2 border rounded" placeholder="氏名" value={report.emergencyContactName} onChange={(e) => updateReport({emergencyContactName: e.target.value})} /></div><div className="grid grid-cols-2 gap-3"><div><label className="text-xs text-gray-500 font-bold mb-1 block">続柄</label><select className="w-full p-2 border rounded bg-white" value={report.emergencyContactRelation} onChange={(e) => updateReport({emergencyContactRelation: e.target.value})}><option value="">選択してください</option><option value="妻">妻</option><option value="夫">夫</option><option value="父">父</option><option value="母">母</option><option value="子">子</option><option value="兄">兄</option><option value="弟">弟</option><option value="姉">姉</option><option value="妹">妹</option><option value="祖父">祖父</option><option value="祖母">祖母</option><option value="同居人">同居人</option><option value="その他">その他</option></select></div><div><label className="text-xs text-gray-500 font-bold mb-1 block">緊急電話番号</label><input type="text" className="w-full p-2 border rounded" placeholder="090-0000-0000" value={report.emergencyContactPhone} onChange={(e) => updateReport({emergencyContactPhone: e.target.value})} /></div></div></div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div className="form-control"><label className="label font-bold text-gray-700">血液型</label><div className="flex gap-2"><select className="p-2 border rounded" value={report.bloodType} onChange={(e) => updateReport({bloodType: e.target.value})}><option value="A">A</option><option value="B">B</option><option value="O">O</option><option value="AB">AB</option></select><span className="self-center">型</span><span className="self-center ml-2">RH</span><select className="p-2 border rounded" value={report.bloodTypeRh} onChange={(e) => updateReport({bloodTypeRh: e.target.value as any})}><option value="Plus">+</option><option value="Minus">-</option></select></div></div><div className="form-control"><label className="label font-bold text-gray-700">健康診断受診日 (令和)</label><div className="flex gap-1 items-center"><input type="number" className="w-14 p-2 border rounded text-center" value={report.healthCheckYear} onChange={(e)=>updateReport({healthCheckYear: parseInt(e.target.value)})} /><span>年</span><input type="number" className="w-12 p-2 border rounded text-center" value={report.healthCheckMonth} onChange={(e)=>updateReport({healthCheckMonth: parseInt(e.target.value)})} /><span>月</span><input type="number" className="w-12 p-2 border rounded text-center" value={report.healthCheckDay} onChange={(e)=>updateReport({healthCheckDay: parseInt(e.target.value)})} /><span>日</span></div></div></div>
+      
+      {/* ★変更: 緊急連絡先氏名を分割入力 */}
+      <div className="form-control bg-gray-50 p-3 rounded">
+        <label className="label font-bold text-gray-700 mb-2 block">緊急連絡先</label>
+        <div className="mb-2">
+          <label className="text-xs text-gray-500 font-bold mb-1 block">氏名</label>
+          <div className="flex gap-2">
+            <input type="text" className="w-1/2 p-2 border rounded" placeholder="氏" value={report.emergencyContactSei} onChange={(e) => updateReport({emergencyContactSei: e.target.value})} />
+            <input type="text" className="w-1/2 p-2 border rounded" placeholder="名" value={report.emergencyContactMei} onChange={(e) => updateReport({emergencyContactMei: e.target.value})} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className="text-xs text-gray-500 font-bold mb-1 block">続柄</label><select className="w-full p-2 border rounded bg-white appearance-none" value={report.emergencyContactRelation} onChange={(e) => updateReport({emergencyContactRelation: e.target.value})}><option value="">選択してください</option><option value="妻">妻</option><option value="夫">夫</option><option value="父">父</option><option value="母">母</option><option value="子">子</option><option value="兄">兄</option><option value="弟">弟</option><option value="姉">姉</option><option value="妹">妹</option><option value="祖父">祖父</option><option value="祖母">祖母</option><option value="同居人">同居人</option><option value="その他">その他</option></select></div>
+          <div><label className="text-xs text-gray-500 font-bold mb-1 block">緊急電話番号</label><input type="text" className="w-full p-2 border rounded" placeholder="090-0000-0000" value={report.emergencyContactPhone} onChange={(e) => updateReport({emergencyContactPhone: e.target.value})} /></div>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* ★変更: 血液型のRHに「不明」を追加 */}
+        <div className="form-control"><label className="label font-bold text-gray-700">血液型</label><div className="flex gap-2"><select className="p-2 border rounded appearance-none" value={report.bloodType} onChange={(e) => updateReport({bloodType: e.target.value})}><option value="A">A</option><option value="B">B</option><option value="O">O</option><option value="AB">AB</option></select><span className="self-center">型</span><span className="self-center ml-2">RH</span><select className="p-2 border rounded appearance-none" value={report.bloodTypeRh} onChange={(e) => updateReport({bloodTypeRh: e.target.value as any})}><option value="Unknown">不明</option><option value="Plus">+</option><option value="Minus">-</option></select></div></div>
+        <div className="form-control"><label className="label font-bold text-gray-700">健康診断受診日 (令和)</label><div className="flex gap-1 items-center"><input type="number" className="w-14 p-2 border rounded text-center" value={report.healthCheckYear} onChange={(e)=>updateReport({healthCheckYear: parseInt(e.target.value)})} /><span>年</span><input type="number" className="w-12 p-2 border rounded text-center" value={report.healthCheckMonth} onChange={(e)=>updateReport({healthCheckMonth: parseInt(e.target.value)})} /><span>月</span><input type="number" className="w-12 p-2 border rounded text-center" value={report.healthCheckDay} onChange={(e)=>updateReport({healthCheckDay: parseInt(e.target.value)})} /><span>日</span></div></div>
+      </div>
       <div className="form-control"><label className="label font-bold text-gray-700">建退協加入</label><div className="flex gap-4 mt-1"><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'Joined'} onChange={() => updateReport({kentaikyo: 'Joined'})} />加入している</label><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'NotJoined'} onChange={() => updateReport({kentaikyo: 'NotJoined'})} />加入していない</label></div></div>
     </div>
   );
@@ -300,33 +355,13 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     </div>
   );
 
-  if (isMasterMode) return (
-    <>
-      {renderMasterManager()}
-      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} />
-      {projectDeleteTarget && (
-        <ProjectDeleteModal 
-          isOpen={!!projectDeleteTarget} 
-          projectName={projectDeleteTarget.name}
-          onCancel={() => setProjectDeleteTarget(null)}
-          onConfirm={async () => {
-            const items = [...masterData.projects];
-            items.splice(projectDeleteTarget.index, 1);
-            await deleteDraftsByProject(projectDeleteTarget.name);
-            const newData = { ...masterData, projects: items };
-            setMasterData(newData);
-            await saveMasterData(newData);
-            setProjectDeleteTarget(null);
-          }}
-        />
-      )}
-    </>
-  );
+  if (isMasterMode) return (<> {renderMasterManager()} <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} /> </>);
 
   return (
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
-        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-person-circle-question mr-2"></i>新規入場者アンケート</h1></div><button onClick={() => setIsMasterMode(true)} className="text-xs bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors"><i className="fa-solid fa-gear mr-1"></i>設定</button>
+        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
+          <div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-person-circle-question mr-2"></i>新規入場者アンケート</h1></div><button onClick={() => setIsMasterMode(true)} className="text-xs bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors"><i className="fa-solid fa-gear mr-1"></i>設定</button>
         </header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-purple-600" : ""}>基本情報</span><span className={step >= 2 ? "text-purple-600" : ""}>資格</span><span className={step >= 3 ? "text-purple-600" : ""}>誓約・署名</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-purple-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg max-w-lg min-h-[60vh] max-w-3xl">{step === 1 && renderStep1()}{step === 2 && renderStep2()}{step === 3 && renderStep3()}</main>
@@ -339,6 +374,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {showPreview && renderPreviewModal()}
       <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
       
+      {/* 隠し印刷用レイアウト */}
       <div className="hidden print:block">
          <NewcomerSurveyPrintLayout data={report} />
       </div>

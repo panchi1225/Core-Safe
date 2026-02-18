@@ -6,14 +6,11 @@ interface Props {
 }
 
 const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
-  // ★安全装置
   if (!data) return null;
   const qual = data.qualifications || {};
 
-  // Styles
   const borderClass = "border-b border-r border-black";
   
-  // Checkbox Helper
   const CheckBox = ({ checked, label }: { checked: boolean | undefined; label: string }) => (
     <div className="flex items-center text-[11px] leading-tight mb-0.5">
       <div className={`w-3.5 h-3.5 border border-black flex items-center justify-center mr-1.5 text-[10px] shrink-0 font-sans`}>
@@ -23,17 +20,14 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
     </div>
   );
 
-  // Job Types List
   const JOB_TYPES = ["土工", "鳶", "大工", "オペ", "鉄筋工", "交通整理人", "その他"];
 
   return (
     <div className="font-serif text-black leading-tight bg-white relative">
       <div className="print-page p-[12mm] flex flex-col box-border" style={{ height: '297mm', width: '210mm' }}>
         
-        {/* Title */}
         <h1 className="text-3xl font-bold text-center mb-6 tracking-[0.5em] shrink-0">新規入場者アンケート</h1>
 
-        {/* --- MAIN TABLE --- */}
         <div className="w-full border-2 border-black flex-1 flex flex-col overflow-hidden">
           
           {/* Row 1: Name / Birth / Gender */}
@@ -43,8 +37,9 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
               <span className="font-bold text-base">氏　　　名</span>
             </div>
             <div className={`w-64 ${borderClass} p-1 flex flex-col justify-center`}>
-               <div className="text-xs text-center w-full mb-0.5">{data.furigana}</div>
-               <div className="text-xl text-center font-bold">{data.name}</div>
+               {/* ★変更: 分割された氏名をスペース繋ぎで表示 */}
+               <div className="text-xs text-center w-full mb-0.5">{data.furiganaSei}　{data.furiganaMei}</div>
+               <div className="text-xl text-center font-bold">{data.nameSei}　{data.nameMei}</div>
             </div>
             <div className={`w-24 ${borderClass} bg-gray-50 flex items-center justify-center font-bold text-sm text-center`}>
               生年月日
@@ -98,12 +93,11 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
              </div>
           </div>
 
-          {/* Row 3: Job Type (修正版: サイズアップ & 間隔調整) */}
+          {/* Row 3: Job Type */}
           <div className="flex border-b border-black shrink-0 h-[40px]">
             <div className={`w-24 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm`}>
               職　　　種
             </div>
-            {/* 文字サイズを text-[11px] から text-sm (約14px) に変更 */}
             <div className={`flex-1 border-b border-black px-2 flex items-center text-sm`}>
               <div className="flex flex-nowrap items-center w-full">
                 {JOB_TYPES.map((job, idx) => (
@@ -112,15 +106,12 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                       <span className={`px-1 ${data.jobType === job ? 'border border-black rounded-full font-bold' : ''}`}>
                         {job}
                       </span>
-                      {/* 丸の右側の点の間隔を mx-0.5 から mx-1 に広げました */}
                       {idx < JOB_TYPES.length - 1 && <span className="text-gray-400 mx-1">・</span>}
                     </div>
                   </React.Fragment>
                 ))}
-                {/* その他詳細 */}
                 <div className="flex items-center whitespace-nowrap ml-1">
                   <span>（</span>
-                  {/* 横幅を少し広げてバランス調整 min-w-[80px] -> 100px */}
                   <span className="inline-block min-w-[100px] text-center px-1 italic">
                      {data.jobType === 'その他' ? data.jobTypeOther : ''}
                   </span>
@@ -156,7 +147,8 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                氏名
              </div>
              <div className={`flex-1 ${borderClass} px-3 flex items-center text-sm`}>
-               {data.emergencyContactName}
+               {/* ★変更: 分割された氏名をスペース繋ぎで表示 */}
+               {data.emergencyContactSei}　{data.emergencyContactMei}
              </div>
              <div className={`w-12 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-[10px]`}>
                続柄
@@ -182,7 +174,10 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
               <span className="text-lg font-bold w-6 text-center">{data.bloodType}</span>
               <span className="text-xs">型</span>
               <span className="ml-4 text-xs font-bold">（ ＲＨ </span>
-              <span className="w-10 text-center border-b border-black text-lg font-bold">{data.bloodTypeRh === 'Plus' ? '+' : data.bloodTypeRh === 'Minus' ? '-' : ''}</span>
+              {/* ★変更: 不明の場合は空欄 */}
+              <span className="w-10 text-center border-b border-black text-lg font-bold">
+                {data.bloodTypeRh === 'Plus' ? '+' : data.bloodTypeRh === 'Minus' ? '-' : ''}
+              </span>
               <span className="text-xs font-bold"> ）</span>
             </div>
             <div className={`w-32 ${borderClass} bg-gray-50 flex items-center justify-center font-bold text-[10px] p-1 text-center leading-tight`}>

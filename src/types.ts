@@ -1,19 +1,19 @@
 export interface MasterData {
   // --- 基本・共通 ---
   projects: string[];       // 工事名
-  workplaces: string[];     // 作業所名 (新規追加)
+  workplaces: string[];     // 作業所名
   contractors: string[];    // 会社名 (元請/施工者)
   supervisors: string[];    // 現場責任者
   locations: string[];      // 場所
-  subcontractors: string[]; // 協力会社名 (アンケート等で使用)
+  subcontractors: string[]; // 協力会社名
 
   // --- 各種項目 ---
-  roles: string[];          // 役職 (新規追加)
-  topics: string[];         // 安全訓練内容 (旧:周知徹底事項)
-  jobTypes: string[];       // 工種 (新規追加)
+  roles: string[];          // 役職
+  topics: string[];         // 安全訓練内容
+  jobTypes: string[];       // 工種
   goals: string[];          // 安全衛生目標
-  predictions: string[];    // 予想災害 (新規追加)
-  countermeasures: string[];// 防止対策 (新規追加)
+  predictions: string[];    // 予想災害
+  countermeasures: string[];// 防止対策
   
   // その他 (内部保持用)
   processes: string[];      // 作業工程
@@ -127,8 +127,13 @@ export interface Qualifications {
 export interface NewcomerSurveyReportData {
   project: string;
   director: string;
-  furigana: string;
-  name: string;
+  
+  // ★変更: 氏名を分割
+  furiganaSei: string; // フリガナ(氏)
+  furiganaMei: string; // フリガナ(名)
+  nameSei: string;     // 氏名(氏)
+  nameMei: string;     // 氏名(名)
+  
   birthEra: 'Showa' | 'Heisei';
   birthYear: number | '';
   birthMonth: number | '';
@@ -143,11 +148,18 @@ export interface NewcomerSurveyReportData {
   jobTypeOther: string;
   address: string;
   phone: string;
-  emergencyContactName: string;
+  
+  // ★変更: 緊急連絡先氏名を分割
+  emergencyContactSei: string; // 緊急連絡先(氏)
+  emergencyContactMei: string; // 緊急連絡先(名)
+  
   emergencyContactRelation: string;
   emergencyContactPhone: string;
+  
   bloodType: string;
-  bloodTypeRh: 'Plus' | 'Minus' | '';
+  // ★変更: 'Unknown'を追加
+  bloodTypeRh: 'Plus' | 'Minus' | 'Unknown';
+  
   healthCheckYear: number;
   healthCheckMonth: number;
   healthCheckDay: number;
@@ -171,7 +183,7 @@ export interface SavedDraft {
 
 export const INITIAL_MASTER_DATA: MasterData = {
   projects: ["公共運動公園周辺地区整備工事"],
-  workplaces: ["現場事務所"], // 新規
+  workplaces: ["現場事務所"],
   contractors: ["松浦建設株式会社"],
   subcontractors: ["（株）田中土木"],
   supervisors: ["大須賀 久敬"],
@@ -180,10 +192,10 @@ export const INITIAL_MASTER_DATA: MasterData = {
   processes: ["準備工"],
   topics: ["新規入場者教育の実施について"],
   cautions: ["現場内整理整頓"],
-  roles: ["職長"], // 新規
-  jobTypes: ["土工", "鳶", "大工", "オペ"], // 新規
-  predictions: ["重機との接触"], // 新規
-  countermeasures: ["作業範囲の立入禁止"] // 新規
+  roles: ["職長"],
+  jobTypes: ["土工", "鳶", "大工", "オペ"],
+  predictions: ["重機との接触"],
+  countermeasures: ["作業範囲の立入禁止"]
 };
 
 export const INITIAL_REPORT: ReportData = {
@@ -238,8 +250,13 @@ export const INITIAL_SAFETY_PLAN_REPORT: SafetyPlanReportData = {
 export const INITIAL_NEWCOMER_SURVEY_REPORT: NewcomerSurveyReportData = {
   project: INITIAL_MASTER_DATA.projects[0],
   director: INITIAL_MASTER_DATA.supervisors[0],
-  furigana: "",
-  name: "",
+  
+  // ★変更: 氏名の初期値分割
+  furiganaSei: "",
+  furiganaMei: "",
+  nameSei: "",
+  nameMei: "",
+  
   birthEra: 'Showa',
   birthYear: '',
   birthMonth: '',
@@ -254,11 +271,17 @@ export const INITIAL_NEWCOMER_SURVEY_REPORT: NewcomerSurveyReportData = {
   jobTypeOther: "",
   address: "",
   phone: "",
-  emergencyContactName: "",
+  
+  // ★変更: 緊急連絡先の初期値分割
+  emergencyContactSei: "",
+  emergencyContactMei: "",
+  
   emergencyContactRelation: "",
   emergencyContactPhone: "",
   bloodType: "A",
-  bloodTypeRh: "Plus",
+  // ★変更: 初期値を Unknown に
+  bloodTypeRh: "Unknown", 
+  
   healthCheckYear: new Date().getFullYear() - 2018,
   healthCheckMonth: new Date().getMonth() + 1,
   healthCheckDay: new Date().getDate(),
