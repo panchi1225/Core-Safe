@@ -1,472 +1,885 @@
-import React, { useState, useEffect } from 'react';
-import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA } from '../types';
-import { getMasterData, saveDraft, saveMasterData, deleteDraftsByProject } from '../services/firebaseService';
-import SignatureCanvas from './SignatureCanvas';
+import React, { useState, useEffect, useRef } from 'react';
+import { NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, MasterData, INITIAL_MASTER_DATA } from '../types';
+import { saveDraft, getMasterData, saveMasterData, deleteDraftsByProject } from '../services/firebaseService';
+import SignatureCanvas from 'react-signature-canvas';
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
 
 interface Props {
-  initialData?: any;
+  initialData?: NewcomerSurveyReportData;
   initialDraftId?: string | null;
   onBackToMenu: () => void;
 }
 
-// --- 安全装置 ---
-const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
-  if (!data) return INITIAL_NEWCOMER_SURVEY_REPORT;
-  const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
-  return { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
+// -----------------------------------------------------------------------------
+// 定数・マスタ定義
+// -----------------------------------------------------------------------------
+const LABEL_MAP: Record<string, string> = {
+  projects: '工事名',
+  companies: '会社名',
+  bosses: '現場責任者',
+  jobTypes: '職種',
+  roles: '役職',
+  workplaces: '作業所名',
 };
 
-// --- Modals ---
-interface ConfirmModalProps { isOpen: boolean; message: string; onConfirm: () => void; onCancel: () => void; }
-const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onConfirm, onCancel }) => {
+const MASTER_GROUPS = {
+  BASIC: ['projects', 'companies', 'bosses', 'workplaces'],
+  SURVEY: ['jobTypes', 'roles']
+};
+
+const JOB_TYPES = ["土工","鳶","大工","オペ","鉄筋工","交通整理人","その他"];
+const BLOOD_TYPES = ["A","B","O","AB"];
+const RH_TYPES = [
+  { value: 'Plus', label: '＋' },
+  { value: 'Minus', label: '-' },
+  { value: 'Unknown', label: '不明' },
+];
+
+// -----------------------------------------------------------------------------
+// 内部コンポーネント: 削除確認モーダル (Password付き)
+// -----------------------------------------------------------------------------
+const ProjectDeleteModal: React.FC<{
+  isOpen: boolean;
+  projectName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}> = ({ isOpen, projectName, onConfirm, onCancel }) => {
+  const [pass, setPass] = useState('');
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[60] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">確認</h3>
-        <p className="text-gray-600 mb-6 whitespace-pre-wrap">{message}</p>
+    <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-fade-in border-2 border-red-500">
+        <h3 className="text-lg font-bold mb-4 text-red-600">⚠ 警告: 工事名の削除</h3>
+        <p className="mb-4 text-sm text-gray-700">
+          工事名「<span className="font-bold">{projectName}</span>」を削除しようとしています。<br/><br/>
+          <span className="font-bold text-red-600">実行すると、この工事名に関連するすべての一時保存データも同時に削除されます。</span><br/>
+          この操作は取り消せません。
+        </p>
+        <p className="mb-2 text-sm font-bold">パスワードを入力してください (4043)</p>
+        <input 
+          type="password" 
+          className="w-full border p-2 rounded mb-4"
+          value={pass}
+          onChange={(e)=>setPass(e.target.value)}
+        />
         <div className="flex justify-end gap-3">
-          <button onClick={onCancel} className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600">キャンセル</button>
-          <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold">実行する</button>
+          <button onClick={onCancel} className="px-4 py-2 bg-gray-200 rounded text-sm">キャンセル</button>
+          <button 
+            onClick={()=>{ if(pass==='4043') onConfirm(); else alert('パスワードが違います'); }}
+            className="px-4 py-2 bg-red-600 text-white rounded text-sm font-bold"
+          >
+            完全削除を実行
+          </button>
         </div>
       </div>
     </div>
   );
 };
 
-// --- Master Section ---
-const MasterSection: React.FC<{title: string; items: string[]; onUpdate: (items: string[]) => void; onDeleteRequest: (index: number, item: string) => void;}> = ({ title, items, onUpdate, onDeleteRequest }) => {
-  const [newItem, setNewItem] = useState("");
-  const handleAdd = () => { if (newItem.trim()) { onUpdate([...items, newItem.trim()]); setNewItem(""); } };
+// -----------------------------------------------------------------------------
+// 内部コンポーネント: 通常の確認モーダル
+// -----------------------------------------------------------------------------
+const ConfirmationModal: React.FC<{ isOpen: boolean; message: string; onConfirm: () => void; onCancel: () => void; }> = ({ isOpen, message, onConfirm, onCancel }) => {
+  if (!isOpen) return null;
   return (
-    <div className="border border-gray-200 p-4 rounded-lg bg-white shadow-sm break-inside-avoid">
-      <h3 className="font-bold mb-3 text-lg text-gray-800 border-b pb-2 flex justify-between items-center">{title}<span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{items.length}件</span></h3>
-      <ul className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-        {items.map((item, idx) => (<li key={idx} className="flex justify-between items-center bg-gray-50 p-2 rounded hover:bg-gray-100 transition-colors"><span className="text-sm text-gray-800 break-all mr-2">{item}</span><button type="button" onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }} className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors"><i className="fa-solid fa-trash"></i></button></li>))}
-        {items.length === 0 && <li className="text-gray-400 text-sm italic text-center py-2">データがありません</li>}
-      </ul>
-      <div className="flex gap-2"><input type="text" className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm bg-white text-black focus:ring-2 focus:ring-blue-500 outline-none" placeholder="新規項目を追加..." value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} /><button onClick={handleAdd} className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 whitespace-nowrap shadow-sm transition-colors"><i className="fa-solid fa-plus mr-1"></i>追加</button></div>
+    <div className="fixed inset-0 z-[60] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-fade-in">
+        <h3 className="text-lg font-bold mb-4">確認</h3>
+        <p className="mb-6 whitespace-pre-wrap">{message}</p>
+        <div className="flex justify-end gap-3">
+          <button onClick={onCancel} className="px-4 py-2 bg-gray-100 rounded">キャンセル</button>
+          <button onClick={onConfirm} className="px-4 py-2 bg-blue-600 text-white rounded">OK</button>
+        </div>
+      </div>
     </div>
   );
 };
 
-const LABEL_MAP: Record<string, string> = { projects: "工事名", supervisors: "実施者（職長・監督）", subcontractors: "協力会社名" };
-const RELEVANT_MASTER_KEYS: (keyof MasterData)[] = ['projects', 'supervisors', 'subcontractors'];
+// -----------------------------------------------------------------------------
+// 内部コンポーネント: マスタ管理セクション
+// -----------------------------------------------------------------------------
+const MasterSection: React.FC<{
+  masterData: MasterData;
+  onUpdate: (newData: MasterData) => Promise<void>;
+}> = ({ masterData, onUpdate }) => {
+  const [activeTab, setActiveTab] = useState<'BASIC' | 'SURVEY'>('BASIC');
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [newItem, setNewItem] = useState('');
+  
+  const [deleteModal, setDeleteModal] = useState<{isOpen:boolean, index:number, item:string}>({isOpen:false, index:-1, item:''});
+  const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index:number, name:string} | null>(null);
 
+  const handleAddItem = async () => {
+    if (!selectedKey || !newItem.trim()) return;
+    const currentList = (masterData as any)[selectedKey] || [];
+    if (currentList.includes(newItem.trim())) {
+      alert('その項目は既に存在します');
+      return;
+    }
+    const updated = { ...masterData, [selectedKey]: [...currentList, newItem.trim()] };
+    await onUpdate(updated);
+    setNewItem('');
+  };
+
+  const handleDeleteRequest = (index: number, item: string) => {
+    if (selectedKey === 'projects') {
+      setProjectDeleteTarget({ index, name: item });
+    } else {
+      setDeleteModal({ isOpen: true, index, item });
+    }
+  };
+
+  const executeDelete = async () => {
+    if (!selectedKey) return;
+    const currentList = (masterData as any)[selectedKey] || [];
+    const updatedList = currentList.filter((_: any, i: number) => i !== deleteModal.index);
+    const updated = { ...masterData, [selectedKey]: updatedList };
+    await onUpdate(updated);
+    setDeleteModal({ isOpen: false, index: -1, item: '' });
+  };
+
+  const executeProjectDelete = async () => {
+    if (!selectedKey || !projectDeleteTarget) return;
+    const currentList = (masterData as any)[selectedKey] || [];
+    const updatedList = currentList.filter((_: any, i: number) => i !== projectDeleteTarget.index);
+    const updated = { ...masterData, [selectedKey]: updatedList };
+    try {
+      await deleteDraftsByProject(projectDeleteTarget.name);
+      await onUpdate(updated);
+      setProjectDeleteTarget(null);
+    } catch (error) {
+      console.error(error);
+      alert('削除に失敗しました');
+    }
+  };
+
+  return (
+    <div className="mb-8 border rounded-lg bg-white shadow-sm overflow-hidden">
+      <div className="bg-gray-100 p-3 border-b flex justify-between items-center">
+        <h3 className="font-bold text-gray-700 flex items-center gap-2">
+          <i className="fa-solid fa-database"></i> マスタデータ管理
+        </h3>
+      </div>
+      <div className="flex border-b">
+        <button 
+          onClick={() => { setActiveTab('BASIC'); setSelectedKey(null); }}
+          className={`flex-1 py-3 text-sm font-bold ${activeTab==='BASIC' ? 'bg-white border-b-2 border-blue-600 text-blue-600' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+        >
+          基本・共通マスタ
+        </button>
+        <button 
+          onClick={() => { setActiveTab('SURVEY'); setSelectedKey(null); }}
+          className={`flex-1 py-3 text-sm font-bold ${activeTab==='SURVEY' ? 'bg-white border-b-2 border-purple-600 text-purple-600' : 'bg-gray-50 text-gray-500 hover:bg-gray-100'}`}
+        >
+          各種項目マスタ
+        </button>
+      </div>
+      <div className="p-4 bg-gray-50 min-h-[300px]">
+        {!selectedKey ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {MASTER_GROUPS[activeTab].map(key => (
+              <button 
+                key={key} 
+                onClick={() => setSelectedKey(key)}
+                className="bg-white p-4 rounded border shadow-sm hover:shadow-md hover:bg-blue-50 transition text-left"
+              >
+                <div className="font-bold text-gray-700">{LABEL_MAP[key] || key}</div>
+                <div className="text-xs text-gray-400 mt-1">
+                  {((masterData as any)[key] || []).length} 件登録済み
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="animate-fade-in">
+            <div className="flex items-center gap-2 mb-4">
+              <button onClick={() => setSelectedKey(null)} className="text-sm text-blue-600 hover:underline">&lt; 戻る</button>
+              <h4 className="font-bold text-lg">{LABEL_MAP[selectedKey]} のリスト編集</h4>
+            </div>
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                placeholder="新しい項目を追加"
+                className="flex-1 border rounded px-3 py-2"
+                value={newItem}
+                onChange={(e) => setNewItem(e.target.value)}
+              />
+              <button onClick={handleAddItem} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">追加</button>
+            </div>
+            <div className="bg-white border rounded max-h-60 overflow-y-auto">
+              {((masterData as any)[selectedKey] || []).length === 0 ? (
+                <div className="p-4 text-center text-gray-400 text-sm">データがありません</div>
+              ) : (
+                <ul className="divide-y">
+                  {((masterData as any)[selectedKey] || []).map((item: string, idx: number) => (
+                    <li key={idx} className="p-2 flex justify-between items-center hover:bg-gray-50">
+                      <span>{item}</span>
+                      <button onClick={() => handleDeleteRequest(idx, item)} className="text-red-500 hover:text-red-700 px-2"><i className="fa-solid fa-trash"></i></button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+      <ConfirmationModal 
+        isOpen={deleteModal.isOpen} 
+        message={`「${deleteModal.item}」を削除しますか？`} 
+        onConfirm={executeDelete} 
+        onCancel={() => setDeleteModal({ isOpen: false, index: -1, item: '' })} 
+      />
+      {projectDeleteTarget && (
+        <ProjectDeleteModal
+          isOpen={!!projectDeleteTarget}
+          projectName={projectDeleteTarget.name}
+          onConfirm={executeProjectDelete}
+          onCancel={() => setProjectDeleteTarget(null)}
+        />
+      )}
+    </div>
+  );
+};
+
+// -----------------------------------------------------------------------------
+// メインコンポーネント: NewcomerSurveyWizard
+// -----------------------------------------------------------------------------
 const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
+  const sanitizeReportData = (data?: any): NewcomerSurveyReportData => {
+    const base = { ...INITIAL_NEWCOMER_SURVEY_REPORT };
+    if (!data) return base;
+    const merged = { ...base, ...data };
+    
+    // Name migration
+    if (data.name && (!data.nameSei || !data.nameMei)) {
+      const parts = data.name.trim().split(/[\s　]+/);
+      merged.nameSei = parts[0] || data.name;
+      merged.nameMei = parts.length > 1 ? parts.slice(1).join(' ') : '';
+    }
+    // Furigana migration
+    if (data.furigana && (!data.furiganaSei || !data.furiganaMei)) {
+      const parts = data.furigana.trim().split(/[\s　]+/);
+      merged.furiganaSei = parts[0] || data.furigana;
+      merged.furiganaMei = parts.length > 1 ? parts.slice(1).join(' ') : '';
+    }
+    // Emergency Contact migration
+    if (data.emergencyContactName && (!data.emergencyContactNameSei || !data.emergencyContactNameMei)) {
+      const parts = data.emergencyContactName.trim().split(/[\s　]+/);
+      merged.emergencyContactNameSei = parts[0] || data.emergencyContactName;
+      merged.emergencyContactNameMei = parts.length > 1 ? parts.slice(1).join(' ') : '';
+    }
+
+    merged.qualifications = { ...(base.qualifications || {}), ...(data.qualifications || {}) };
+    return merged;
+  };
+
   const [step, setStep] = useState(1);
   const [report, setReport] = useState<NewcomerSurveyReportData>(sanitizeReportData(initialData));
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
-  const [isMasterMode, setIsMasterMode] = useState(false);
+  const [showMasterManager, setShowMasterManager] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const [previewScale, setPreviewScale] = useState(1);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: () => {} });
+  const [previewScale, setPreviewScale] = useState(0.7);
+  const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [sigKey, setSigKey] = useState(0);
-  const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
-  
-  // ★追加: エラー状態の管理
+  const [showHomeConfirm, setShowHomeConfirm] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
-  // ★追加: マスタ管理のタブ状態
-  const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
-
-  useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
-  useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
+  const sigCanvas = useRef<SignatureCanvas>(null);
+  const [showSigModal, setShowSigModal] = useState(false);
 
   useEffect(() => {
-    const calculateAge = () => {
-      if (report.birthYear === '' || report.birthMonth === '' || report.birthDay === '') return report.age;
-      let yearAD = 0;
-      if (report.birthEra === 'Showa') yearAD = 1925 + report.birthYear; else if (report.birthEra === 'Heisei') yearAD = 1988 + report.birthYear;
-      if (yearAD === 0) return report.age;
-      const today = new Date(); const birthDate = new Date(yearAD, report.birthMonth - 1, report.birthDay);
-      let age = today.getFullYear() - birthDate.getFullYear(); const m = today.getMonth() - birthDate.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
-      return Math.max(0, age);
-    };
-    const newAge = calculateAge();
-    if (newAge !== report.age && report.birthYear !== '' && report.birthMonth !== '' && report.birthDay !== '') setReport(prev => ({ ...prev, age: newAge }));
-  }, [report.birthEra, report.birthYear, report.birthMonth, report.birthDay]);
+    getMasterData().then(setMasterData).catch(console.error);
+  }, []);
 
-  const updateReport = (updates: Partial<NewcomerSurveyReportData>) => { 
-    setReport(prev => ({ ...prev, ...updates })); 
-    setSaveStatus('idle'); 
-    setHasUnsavedChanges(true); 
-    // 入力されたらエラーを解除
-    const newErrors = { ...errors };
-    Object.keys(updates).forEach(key => delete newErrors[key]);
-    setErrors(newErrors);
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setPreviewScale(width < 640 ? 0.45 : width < 1024 ? 0.6 : 0.8);
+    };
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const updateReport = (updates: Partial<NewcomerSurveyReportData>) => {
+    setReport(prev => ({ ...prev, ...updates }));
+    setHasUnsavedChanges(true);
+    if (Object.keys(errors).length > 0) {
+      const newErrors = { ...errors };
+      Object.keys(updates).forEach(key => delete newErrors[key]);
+      setErrors(newErrors);
+    }
   };
-  
-  const updateQual = (key: keyof Qualifications, value: any) => { setReport(prev => ({ ...prev, qualifications: { ...prev.qualifications, [key]: value } })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
-  
-  // ★追加: STEP1のバリデーション
+
+  const handleMasterUpdate = async (newData: MasterData) => {
+    try {
+      await saveMasterData(newData);
+      setMasterData(newData);
+    } catch (err) { console.error(err); alert('マスタ保存に失敗しました'); }
+  };
+
   const validateStep1 = () => {
     const newErrors: Record<string, boolean> = {};
-    const r = report;
+    const requiredKeys = [
+      'project', 'director', 'company', 'workplace',
+      'nameSei', 'nameMei', 'furiganaSei', 'furiganaMei', 'birthDate', 'bloodType',
+      'address', 'phone', 
+      'emergencyContactNameSei', 'emergencyContactNameMei', 'emergencyContactRelation', 'emergencyContactPhone',
+      'role', 'jobType', 'experienceYears', 
+      'healthCheckDate', 'bloodPressureHigh', 'bloodPressureLow'
+    ];
+    
+    requiredKeys.forEach(key => {
+      if (!(report as any)[key]) newErrors[key] = true;
+    });
 
-    if (!r.project) newErrors.project = true;
-    if (!r.director) newErrors.director = true;
-    if (!r.nameSei) newErrors.nameSei = true;
-    if (!r.nameMei) newErrors.nameMei = true;
-    if (!r.furiganaSei) newErrors.furiganaSei = true;
-    if (!r.furiganaMei) newErrors.furiganaMei = true;
-    if (!r.birthYear) newErrors.birthYear = true;
-    if (!r.birthMonth) newErrors.birthMonth = true;
-    if (!r.birthDay) newErrors.birthDay = true;
-    if (!r.company) newErrors.company = true;
-    // subContractorRankは任意でも良いかもしれないが、一旦必須とするなら以下
-    if (!r.subcontractorRank) newErrors.subcontractorRank = true;
-    
-    // 経験年数は0でもOKだが、空文字扱いでないか確認（数値型なので通常は大丈夫だが念のため）
-    if (r.experienceYears === undefined) newErrors.experienceYears = true;
-    
-    if (!r.jobType) newErrors.jobType = true;
-    if (r.jobType === 'その他' && !r.jobTypeOther) newErrors.jobTypeOther = true;
-    
-    if (!r.address) newErrors.address = true;
-    if (!r.phone) newErrors.phone = true;
-    
-    if (!r.emergencyContactSei) newErrors.emergencyContactSei = true;
-    if (!r.emergencyContactMei) newErrors.emergencyContactMei = true;
-    if (!r.emergencyContactRelation) newErrors.emergencyContactRelation = true;
-    if (!r.emergencyContactPhone) newErrors.emergencyContactPhone = true;
-    
-    if (!r.healthCheckYear) newErrors.healthCheckYear = true;
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // ★変更: バリデーション付きのNextハンドラ
   const handleNext = () => {
     if (step === 1) {
-      if (!validateStep1()) {
-        alert("未入力の必須項目があります。\n赤枠の項目を確認してください。");
-        return;
+      if (validateStep1()) {
+        setStep(2);
+        window.scrollTo(0, 0);
+      } else {
+        alert('未入力の必須項目があります。赤枠の箇所を確認してください。');
+        window.scrollTo(0, 0);
       }
+    } else if (step === 2) {
+      setStep(3);
+      window.scrollTo(0, 0);
     }
-    setStep(prev => Math.min(prev + 1, 3));
   };
 
-  const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files && e.target.files[0]) { const compressed = await compressImage(e.target.files[0]); updateReport('photoUrl', compressed); } };
-  const handleTempSave = async () => { setSaveStatus('saving'); try { const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', report); setDraftId(newId); setSaveStatus('saved'); setHasUnsavedChanges(false); setTimeout(() => setSaveStatus('idle'), 2000); } catch (e) { console.error(e); alert("保存に失敗しました"); setSaveStatus('idle'); } };
+  const handleBack = () => {
+    if (step > 1) setStep(step - 1);
+  };
+
+  const handleTempSave = async () => {
+    if (!report.project) { alert('工事名は必須です'); return; }
+    try {
+      setIsSaving(true);
+      const savedId = await saveDraft('NEWCOMER_SURVEY', report, draftId);
+      setDraftId(savedId);
+      setHasUnsavedChanges(false);
+      alert('一時保存しました');
+    } catch (err) { console.error(err); alert('保存に失敗しました'); } finally { setIsSaving(false); }
+  };
 
   const handleSaveAndPrint = async () => {
-    setSaveStatus('saving');
+    if (!report.project) { alert('工事名は必須です'); return; }
     try {
-      const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', report);
-      setDraftId(newId);
-      setSaveStatus('saved');
+      setIsSaving(true);
+      const savedId = await saveDraft('NEWCOMER_SURVEY', report, draftId);
+      setDraftId(savedId);
       setHasUnsavedChanges(false);
-      setTimeout(() => setSaveStatus('idle'), 2000);
-      const prevTitle = document.title;
+
+      const originalTitle = document.title;
       const fullName = (report.nameSei || '') + (report.nameMei || '');
-      const fileName = `新規_${report.company || '未入力'}_${fullName || '未入力'}`;
-      document.title = fileName;
+      const companyName = report.company || '未入力';
+      document.title = `新規_${companyName}_${fullName || '未入力'}`;
+
       window.print();
-      document.title = prevTitle;
-    } catch (e) { alert("保存に失敗しました"); setSaveStatus('idle'); }
+      setTimeout(() => { document.title = originalTitle; }, 500);
+    } catch (err) { console.error(err); alert('保存・印刷処理に失敗しました'); } finally { setIsSaving(false); }
   };
 
-  const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
-  const handleSignatureSave = (dataUrl: string) => { updateReport({ signatureDataUrl: dataUrl }); setSigKey(prev => prev + 1); };
-
-  // --- Helper for Error Styling ---
-  const getErrorClass = (key: string) => errors[key] ? "border-red-500 bg-red-50 ring-1 ring-red-500" : "border-gray-300 bg-white";
-
-  // --- RENDER STEPS ---
-  const renderStep1 = () => {
-    return (
-      <div className="space-y-6">
-        <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 1: 基本情報</h2>
-        <p className="text-sm text-red-500 font-bold"><i className="fa-solid fa-circle-exclamation mr-1"></i>全ての項目が必須です</p>
-        
-        {/* Project Info */}
-        <div className="bg-purple-50 p-4 rounded border border-purple-100 grid grid-cols-1 md:grid-cols-2 gap-4">
-           <div className="col-span-1 md:col-span-2 text-sm text-purple-700 font-bold mb-1"><i className="fa-solid fa-circle-info mr-1"></i>はじめに現場を選択してください</div>
-           <div><label className="block text-xs font-bold text-gray-700 mb-1">作業所名 (マスタ選択)</label><select className={`w-full p-2 border rounded font-bold ${getErrorClass('project')}`} value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
-           <div><label className="block text-xs font-bold text-gray-700 mb-1">作業所長名 (マスタ選択)</label><select className={`w-full p-2 border rounded ${getErrorClass('director')}`} value={report.director} onChange={(e)=>updateReport({director: e.target.value})}>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-        </div>
-
-        {/* Name */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="form-control">
-            <label className="label font-bold text-gray-700">氏名（フリガナ）</label>
-            <div className="flex gap-2 mb-2">
-              <input type="text" className={`w-1/2 p-2 border rounded ${getErrorClass('nameSei')}`} placeholder="氏" value={report.nameSei} onChange={(e) => updateReport({nameSei: e.target.value})} />
-              <input type="text" className={`w-1/2 p-2 border rounded ${getErrorClass('nameMei')}`} placeholder="名" value={report.nameMei} onChange={(e) => updateReport({nameMei: e.target.value})} />
-            </div>
-            <div className="flex gap-2">
-              <input type="text" className={`w-1/2 p-2 border rounded ${getErrorClass('furiganaSei')}`} placeholder="セイ" value={report.furiganaSei} onChange={(e) => updateReport({furiganaSei: e.target.value})} />
-              <input type="text" className={`w-1/2 p-2 border rounded ${getErrorClass('furiganaMei')}`} placeholder="メイ" value={report.furiganaMei} onChange={(e) => updateReport({furiganaMei: e.target.value})} />
-            </div>
-          </div>
-          
-          <div className="form-control">
-            <label className="label font-bold text-gray-700">生年月日・性別</label>
-            <div className="flex gap-2 mb-2 items-center">
-              <select className="p-2 border rounded bg-white" value={report.birthEra} onChange={(e)=>updateReport({birthEra: e.target.value as any})}><option value="Showa">昭和</option><option value="Heisei">平成</option></select>
-              <input type="number" className={`w-14 p-2 border rounded text-center ${getErrorClass('birthYear')}`} value={report.birthYear} onChange={(e)=>updateReport({birthYear: e.target.value === '' ? '' : parseInt(e.target.value)})} placeholder="年" /><span>年</span>
-              <input type="number" className={`w-12 p-2 border rounded text-center ${getErrorClass('birthMonth')}`} value={report.birthMonth} onChange={(e)=>updateReport({birthMonth: e.target.value === '' ? '' : parseInt(e.target.value)})} placeholder="月" /><span>月</span>
-              <input type="number" className={`w-12 p-2 border rounded text-center ${getErrorClass('birthDay')}`} value={report.birthDay} onChange={(e)=>updateReport({birthDay: e.target.value === '' ? '' : parseInt(e.target.value)})} placeholder="日" /><span>日</span>
-            </div>
-            <div className="flex gap-4 items-center">
-              <div className="flex gap-2 border p-1 rounded bg-white">
-                <label className="flex items-center gap-1 cursor-pointer"><input type="radio" checked={report.gender === 'Male'} onChange={() => updateReport({gender: 'Male'})} />男</label>
-                <label className="flex items-center gap-1 cursor-pointer"><input type="radio" checked={report.gender === 'Female'} onChange={() => updateReport({gender: 'Female'})} />女</label>
-              </div>
-              <div className="flex items-center gap-2"><input type="number" className="w-16 p-2 border rounded text-center bg-gray-100" readOnly value={report.age} /><span>歳</span></div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="form-control">
-            <label className="label font-bold text-gray-700">所属会社名 (マスタ選択)</label>
-            <select className={`w-full p-2 border rounded mb-2 ${getErrorClass('company')}`} value={report.company} onChange={(e) => updateReport({company: e.target.value})}>{masterData.subcontractors.map(c => <option key={c} value={c}>{c}</option>)}</select>
-            <div className="flex items-center gap-2 text-sm"><span>(</span><input type="text" className={`w-10 border-b text-center ${getErrorClass('subcontractorRank')}`} value={report.subcontractorRank} onChange={(e)=>updateReport({subcontractorRank: e.target.value})} /><span>次) 下請け</span></div>
-          </div>
-          <div className="form-control">
-            <label className="label font-bold text-gray-700">経験年数</label>
-            <div className="flex items-center gap-2 mt-2">
-              <input type="number" className={`w-16 p-2 border rounded text-center ${getErrorClass('experienceYears')}`} value={report.experienceYears} onChange={(e)=>updateReport({experienceYears: parseInt(e.target.value)})} /><span>年</span>
-              <input type="number" className="w-16 p-2 border rounded text-center bg-white" value={report.experienceMonths} onChange={(e)=>updateReport({experienceMonths: parseInt(e.target.value)})} /><span>ヶ月</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="form-control">
-          <label className="label font-bold text-gray-700">職種</label>
-          <div className="flex gap-2">
-            <select className={`w-1/2 p-2 border rounded ${getErrorClass('jobType')}`} value={report.jobType} onChange={(e) => updateReport({jobType: e.target.value})}><option value="土工">土工</option><option value="鳶">鳶</option><option value="大工">大工</option><option value="オペ">オペ</option><option value="鉄筋工">鉄筋工</option><option value="交通整理人">交通整理人</option><option value="その他">その他</option></select>
-            {report.jobType === 'その他' && (<input type="text" className={`flex-1 p-2 border rounded ${getErrorClass('jobTypeOther')}`} placeholder="詳細を入力" value={report.jobTypeOther} onChange={(e)=>updateReport({jobTypeOther: e.target.value})} />)}
-          </div>
-        </div>
-
-        <div className="form-control">
-          <label className="label font-bold text-gray-700">現住所・電話番号</label>
-          <input type="text" className={`w-full p-2 border rounded mb-2 ${getErrorClass('address')}`} placeholder="住所" value={report.address} onChange={(e) => updateReport({address: e.target.value})} />
-          <input type="text" className={`w-full p-2 border rounded ${getErrorClass('phone')}`} placeholder="電話番号" value={report.phone} onChange={(e) => updateReport({phone: e.target.value})} />
-        </div>
-
-        <div className="form-control bg-gray-50 p-3 rounded">
-          <label className="label font-bold text-gray-700 mb-2 block">緊急連絡先</label>
-          <div className="mb-2">
-            <label className="text-xs text-gray-500 font-bold mb-1 block">氏名</label>
-            <div className="flex gap-2">
-              <input type="text" className={`w-1/2 p-2 border rounded ${getErrorClass('emergencyContactSei')}`} placeholder="氏" value={report.emergencyContactSei} onChange={(e) => updateReport({emergencyContactSei: e.target.value})} />
-              <input type="text" className={`w-1/2 p-2 border rounded ${getErrorClass('emergencyContactMei')}`} placeholder="名" value={report.emergencyContactMei} onChange={(e) => updateReport({emergencyContactMei: e.target.value})} />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><label className="text-xs text-gray-500 font-bold mb-1 block">続柄</label><select className={`w-full p-2 border rounded ${getErrorClass('emergencyContactRelation')}`} value={report.emergencyContactRelation} onChange={(e) => updateReport({emergencyContactRelation: e.target.value})}><option value="">選択してください</option><option value="妻">妻</option><option value="夫">夫</option><option value="父">父</option><option value="母">母</option><option value="子">子</option><option value="兄">兄</option><option value="弟">弟</option><option value="姉">姉</option><option value="妹">妹</option><option value="祖父">祖父</option><option value="祖母">祖母</option><option value="同居人">同居人</option><option value="その他">その他</option></select></div>
-            <div><label className="text-xs text-gray-500 font-bold mb-1 block">緊急電話番号</label><input type="text" className={`w-full p-2 border rounded ${getErrorClass('emergencyContactPhone')}`} placeholder="090-0000-0000" value={report.emergencyContactPhone} onChange={(e) => updateReport({emergencyContactPhone: e.target.value})} /></div>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="form-control">
-            <label className="label font-bold text-gray-700">血液型</label>
-            <div className="flex gap-2">
-              <select className="p-2 border rounded bg-white" value={report.bloodType} onChange={(e) => updateReport({bloodType: e.target.value})}><option value="A">A</option><option value="B">B</option><option value="O">O</option><option value="AB">AB</option></select>
-              <span className="self-center">型</span><span className="self-center ml-2">RH</span>
-              <select className="p-2 border rounded bg-white" value={report.bloodTypeRh} onChange={(e) => updateReport({bloodTypeRh: e.target.value as any})}><option value="Unknown">不明</option><option value="Plus">+</option><option value="Minus">-</option></select>
-            </div>
-          </div>
-          <div className="form-control">
-            <label className="label font-bold text-gray-700">健康診断受診日 (令和)</label>
-            <div className="flex gap-1 items-center">
-              <input type="number" className={`w-14 p-2 border rounded text-center ${getErrorClass('healthCheckYear')}`} value={report.healthCheckYear} onChange={(e)=>updateReport({healthCheckYear: parseInt(e.target.value)})} /><span>年</span>
-              <input type="number" className="w-12 p-2 border rounded text-center bg-white" value={report.healthCheckMonth} onChange={(e)=>updateReport({healthCheckMonth: parseInt(e.target.value)})} /><span>月</span>
-              <input type="number" className="w-12 p-2 border rounded text-center bg-white" value={report.healthCheckDay} onChange={(e)=>updateReport({healthCheckDay: parseInt(e.target.value)})} /><span>日</span>
-            </div>
-          </div>
-        </div>
-        <div className="form-control"><label className="label font-bold text-gray-700">建退協加入</label><div className="flex gap-4 mt-1"><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'Joined'} onChange={() => updateReport({kentaikyo: 'Joined'})} />加入している</label><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'NotJoined'} onChange={() => updateReport({kentaikyo: 'NotJoined'})} />加入していない</label></div></div>
-      </div>
-    );
+  const handleHomeClick = () => {
+    if (hasUnsavedChanges) setShowHomeConfirm(true);
+    else onBackToMenu();
   };
 
-  const renderStep2 = () => {
-    const qual = report.qualifications || {};
-    return (
-      <div className="space-y-6">
-        <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 2: 資格</h2>
-        <p className="text-sm text-gray-500">保有している資格にチェックを入れてください。</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-4 rounded border shadow-sm">
-             <h3 className="font-bold border-b mb-3">技能講習</h3>
-             <div className="space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.vehicle_leveling} onChange={(e)=>updateQual('vehicle_leveling', e.target.checked)} />車輌系建設機械（整地、積込運搬等）</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.vehicle_demolition} onChange={(e)=>updateQual('vehicle_demolition', e.target.checked)} />車輌系建設機械（解体用）</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.mobile_crane} onChange={(e)=>updateQual('mobile_crane', e.target.checked)} />小型移動クレーン</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.slinging} onChange={(e)=>updateQual('slinging', e.target.checked)} />玉掛</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.gas_welding} onChange={(e)=>updateQual('gas_welding', e.target.checked)} />ガス溶接</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.earth_retaining} onChange={(e)=>updateQual('earth_retaining', e.target.checked)} />土留め支保工作業主任者</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.excavation} onChange={(e)=>updateQual('excavation', e.target.checked)} />地山掘削作業主任者</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.scaffolding} onChange={(e)=>updateQual('scaffolding', e.target.checked)} />足場組立て等作業主任者</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.formwork} onChange={(e)=>updateQual('formwork', e.target.checked)} />型枠支保工作業主任者</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.oxygen_deficiency} onChange={(e)=>updateQual('oxygen_deficiency', e.target.checked)} />酸素欠乏危険作業主任者</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.rough_terrain} onChange={(e)=>updateQual('rough_terrain', e.target.checked)} />不整地運搬車</label>
-             </div>
-          </div>
-          <div className="space-y-6">
-             <div className="bg-white p-4 rounded border shadow-sm">
-               <h3 className="font-bold border-b mb-3">特別教育</h3>
-               <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.arc_welding} onChange={(e)=>updateQual('arc_welding', e.target.checked)} />アーク溶接</label>
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.grinding_wheel} onChange={(e)=>updateQual('grinding_wheel', e.target.checked)} />研削といし取替え業務</label>
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.low_voltage} onChange={(e)=>updateQual('low_voltage', e.target.checked)} />低圧電気取扱</label>
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.roller} onChange={(e)=>updateQual('roller', e.target.checked)} />ローラー運転業務</label>
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.asbestos} onChange={(e)=>updateQual('asbestos', e.target.checked)} />石綿取り扱い業務</label>
-               </div>
-             </div>
-             <div className="bg-white p-4 rounded border shadow-sm">
-               <h3 className="font-bold border-b mb-3">その他</h3>
-               <label className="flex items-center gap-2 cursor-pointer mb-4"><input type="checkbox" checked={qual.foreman} onChange={(e)=>updateQual('foreman', e.target.checked)} />職長教育</label>
-               <div className="text-sm font-bold mb-2">上記以外の資格</div>
-               <div className="space-y-2">
-                  <input type="text" className="w-full p-2 border rounded" placeholder="資格名" value={qual.otherText1} onChange={(e)=>updateQual('otherText1', e.target.value)} />
-                  <input type="text" className="w-full p-2 border rounded" placeholder="資格名" value={qual.otherText2} onChange={(e)=>updateQual('otherText2', e.target.value)} />
-                  <input type="text" className="w-full p-2 border rounded" placeholder="資格名" value={qual.otherText3} onChange={(e)=>updateQual('otherText3', e.target.value)} />
-               </div>
-             </div>
-          </div>
-        </div>
-      </div>
-    );
+  const saveSignature = () => {
+    if (sigCanvas.current) {
+      updateReport({ signatureDataUrl: sigCanvas.current.getTrimmedCanvas().toDataURL('image/png') });
+      setShowSigModal(false);
+    }
   };
 
-  const renderStep3 = () => (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 3: 誓約・署名</h2>
-      <div className="bg-gray-50 p-6 rounded-lg border leading-relaxed text-gray-800"><h3 className="font-bold text-lg mb-4 text-center">新規入場時誓約</h3><ul className="list-disc pl-5 space-y-2 mb-6"><li>私は当作業所の新規入場時教育を受けました。</li><li>作業所の遵守事項やルールを厳守し作業します。</li><li>どんな小さなケガでも、必ず当日に報告します。</li><li>自分の身を守り、また周囲の人の安全にも気を配ります。</li><li>危険個所を発見したときは、直ちに現場責任者もしくは元請職員に連絡します。</li><li>作業中は有資格者証を携帯します。</li><li>記載した個人情報を緊急時連絡等、労務・安全衛生管理に使用することに同意します。</li><li>上記の事項を相違なく報告します。</li></ul><div className="bg-white p-4 rounded border text-center"><div className="mb-4"><label className="font-bold mr-2">誓約日 (令和)</label><input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateYear} onChange={(e)=>updateReport({pledgeDateYear: parseInt(e.target.value)})} />年<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateMonth} onChange={(e)=>updateReport({pledgeDateMonth: parseInt(e.target.value)})} />月<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateDay} onChange={(e)=>updateReport({pledgeDateDay: parseInt(e.target.value)})} />日</div><label className="block font-bold text-gray-700 mb-2">本人署名</label><div className="mx-auto w-full max-w-sm"><SignatureCanvas key={sigKey} onSave={handleSignatureSave} onClear={()=>{ updateReport({signatureDataUrl: null}) }} lineWidth={6} /></div>{report.signatureDataUrl && (<div className="mt-4"><p className="text-xs text-green-600 font-bold mb-1">署名済み</p><div className="cursor-pointer hover:opacity-80 transition-opacity inline-block border border-transparent hover:border-blue-300 rounded p-1" onClick={() => setPreviewSigUrl(report.signatureDataUrl)} title="タップして拡大"><img src={report.signatureDataUrl} alt="Signature" className="h-10 mx-auto border" /></div></div>)}</div></div>
-    </div>
-  );
+  const getErrorClass = (field: string) => errors[field] ? 'border-red-500 bg-red-50' : 'border-gray-300';
 
-  const renderMasterManager = () => (
-    <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen flex flex-col">
-      <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
-        <h2 className="text-2xl font-bold text-gray-800"><i className="fa-solid fa-database mr-2"></i>マスタ管理</h2>
-        <button onClick={() => setIsMasterMode(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button>
-      </div>
-      
-      <div className="flex gap-4 mb-6 shrink-0">
-        <button onClick={() => setMasterTab('BASIC')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-house-chimney mr-2"></i>基本・共通マスタ</button>
-        <button onClick={() => setMasterTab('TRAINING')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-list-check mr-2"></i>各種項目マスタ</button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
-        {MASTER_GROUPS[masterTab].map((key) => {
-           const title = LABEL_MAP[key] || key;
-           return (
-             <MasterSection 
-               key={key} 
-               title={title} 
-               items={masterData[key as keyof MasterData] || []} 
-               onUpdate={async (newItems) => { const newData = { ...masterData, [key]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
-               onDeleteRequest={(index, item) => {
-                 if (key === 'projects') {
-                   setProjectDeleteTarget({ index, name: item });
-                 } else {
-                   setConfirmModal({ 
-                     isOpen: true, 
-                     message: `「${item}」を削除しますか？`, 
-                     onConfirm: async () => { 
-                       const newItems = [...(masterData[key as keyof MasterData] || [])]; 
-                       newItems.splice(index, 1); 
-                       const newData = { ...masterData, [key]: newItems }; 
-                       setMasterData(newData); 
-                       await saveMasterData(newData); 
-                       setConfirmModal(prev => ({ ...prev, isOpen: false })); 
-                     } 
-                   }); 
-                 }
-               }} 
-             />
-           )
-        })}
-      </div>
-    </div>
-  );
-
-  const renderPreviewModal = () => (
-    <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-90 flex flex-col no-print">
-      <div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0">
-        <h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i> 印刷プレビュー</h2>
-        <div className="flex gap-4">
-          <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded">閉じる</button>
-          <button onClick={handleSaveAndPrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center">
-            <i className="fa-solid fa-print mr-2"></i> 保存して印刷
-          </button>
-        </div>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4 flex justify-center">
-        <div style={{ width: '794px', transform: `scale(${previewScale})`, transformOrigin: 'top center', marginBottom: `${(previewScale - 1) * 100}%` }}>
-          <NewcomerSurveyPrintLayout data={report} />
-        </div>
-      </div>
-    </div>
-  );
-
-  if (isMasterMode) return (
-    <>
-      {renderMasterManager()}
-      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} />
-      {projectDeleteTarget && (
-        <ProjectDeleteModal 
-          isOpen={!!projectDeleteTarget} 
-          projectName={projectDeleteTarget.name}
-          onCancel={() => setProjectDeleteTarget(null)}
-          onConfirm={async () => {
-            const items = [...masterData.projects];
-            items.splice(projectDeleteTarget.index, 1);
-            await deleteDraftsByProject(projectDeleteTarget.name);
-            const newData = { ...masterData, projects: items };
-            setMasterData(newData);
-            await saveMasterData(newData);
-            setProjectDeleteTarget(null);
-          }}
-        />
-      )}
-    </>
-  );
-
+  // ---------------------------------------------------------------------------
+  // UI レンダリング
+  // ---------------------------------------------------------------------------
   return (
-    <>
-      <div className="no-print min-h-screen pb-24 bg-gray-50">
-        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
-          <div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-person-circle-question mr-2"></i>新規入場者アンケート</h1></div><button onClick={() => setIsMasterMode(true)} className="text-xs bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors"><i className="fa-solid fa-gear mr-1"></i>設定</button>
-        </header>
-        <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-purple-600" : ""}>基本情報</span><span className={step >= 2 ? "text-purple-600" : ""}>資格</span><span className={step >= 3 ? "text-purple-600" : ""}>誓約・署名</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-purple-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
-        <main className="mx-auto p-4 bg-white shadow-lg rounded-lg max-w-3xl min-h-[60vh]">
-           {step === 1 && renderStep1()}
-           {step === 2 && renderStep2()}
-           {step === 3 && renderStep3()}
-        </main>
-        <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-md z-20">
-          <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
-          {step < 3 ? (
-             <button onClick={handleNext} className="px-8 py-3 bg-purple-600 text-white rounded-lg font-bold shadow hover:bg-purple-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>
-          ) : (
-             <button onClick={() => setShowPreview(true)} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>
+    <div className="min-h-screen bg-gray-100 pb-20 font-sans text-gray-800">
+      <div className="bg-white shadow-sm sticky top-0 z-40 px-4 py-3 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <button onClick={handleHomeClick} className="text-gray-500 hover:text-gray-700"><i className="fa-solid fa-house"></i></button>
+          <h2 className="font-bold text-lg hidden sm:block">新規入場者アンケート作成</h2>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setShowMasterManager(!showMasterManager)} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm hover:bg-gray-200"><i className="fa-solid fa-gear mr-1"></i>設定</button>
+          <button onClick={() => setShowPreview(true)} className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200"><i className="fa-solid fa-eye mr-1"></i>プレビュー</button>
+          <button onClick={handleTempSave} disabled={isSaving} className="px-3 py-1.5 bg-green-600 text-white rounded text-sm hover:bg-green-700 disabled:opacity-50"><i className="fa-solid fa-floppy-disk mr-1"></i>一時保存</button>
+        </div>
+      </div>
+
+      <div className="max-w-3xl mx-auto p-4">
+        {showMasterManager && <MasterSection masterData={masterData} onUpdate={handleMasterUpdate} />}
+
+        <div className="mb-6 flex items-center justify-between px-4">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${step>=1?'bg-blue-600 text-white':'bg-gray-300 text-gray-600'}`}>1</div>
+          <div className={`flex-1 h-1 mx-2 ${step>=2?'bg-blue-600':'bg-gray-300'}`}></div>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${step>=2?'bg-blue-600 text-white':'bg-gray-300 text-gray-600'}`}>2</div>
+          <div className={`flex-1 h-1 mx-2 ${step>=3?'bg-blue-600':'bg-gray-300'}`}></div>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${step>=3?'bg-blue-600 text-white':'bg-gray-300 text-gray-600'}`}>3</div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          {/* STEP 1: 基本情報 */}
+          {step === 1 && (
+            <div className="animate-fade-in space-y-6">
+              <div className="border-b pb-2 mb-4">
+                <h3 className="text-xl font-bold">基本情報入力</h3>
+                <p className="text-xs text-red-500 mt-1">※視認性を考慮し項目をグループ分けしています。すべての項目が必須です。</p>
+              </div>
+
+              {/* グループ1: 現場・所属情報 */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <h4 className="font-bold text-gray-700 mb-4 flex items-center gap-2 border-b pb-2">
+                  <i className="fa-solid fa-building text-blue-600"></i> 現場・所属情報
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">工事名 <span className="text-red-500 text-xs">※必須</span></label>
+                    <select 
+                      value={report.project} onChange={e => updateReport({ project: e.target.value })} 
+                      className={`w-full h-11 border rounded px-3 bg-white appearance-none ${getErrorClass('project')}`}
+                    >
+                      <option value="">選択してください</option>
+                      {(masterData.projects || []).map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">作業所名 <span className="text-red-500 text-xs">※必須</span></label>
+                    <select 
+                      value={report.workplace} onChange={e => updateReport({ workplace: e.target.value })} 
+                      className={`w-full h-11 border rounded px-3 bg-white appearance-none ${getErrorClass('workplace')}`}
+                    >
+                      <option value="">選択してください</option>
+                      {(masterData.workplaces || []).map(w => <option key={w} value={w}>{w}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">現場責任者 <span className="text-red-500 text-xs">※必須</span></label>
+                    <select 
+                      value={report.director} onChange={e => updateReport({ director: e.target.value })} 
+                      className={`w-full h-11 border rounded px-3 bg-white appearance-none ${getErrorClass('director')}`}
+                    >
+                      <option value="">選択してください</option>
+                      {(masterData.bosses || []).map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">所属会社 <span className="text-red-500 text-xs">※必須</span></label>
+                    <select 
+                      value={report.company} onChange={e => updateReport({ company: e.target.value })} 
+                      className={`w-full h-11 border rounded px-3 bg-white appearance-none ${getErrorClass('company')}`}
+                    >
+                      <option value="">選択してください</option>
+                      {(masterData.companies || []).map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* グループ2: 本人情報 */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <h4 className="font-bold text-gray-700 mb-4 flex items-center gap-2 border-b pb-2">
+                  <i className="fa-solid fa-user text-green-600"></i> 本人情報
+                </h4>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">氏名 (姓)</label>
+                      <input 
+                        type="text" value={report.nameSei || ''} onChange={e => updateReport({ nameSei: e.target.value })} 
+                        className={`w-full h-11 border rounded px-3 ${getErrorClass('nameSei')}`} placeholder="例: 山田"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">氏名 (名)</label>
+                      <input 
+                        type="text" value={report.nameMei || ''} onChange={e => updateReport({ nameMei: e.target.value })} 
+                        className={`w-full h-11 border rounded px-3 ${getErrorClass('nameMei')}`} placeholder="例: 太郎"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">フリガナ (セイ)</label>
+                      <input 
+                        type="text" value={report.furiganaSei || ''} onChange={e => updateReport({ furiganaSei: e.target.value })} 
+                        className={`w-full h-11 border rounded px-3 ${getErrorClass('furiganaSei')}`} placeholder="例: ヤマダ"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">フリガナ (メイ)</label>
+                      <input 
+                        type="text" value={report.furiganaMei || ''} onChange={e => updateReport({ furiganaMei: e.target.value })} 
+                        className={`w-full h-11 border rounded px-3 ${getErrorClass('furiganaMei')}`} placeholder="例: タロウ"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">生年月日</label>
+                      <input 
+                        type="date" value={report.birthDate} onChange={e => updateReport({ birthDate: e.target.value })} 
+                        className={`w-full h-11 border rounded px-3 ${getErrorClass('birthDate')}`} 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">血液型</label>
+                      <div className="flex gap-2">
+                        <select 
+                          value={report.bloodType} onChange={e => updateReport({ bloodType: e.target.value })} 
+                          className={`flex-1 h-11 border rounded px-3 bg-white appearance-none ${getErrorClass('bloodType')}`}
+                        >
+                          <option value="">型</option>
+                          {BLOOD_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <select 
+                          value={report.bloodTypeRh} onChange={e => updateReport({ bloodTypeRh: e.target.value as any })} 
+                          className="flex-1 h-11 border rounded px-3 bg-white appearance-none"
+                        >
+                          {RH_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* グループ3: 連絡先 */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <h4 className="font-bold text-gray-700 mb-4 flex items-center gap-2 border-b pb-2">
+                  <i className="fa-solid fa-address-book text-orange-600"></i> 連絡先
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">現住所 <span className="text-red-500 text-xs">※必須</span></label>
+                    <input 
+                      type="text" value={report.address} onChange={e => updateReport({ address: e.target.value })} 
+                      className={`w-full h-11 border rounded px-3 ${getErrorClass('address')}`} 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">電話番号 <span className="text-red-500 text-xs">※必須</span></label>
+                    <input 
+                      type="tel" value={report.phone} onChange={e => updateReport({ phone: e.target.value })} 
+                      className={`w-1/2 md:max-w-xs h-11 border rounded px-3 ${getErrorClass('phone')}`} placeholder="090-0000-0000"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* グループ4: 緊急連絡先 (赤枠強調) */}
+              <div className="border border-red-200 rounded-lg p-4 bg-red-50">
+                <h4 className="font-bold text-red-800 mb-4 flex items-center gap-2 border-b border-red-200 pb-2">
+                  <i className="fa-solid fa-bell text-red-600"></i> 緊急連絡先
+                </h4>
+                <div className="grid grid-cols-1 gap-3 max-w-lg">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 mb-1">氏名 (姓)</label>
+                      <input 
+                        type="text" value={report.emergencyContactNameSei || ''} onChange={e => updateReport({ emergencyContactNameSei: e.target.value })} 
+                        className={`w-full h-11 border rounded px-3 ${getErrorClass('emergencyContactNameSei')}`}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 mb-1">氏名 (名)</label>
+                      <input 
+                        type="text" value={report.emergencyContactNameMei || ''} onChange={e => updateReport({ emergencyContactNameMei: e.target.value })} 
+                        className={`w-full h-11 border rounded px-3 ${getErrorClass('emergencyContactNameMei')}`}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 mb-1">続柄</label>
+                      <input 
+                        type="text" value={report.emergencyContactRelation} onChange={e => updateReport({ emergencyContactRelation: e.target.value })} 
+                        className={`w-full h-11 border rounded px-3 ${getErrorClass('emergencyContactRelation')}`} placeholder="例: 父"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-600 mb-1">緊急電話番号</label>
+                      <input 
+                        type="tel" value={report.emergencyContactPhone} onChange={e => updateReport({ emergencyContactPhone: e.target.value })} 
+                        className={`w-full h-11 border rounded px-3 ${getErrorClass('emergencyContactPhone')}`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* グループ5: 職務・資格・経験 */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <h4 className="font-bold text-gray-700 mb-4 flex items-center gap-2 border-b pb-2">
+                  <i className="fa-solid fa-helmet-safety text-gray-600"></i> 職務・資格・経験
+                </h4>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">役職 <span className="text-red-500 text-xs">※必須</span></label>
+                      <select 
+                        value={report.role} onChange={e => updateReport({ role: e.target.value })} 
+                        className={`w-full h-11 border rounded px-3 bg-white appearance-none ${getErrorClass('role')}`}
+                      >
+                        <option value="">選択してください</option>
+                        {(masterData.roles || []).map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1">経験年数 (年) <span className="text-red-500 text-xs">※必須</span></label>
+                      <input 
+                        type="number" value={report.experienceYears} onChange={e => updateReport({ experienceYears: e.target.value })} 
+                        className={`w-full h-11 border rounded px-3 ${getErrorClass('experienceYears')}`} 
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1">職種 <span className="text-red-500 text-xs">※必須</span></label>
+                    <div className={`grid grid-cols-2 sm:grid-cols-4 gap-2 border p-2 rounded bg-white ${errors.jobType ? 'border-red-500 bg-red-50' : 'border-gray-200'}`}>
+                      {JOB_TYPES.map(job => (
+                        <label key={job} className="flex items-center space-x-2 p-2 rounded hover:bg-gray-50 cursor-pointer">
+                          <input 
+                            type="radio" name="jobType" value={job} checked={report.jobType === job} 
+                            onChange={e => updateReport({ jobType: e.target.value })} 
+                            className="w-4 h-4 text-blue-600"
+                          />
+                          <span className="text-sm">{job}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {report.jobType === 'その他' && (
+                      <input 
+                        type="text" value={report.jobTypeOther || ''} onChange={e => updateReport({ jobTypeOther: e.target.value })} 
+                        placeholder="職種を入力" className="mt-2 w-full h-11 border rounded px-3" 
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* グループ6: 健康診断 */}
+              <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                <h4 className="font-bold text-blue-800 mb-4 flex items-center gap-2 border-b border-blue-200 pb-2">
+                  <i className="fa-solid fa-heart-pulse text-blue-600"></i> 健康診断
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1">受診年月</label>
+                    <input 
+                      type="month" value={report.healthCheckDate} onChange={e => updateReport({ healthCheckDate: e.target.value })} 
+                      className={`w-full h-11 border rounded px-3 bg-white ${getErrorClass('healthCheckDate')}`} 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1">血圧 (上)</label>
+                    <input 
+                      type="number" value={report.bloodPressureHigh} onChange={e => updateReport({ bloodPressureHigh: e.target.value })} 
+                      className={`w-full h-11 border rounded px-3 bg-white ${getErrorClass('bloodPressureHigh')}`} 
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1">血圧 (下)</label>
+                    <input 
+                      type="number" value={report.bloodPressureLow} onChange={e => updateReport({ bloodPressureLow: e.target.value })} 
+                      className={`w-full h-11 border rounded px-3 bg-white ${getErrorClass('bloodPressureLow')}`} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+            </div>
           )}
-        </footer>
+
+          {/* STEP 2: 資格情報 */}
+          {step === 2 && (
+            <div className="animate-fade-in space-y-6">
+              <h3 className="text-xl font-bold border-b pb-2 mb-4">資格情報</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="bg-gray-50 p-3 rounded">
+                  <h4 className="font-bold text-sm mb-2 text-center bg-gray-200 py-1">技能講習</h4>
+                  <div className="space-y-2">
+                    {[
+                      {k:'vehicle_leveling', l:'車輌系建設機械(整地)'},
+                      {k:'vehicle_excavation', l:'車輌系建設機械(解体)'},
+                      {k:'vehicle_foundation', l:'車輌系建設機械(基礎)'},
+                      {k:'aerial_work_platform', l:'高所作業車(10m以上)'},
+                      {k:'crane_5t_plus', l:'小型移動式クレーン'},
+                      {k:'forklift', l:'フォークリフト'},
+                      {k:'slinging', l:'玉掛'},
+                      {k:'scaffolding_chief', l:'足場組立作業主任者'},
+                      {k:'excavation_chief', l:'地山掘削作業主任者'},
+                      {k:'steel_frame_chief', l:'鉄骨組立作業主任者'},
+                      {k:'concrete_chief', l:'コンクリート造工作物'},
+                      {k:'formwork_chief', l:'型枠支保工組立作業主任者'},
+                      {k:'wooden_building_chief', l:'木造建築物組立作業主任者'},
+                    ].map(q => (
+                      <label key={q.k} className="flex items-center space-x-2">
+                        <input 
+                          type="checkbox" checked={(report.qualifications as any)?.[q.k] || false} 
+                          onChange={e => updateReport({ qualifications: { ...report.qualifications, [q.k]: e.target.checked } })}
+                          className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="text-sm">{q.l}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="bg-gray-50 p-3 rounded">
+                  <h4 className="font-bold text-sm mb-2 text-center bg-gray-200 py-1">特別教育</h4>
+                  <div className="space-y-2">
+                    {[
+                      {k:'arc_welding', l:'アーク溶接'},
+                      {k:'grindstone', l:'自由研削砥石'},
+                      {k:'winch', l:'巻上げ機(ウインチ)'},
+                      {k:'low_voltage', l:'低圧電気取扱'},
+                      {k:'dust_mask', l:'防塵マスク使用'},
+                      {k:'vibration_tools', l:'振動工具取扱'},
+                      {k:'circular_saw', l:'丸のこ等取扱'},
+                      {k:'aerial_work_under_10m', l:'高所作業車(10m未満)'},
+                      {k:'roller', l:'ローラー(締固め用機械)'},
+                      {k:'full_harness', l:'フルハーネス型墜落制止用器具'},
+                    ].map(q => (
+                      <label key={q.k} className="flex items-center space-x-2">
+                        <input 
+                          type="checkbox" checked={(report.qualifications as any)?.[q.k] || false} 
+                          onChange={e => updateReport({ qualifications: { ...report.qualifications, [q.k]: e.target.checked } })}
+                          className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="text-sm">{q.l}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div className="bg-gray-50 p-3 rounded flex flex-col">
+                  <h4 className="font-bold text-sm mb-2 text-center bg-gray-200 py-1">その他</h4>
+                  <div className="space-y-2 mb-4">
+                    <label className="flex items-center space-x-2">
+                      <input 
+                        type="checkbox" checked={report.qualifications?.foreman || false} 
+                        onChange={e => updateReport({ qualifications: { ...report.qualifications, foreman: e.target.checked } })}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span className="text-sm">職長教育</span>
+                    </label>
+                  </div>
+                  <div className="mt-auto">
+                    <p className="text-xs font-bold text-gray-500 mb-1">その他（自由記入）</p>
+                    <input 
+                      type="text" className="w-full border rounded mb-2 px-2 py-1 text-sm" 
+                      value={report.qualifications?.otherText1 || ''}
+                      onChange={e => updateReport({ qualifications: { ...report.qualifications, otherText1: e.target.value } })}
+                    />
+                    <input 
+                      type="text" className="w-full border rounded mb-2 px-2 py-1 text-sm" 
+                      value={report.qualifications?.otherText2 || ''}
+                      onChange={e => updateReport({ qualifications: { ...report.qualifications, otherText2: e.target.value } })}
+                    />
+                    <input 
+                      type="text" className="w-full border rounded px-2 py-1 text-sm" 
+                      value={report.qualifications?.otherText3 || ''}
+                      onChange={e => updateReport({ qualifications: { ...report.qualifications, otherText3: e.target.value } })}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: 誓約・署名 */}
+          {step === 3 && (
+            <div className="animate-fade-in space-y-6">
+              <h3 className="text-xl font-bold border-b pb-2 mb-4">誓約・署名</h3>
+              <div className="bg-gray-50 p-4 rounded border text-sm leading-relaxed text-gray-700 mb-6">
+                <p>私は、貴作業所の建設工事に従事するに当たり、労働安全衛生法及び関係法令を遵守することはもとより、貴作業所の安全衛生管理計画書及び作業所の決まり事項を守り、災害防止に努めることを誓います。</p>
+                <p className="mt-2">万一、私の不注意により事故を惹起した場合は、私の責任において処理し、貴社及び元請負人には一切ご迷惑をお掛け致しません。</p>
+                <p className="mt-2">尚、貴作業所の規律を乱し、または指示に従わない時は、退場を命じられても異存ありません。</p>
+              </div>
+              <div className="text-center">
+                <p className="mb-2 font-bold">署名</p>
+                {report.signatureDataUrl ? (
+                  <div className="inline-block relative group">
+                    <img src={report.signatureDataUrl} alt="Signature" className="border rounded h-32 mx-auto" />
+                    <button onClick={() => updateReport({ signatureDataUrl: undefined })} className="absolute top-0 right-0 bg-red-500 text-white w-6 h-6 rounded-full flex items-center justify-center -mt-2 -mr-2 shadow-md hover:bg-red-600"><i className="fa-solid fa-xmark text-xs"></i></button>
+                  </div>
+                ) : (
+                  <button onClick={() => setShowSigModal(true)} className="w-full max-w-sm py-8 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:bg-gray-50 hover:border-blue-500 hover:text-blue-500 transition flex flex-col items-center justify-center gap-2">
+                    <i className="fa-solid fa-pen-nib text-2xl"></i>
+                    <span>タップして署名する</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Navigation */}
+        <div className="mt-6 flex justify-between">
+          <button onClick={handleBack} disabled={step === 1} className="px-6 py-3 rounded-lg bg-gray-200 text-gray-700 disabled:opacity-50 hover:bg-gray-300 transition font-bold">戻る</button>
+          {step < 3 ? (
+            <button onClick={handleNext} className="px-8 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-lg transition font-bold flex items-center gap-2">次へ <i className="fa-solid fa-arrow-right"></i></button>
+          ) : (
+            <button onClick={handleSaveAndPrint} disabled={isSaving} className="px-8 py-3 rounded-lg bg-green-600 text-white hover:bg-green-700 shadow-lg transition font-bold flex items-center gap-2 disabled:opacity-70">
+              {isSaving ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> 保存中...</> : <><i className="fa-solid fa-print"></i> 保存して印刷</>}
+            </button>
+          )}
+        </div>
       </div>
-      
-      {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
-      {showPreview && renderPreviewModal()}
-      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
+
+      {showSigModal && (
+        <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-90 flex flex-col">
+          <div className="flex justify-between items-center p-4 text-white">
+            <h3 className="font-bold">署名を記入</h3>
+            <button onClick={() => setShowSigModal(false)} className="text-gray-400 hover:text-white"><i className="fa-solid fa-xmark text-2xl"></i></button>
+          </div>
+          <div className="flex-1 bg-white p-4 flex items-center justify-center overflow-hidden relative">
+             <SignatureCanvas ref={sigCanvas} penColor="black" canvasProps={{ className: 'border-2 border-gray-300 rounded w-full h-full' }} />
+             <div className="absolute bottom-4 left-4 text-gray-400 text-xs pointer-events-none">枠内に大きくサインしてください</div>
+          </div>
+          <div className="p-4 bg-gray-800 flex justify-between">
+            <button onClick={() => sigCanvas.current?.clear()} className="px-6 py-3 text-white border border-gray-600 rounded">クリア</button>
+            <button onClick={saveSignature} className="px-8 py-3 bg-blue-600 text-white rounded font-bold">確定</button>
+          </div>
+        </div>
+      )}
+
+      {showPreview && (
+        <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-90 flex flex-col no-print">
+          <div className="p-4 flex justify-between items-center text-white bg-gray-800">
+            <h3 className="font-bold text-lg"><i className="fa-solid fa-eye mr-2"></i>プレビュー</h3>
+            <div className="flex gap-4">
+              <button onClick={handleSaveAndPrint} className="px-4 py-2 bg-green-600 rounded font-bold hover:bg-green-700">保存して印刷</button>
+              <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500"><i className="fa-solid fa-xmark"></i></button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-8 flex justify-center bg-gray-700">
+            <div className="bg-white shadow-xl origin-top transition-transform" style={{ transform: `scale(${previewScale})` }}>
+              <NewcomerSurveyPrintLayout data={report} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmationModal
+        isOpen={showHomeConfirm}
+        message="保存されていない変更があります。保存せずにホームに戻りますか？"
+        onConfirm={onBackToMenu}
+        onCancel={() => setShowHomeConfirm(false)}
+      />
+
       <div className="hidden print:block">
-         <NewcomerSurveyPrintLayout data={report} />
+        <NewcomerSurveyPrintLayout data={report} />
       </div>
-    </>
+    </div>
   );
 };
 
