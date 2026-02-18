@@ -96,7 +96,7 @@ const MASTER_GROUPS = {
 };
 const RELEVANT_MASTER_KEYS: (keyof MasterData)[] = ['projects', 'contractors', 'locations', 'supervisors', 'subcontractors'];
 
-// ★固定役職の定義
+// 固定役職
 const FIXED_ROLES = ["統括安全衛生責任者", "副統括安全衛生責任者", "書記", "安全委員"];
 
 const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
@@ -115,7 +115,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [tempRole, setTempRole] = useState("職長");
   const [sigKey, setSigKey] = useState(0);
 
-  // マスタ管理ステート
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
   const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
@@ -124,6 +123,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [availablePlans, setAvailablePlans] = useState<SavedDraft[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<SafetyPlanReportData | null>(null);
 
+  // マスタロード
   useEffect(() => { 
     const loadMaster = async () => { 
       try { 
@@ -136,28 +136,33 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     loadMaster(); 
   }, []);
 
-  // 初期データロード時に固定役職をセットする（初回作成時のみ）
+  // 初期ロード時に固定役職をセット（安全装置付き）
   useEffect(() => {
     if (!initialData) {
-      const newAttendees = [...report.gcAttendees];
+      // 現在のリストをコピー
+      const newAttendees = report.gcAttendees ? [...report.gcAttendees] : Array(8).fill({ role: "", name: "" });
+      let changed = false;
+      
+      // 固定役職をセット
       FIXED_ROLES.forEach((role, idx) => {
-        if (newAttendees[idx]) {
+        if (!newAttendees[idx] || newAttendees[idx].role !== role) {
           newAttendees[idx] = { ...newAttendees[idx], role: role };
+          changed = true;
         }
       });
-      // 状態更新はuseEffect内で行うと無限ループの危険があるため、
-      // ここでは簡易的に初期値としてセットされていることを期待するが、
-      // 強制的に上書きが必要な場合は setReport を呼ぶ
-      // setReport(prev => ({ ...prev, gcAttendees: newAttendees }));
+
+      // 変更があった場合のみ更新
+      if (changed) {
+        setReport(prev => ({ ...prev, gcAttendees: newAttendees }));
+      }
     }
-  }, []);
+  }, [initialData]); // initialData依存を追加
 
   useEffect(() => { if (masterData.subcontractors.length > 0 && !masterData.subcontractors.includes(tempCompany) && tempCompany !== "") { setTempCompany(masterData.subcontractors[0]); } }, [masterData.subcontractors, tempCompany]);
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
 
   const updateReport = (field: keyof DisasterCouncilReportData, value: any) => { setReport(prev => ({ ...prev, [field]: value })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
-  // 元請出席者の更新ロジック
   const updateGCAttendee = (index: number, field: 'role' | 'name', value: string) => { 
     const newAttendees = [...report.gcAttendees]; 
     if (!newAttendees[index]) newAttendees[index] = { role: '', name: '' }; 
@@ -199,7 +204,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     setShowPreview(true);
   };
 
-  // ファイル名自動設定
   const handlePrint = () => {
     const d = new Date(report.date);
     const m = d.getMonth() + 1; 
@@ -219,20 +223,9 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         <button onClick={() => { setIsMasterMode(false); setSelectedMasterKey(null); }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button>
       </div>
       
-      {/* タブボタン */}
       <div className="flex gap-4 mb-6">
-        <button 
-          onClick={() => setMasterTab('BASIC')} 
-          className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}
-        >
-          <i className="fa-solid fa-house-chimney mr-2"></i>基本・共通マスタ
-        </button>
-        <button 
-          onClick={() => setMasterTab('TRAINING')} 
-          className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}
-        >
-          <i className="fa-solid fa-clipboard-check mr-2"></i>各種項目マスタ
-        </button>
+        <button onClick={() => setMasterTab('BASIC')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-house-chimney mr-2"></i>基本・共通マスタ</button>
+        <button onClick={() => setMasterTab('TRAINING')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-clipboard-check mr-2"></i>各種項目マスタ</button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
@@ -288,17 +281,14 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 2: 出席者名簿</h2>
       <div className="bg-gray-50 p-4 rounded border"><h3 className="font-bold text-gray-700 mb-3">開催情報</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-xs font-bold text-gray-500">場所 (マスタ選択)</label><select className="w-full p-2 border border-gray-300 rounded bg-white appearance-none" value={report.location} onChange={(e) => updateReport('location', e.target.value)}>{masterData.locations.map(s => <option key={s} value={s}>{s}</option>)}</select></div><div><label className="text-xs font-bold text-gray-500">時間</label><div className="flex items-center gap-2"><input type="time" className="p-2 border rounded appearance-none" value={report.startTime} onChange={(e) => updateReport('startTime', e.target.value)} /><span>～</span><input type="time" className="p-2 border rounded appearance-none" value={report.endTime} onChange={(e) => updateReport('endTime', e.target.value)} /></div></div></div></div>
       <div className="bg-white p-4 rounded border shadow-sm"><h3 className="font-bold text-gray-700 mb-3 border-b pb-1">元請出席者</h3>
-        {/* ★変更: 最初の4人は固定職務名、それ以外はマスタ選択式 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {report.gcAttendees.map((attendee, idx) => (
             <div key={idx} className="flex gap-2 items-center">
               {idx < 4 ? (
-                // 固定職務名 (編集不可、または初期値として表示)
                 <div className="w-1/3 p-2 border border-gray-300 rounded text-xs bg-gray-100 font-bold truncate">
                   {FIXED_ROLES[idx]}
                 </div>
               ) : (
-                // 5人目以降はマスタから選択
                 <select 
                   className="w-1/3 p-2 border border-gray-300 rounded text-sm bg-white appearance-none"
                   value={attendee.role}
@@ -324,7 +314,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       
       <div className="bg-white p-4 rounded border shadow-sm"><h3 className="font-bold text-gray-700 mb-3 border-b pb-1">専門工事会社（署名）</h3><div className="mb-6 p-4 bg-gray-50 rounded"><div className="grid grid-cols-2 gap-3 mb-3"><div><label className="block text-xs font-bold text-gray-500 mb-1">会社名 (マスタ選択)</label><select className="w-full p-2 border border-gray-300 rounded appearance-none" value={tempCompany} onChange={(e) => setTempCompany(e.target.value)}>{masterData.subcontractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
       
-      {/* ★変更: 専門工事会社の役職もマスタ選択式に変更 */}
       <div>
         <label className="block text-xs font-bold text-gray-500 mb-1">役職</label>
         <select 
