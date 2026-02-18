@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { MasterData, SafetyPlanReportData, INITIAL_SAFETY_PLAN_REPORT, INITIAL_MASTER_DATA } from '../types';
+import { 
+  MasterData, SafetyPlanReportData, INITIAL_SAFETY_PLAN_REPORT, INITIAL_MASTER_DATA 
+} from '../types';
 import { getMasterData, saveDraft, saveMasterData, deleteDraftsByProject } from '../services/firebaseService';
 import { getDaysInMonth, getDay } from 'date-fns';
 
@@ -46,7 +48,7 @@ const ProjectDeleteModal: React.FC<{ isOpen: boolean; projectName: string; onCon
   );
 };
 
-// --- Master Manager (Updated) ---
+// --- Master Section (List View) ---
 const MasterSection: React.FC<{
   title: string;
   items: string[];
@@ -64,19 +66,48 @@ const MasterSection: React.FC<{
       </div>
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
         <ul className="space-y-2">
-          {items.map((item, idx) => (<li key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded hover:bg-gray-100 transition-colors"><span className="text-sm text-gray-800 break-all mr-2">{item}</span><button type="button" onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }} className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors"><i className="fa-solid fa-trash"></i></button></li>))}
+          {items.map((item, idx) => (
+            <li key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded hover:bg-gray-100 transition-colors">
+              <span className="text-sm text-gray-800 break-all mr-2">{item}</span>
+              <button type="button" onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }} className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors"><i className="fa-solid fa-trash"></i></button>
+            </li>
+          ))}
           {items.length === 0 && <li className="text-gray-400 text-sm italic text-center py-8">データがありません</li>}
         </ul>
       </div>
       <div className="p-4 border-t bg-gray-50">
-        <div className="flex gap-2"><input type="text" className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white text-black outline-none focus:ring-2 focus:ring-blue-500" placeholder="新規項目を追加..." value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} /><button onClick={handleAdd} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md"><i className="fa-solid fa-plus mr-1"></i>追加</button></div>
+        <div className="flex gap-2">
+          <input type="text" className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white text-black outline-none focus:ring-2 focus:ring-blue-500" placeholder="新規項目を追加..." value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
+          <button onClick={handleAdd} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md"><i className="fa-solid fa-plus mr-1"></i>追加</button>
+        </div>
       </div>
     </div>
   );
 };
 
-const LABEL_MAP: Record<string, string> = { projects: "工事名", supervisors: "氏名リスト", locations: "作業所" };
-const MASTER_GROUPS = { BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'subcontractors'], TRAINING: ['goals', 'processes', 'topics', 'cautions'] };
+// ★変更: 表示名マップ (ご要望に合わせて変更)
+const LABEL_MAP: Record<string, string> = { 
+  projects: "工事名", 
+  contractors: "会社名", 
+  supervisors: "現場責任者", 
+  locations: "場所", 
+  workplaces: "作業所名",
+  subcontractors: "協力会社名", 
+  roles: "役職",
+  topics: "安全訓練内容",
+  jobTypes: "工種",
+  goals: "安全衛生目標",
+  predictions: "予想災害",
+  countermeasures: "防止対策",
+  processes: "作業工程", // 既存の残り
+  cautions: "注意事項"   // 既存の残り
+};
+
+// ★変更: グループ分け (ご要望に合わせて変更)
+const MASTER_GROUPS = { 
+  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
+  TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
+};
 const RELEVANT_MASTER_KEYS: (keyof MasterData)[] = ['projects', 'supervisors', 'locations'];
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -105,7 +136,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const [previewScale, setPreviewScale] = useState(1);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
-  // Master Management State
+  // Master State
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
   const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
@@ -130,13 +161,22 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   // --- RENDER MASTER MANAGER ---
   const renderMasterManager = () => (
     <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen flex flex-col">
-      <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b"><h2 className="text-2xl font-bold text-gray-800"><i className="fa-solid fa-database mr-2"></i>マスタ管理</h2><button onClick={() => { setIsMasterMode(false); setSelectedMasterKey(null); }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button></div>
+      <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
+        <h2 className="text-2xl font-bold text-gray-800"><i className="fa-solid fa-database mr-2"></i>マスタ管理</h2>
+        <button onClick={() => { setIsMasterMode(false); setSelectedMasterKey(null); }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button>
+      </div>
+      
       {selectedMasterKey ? (
         <div className="flex-1 overflow-hidden">
           <MasterSection 
-            title={LABEL_MAP[selectedMasterKey]} items={masterData[selectedMasterKey]} onBack={() => setSelectedMasterKey(null)}
+            title={LABEL_MAP[selectedMasterKey]} 
+            items={masterData[selectedMasterKey]} 
+            onBack={() => setSelectedMasterKey(null)}
             onUpdate={async (newItems) => { const newData = { ...masterData, [selectedMasterKey]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
-            onDeleteRequest={(index, item) => { if (selectedMasterKey === 'projects') { setProjectDeleteTarget({ index, name: item }); } else { setConfirmModal({ isOpen: true, message: `「${item}」を削除しますか？`, onConfirm: async () => { const newItems = [...masterData[selectedMasterKey]]; newItems.splice(index, 1); const newData = { ...masterData, [selectedMasterKey]: newItems }; setMasterData(newData); await saveMasterData(newData); setConfirmModal(prev => ({ ...prev, isOpen: false })); } }); } }} 
+            onDeleteRequest={(index, item) => {
+              if (selectedMasterKey === 'projects') { setProjectDeleteTarget({ index, name: item }); } 
+              else { setConfirmModal({ isOpen: true, message: `「${item}」を削除しますか？`, onConfirm: async () => { const newItems = [...masterData[selectedMasterKey]]; newItems.splice(index, 1); const newData = { ...masterData, [selectedMasterKey]: newItems }; setMasterData(newData); await saveMasterData(newData); setConfirmModal(prev => ({ ...prev, isOpen: false })); } }); }
+            }} 
           />
         </div>
       ) : (
@@ -147,7 +187,19 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
             {MASTER_GROUPS[masterTab].map((key) => (
-              <button key={key} onClick={() => setSelectedMasterKey(key as keyof MasterData)} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group"><div><h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3><p className="text-xs text-gray-500">{masterData[key as keyof MasterData].length} 件の登録</p></div><div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors"><i className="fa-solid fa-chevron-right"></i></div></button>
+              <button 
+                key={key}
+                onClick={() => setSelectedMasterKey(key as keyof MasterData)}
+                className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group"
+              >
+                <div>
+                  <h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3>
+                  <p className="text-xs text-gray-500">{masterData[key as keyof MasterData].length} 件の登録</p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+                  <i className="fa-solid fa-chevron-right"></i>
+                </div>
+              </button>
             ))}
           </div>
         </>
@@ -221,7 +273,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   return (
     <>
       <div className="no-print min-h-screen bg-gray-50 flex flex-col">
-        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-30 flex justify-between items-center shrink-0"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300 transition-colors"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-clipboard-list mr-2"></i>安全管理計画表</h1></div><div className="flex gap-2"><button onClick={handleSave} className="px-4 py-2 rounded font-bold border border-blue-400 text-white bg-blue-600 hover:bg-blue-500 flex items-center text-sm transition-colors shadow-sm"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : saveStatus === 'saving' ? '保存中...' : '一時保存'}</button><button onClick={() => setShowPreview(true)} className="px-4 py-2 bg-cyan-600 text-white rounded font-bold hover:bg-cyan-500 flex items-center text-sm transition-colors shadow-sm"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button><button onClick={() => setIsMasterMode(true)} className="text-xs bg-slate-700 px-3 py-2 rounded hover:bg-slate-600 transition-colors ml-2 shadow-sm"><i className="fa-solid fa-gear mr-1"></i>設定</button></div></header>
+        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-30 flex justify-between items-center shrink-0"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300 transition-colors"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-clipboard-list mr-2"></i>安全管理計画表</h1></div><div className="flex gap-2"><button onClick={handleSave} className="px-4 py-2 rounded font-bold border border-blue-400 text-white bg-blue-600 hover:bg-blue-500 flex items-center text-sm transition-colors shadow-sm"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button><button onClick={() => setShowPreview(true)} className="px-4 py-2 bg-cyan-600 text-white rounded font-bold hover:bg-cyan-500 flex items-center text-sm transition-colors shadow-sm"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button><button onClick={() => setIsMasterMode(true)} className="text-xs bg-slate-700 px-3 py-2 rounded hover:bg-slate-600 transition-colors ml-2 shadow-sm"><i className="fa-solid fa-gear mr-1"></i>設定</button></div></header>
         <main className="flex-1 overflow-auto p-4 bg-gray-100 flex justify-center"><div className="bg-white shadow-xl origin-top" style={{ width: '297mm', minHeight: '210mm' }}>{renderReportSheet(false)}</div></main>
       </div>
       {showPreview && (<div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-95 flex flex-col no-print"><div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0"><h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i>印刷プレビュー</h2><div className="flex gap-4"><button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500 transition-colors">閉じる</button><button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center hover:bg-green-500 transition-colors"><i className="fa-solid fa-print mr-2"></i> 保存して印刷</button></div></div><div className="flex-1 overflow-y-auto p-8 flex justify-center items-start bg-gray-800"><div style={{ width: '297mm', transform: `scale(${previewScale})`, transformOrigin: 'top center', marginBottom: `${(previewScale - 1) * 100}%` }}><div className="bg-white shadow-2xl">{renderReportSheet(true)}</div></div></div></div>)}

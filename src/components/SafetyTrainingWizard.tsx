@@ -49,7 +49,7 @@ const ProjectDeleteModal: React.FC<{ isOpen: boolean; projectName: string; onCon
   );
 };
 
-// --- Master Section (Updated for single view) ---
+// --- Master Section (List View) ---
 const MasterSection: React.FC<{
   title: string;
   items: string[];
@@ -86,9 +86,29 @@ const MasterSection: React.FC<{
   );
 };
 
-const LABEL_MAP: Record<string, string> = { projects: "工事名", contractors: "施工者名", supervisors: "実施者（職長・監督）", locations: "実施場所", goals: "災害防止目標", processes: "作業工程", topics: "周知徹底事項", cautions: "現場内注意事項", subcontractors: "協力会社名" };
-const MASTER_GROUPS = { BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'subcontractors'], TRAINING: ['goals', 'processes', 'topics', 'cautions'] };
-const RELEVANT_MASTER_KEYS: (keyof MasterData)[] = ['projects', 'contractors', 'locations', 'supervisors', 'subcontractors']; // Not used in wizard directly but kept for consistency
+// ★変更: 表示名マップ (ご要望に合わせて変更)
+const LABEL_MAP: Record<string, string> = { 
+  projects: "工事名", 
+  contractors: "会社名", 
+  supervisors: "現場責任者", 
+  locations: "場所", 
+  workplaces: "作業所名",
+  subcontractors: "協力会社名", // ※リストにはないがアンケート等で必須のため保持
+  roles: "役職",
+  topics: "安全訓練内容",
+  jobTypes: "工種",
+  goals: "安全衛生目標",
+  predictions: "予想災害",
+  countermeasures: "防止対策",
+  processes: "作業工程", // 既存の残り
+  cautions: "注意事項"   // 既存の残り
+};
+
+// ★変更: グループ分け (ご要望に合わせて変更)
+const MASTER_GROUPS = { 
+  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
+  TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
+};
 
 const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
   const [step, setStep] = useState(1);
@@ -102,11 +122,11 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
   const [previewScale, setPreviewScale] = useState(1);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: () => {} });
+
   const [planSelectionModal, setPlanSelectionModal] = useState(false);
   const [availablePlans, setAvailablePlans] = useState<SavedDraft[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<SafetyPlanReportData | null>(null);
   
-  // マスタ管理ステート
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
   const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
@@ -134,7 +154,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const handlePrint = () => { const prevTitle = document.title; document.title = `安全訓練_${report.project}_${report.month}月度`; window.print(); document.title = prevTitle; };
   const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
 
-  // --- RENDER MASTER MANAGER ---
   const renderMasterManager = () => (
     <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen flex flex-col">
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
@@ -142,13 +161,10 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <button onClick={() => { setIsMasterMode(false); setSelectedMasterKey(null); }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button>
       </div>
       
-      {/* 項目選択時 */}
       {selectedMasterKey ? (
         <div className="flex-1 overflow-hidden">
           <MasterSection 
-            title={LABEL_MAP[selectedMasterKey]} 
-            items={masterData[selectedMasterKey]} 
-            onBack={() => setSelectedMasterKey(null)}
+            title={LABEL_MAP[selectedMasterKey]} items={masterData[selectedMasterKey]} onBack={() => setSelectedMasterKey(null)}
             onUpdate={async (newItems) => { const newData = { ...masterData, [selectedMasterKey]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
             onDeleteRequest={(index, item) => {
               if (selectedMasterKey === 'projects') { setProjectDeleteTarget({ index, name: item }); } 
@@ -157,7 +173,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           />
         </div>
       ) : (
-        /* 項目一覧表示時 */
         <>
           <div className="flex gap-4 mb-6 shrink-0">
             <button onClick={() => setMasterTab('BASIC')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-house-chimney mr-2"></i>基本・共通マスタ</button>
@@ -165,18 +180,9 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
             {MASTER_GROUPS[masterTab].map((key) => (
-              <button 
-                key={key}
-                onClick={() => setSelectedMasterKey(key as keyof MasterData)}
-                className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group"
-              >
-                <div>
-                  <h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3>
-                  <p className="text-xs text-gray-500">{masterData[key as keyof MasterData].length} 件の登録</p>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
-                  <i className="fa-solid fa-chevron-right"></i>
-                </div>
+              <button key={key} onClick={() => setSelectedMasterKey(key as keyof MasterData)} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group">
+                <div><h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3><p className="text-xs text-gray-500">{masterData[key as keyof MasterData].length} 件の登録</p></div>
+                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors"><i className="fa-solid fa-chevron-right"></i></div>
               </button>
             ))}
           </div>
@@ -185,7 +191,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     </div>
   );
 
-  // --- RENDER WIZARD STEPS ---
   const renderStep1 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 1: 表紙情報</h2>
@@ -194,6 +199,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <div className="form-control"><label className="label font-bold text-gray-700">施工者名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.contractor} onChange={(e) => updateReport('contractor', e.target.value)}>{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
     </div>
   );
+
   const renderStep2 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 2: 実施内容</h2>
@@ -238,22 +244,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     </div>
   );
 
-  const renderPlanSelectionModal = () => {
-    if (!planSelectionModal) return null;
-    return (
-      <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-80 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 animate-fade-in">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">添付する安全管理計画表を選択</h3>
-          <p className="text-sm text-gray-600 mb-4">工事名「{report.project}」の計画表が見つかりました。</p>
-          <div className="space-y-3 mb-6 max-h-60 overflow-y-auto">
-             {availablePlans.map(plan => { const d = plan.data as SafetyPlanReportData; return ( <button key={plan.id} onClick={() => confirmPlanSelection(plan)} className="w-full text-left border rounded p-3 hover:bg-blue-50 transition-colors flex justify-between items-center"><div><div className="font-bold text-blue-800">{d.month}月度 計画表</div><div className="text-xs text-gray-500">更新: {new Date(plan.lastModified).toLocaleString('ja-JP')}</div></div><i className="fa-solid fa-chevron-right text-gray-400"></i></button> ) })}
-          </div>
-          <button onClick={() => setPlanSelectionModal(false)} className="w-full py-2 bg-gray-200 text-gray-700 rounded font-bold">キャンセル</button>
-        </div>
-      </div>
-    );
-  };
-
   if (isMasterMode) return (
     <>
       {renderMasterManager()}
@@ -284,14 +274,14 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-blue-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-blue-600" : ""}>STEP 2</span><span className={step >= 3 ? "text-blue-600" : ""}>STEP 3</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">{step === 1 && renderStep1()}{step === 2 && renderStep2()}{step === 3 && renderStep3()}</main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
-          <div className="flex items-center gap-2"><button onClick={handleBack} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className={`px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center transition-colors`}><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
+          <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
           {step < 3 ? (<button onClick={handleNext} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
         </footer>
       </div>
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       {renderPlanSelectionModal()}
-      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} />
+      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
       
       <div className="hidden print:block">
          <PrintLayout data={report} />

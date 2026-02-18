@@ -48,7 +48,7 @@ const ProjectDeleteModal: React.FC<{ isOpen: boolean; projectName: string; onCon
   );
 };
 
-// --- Master Section (List View Only) ---
+// --- Master Section (List View) ---
 const MasterSection: React.FC<{
   title: string;
   items: string[];
@@ -85,8 +85,15 @@ const MasterSection: React.FC<{
   );
 };
 
-const LABEL_MAP: Record<string, string> = { projects: "工事名", contractors: "施工者名", supervisors: "実施者（職長・監督）", locations: "実施場所", subcontractors: "協力会社名" };
-const MASTER_GROUPS = { BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'subcontractors'], TRAINING: ['goals', 'processes', 'topics', 'cautions'] };
+const LABEL_MAP: Record<string, string> = { 
+  projects: "工事名", contractors: "会社名", supervisors: "現場責任者", locations: "場所", workplaces: "作業所名",
+  subcontractors: "協力会社名", roles: "役職", topics: "安全訓練内容", jobTypes: "工種", goals: "安全衛生目標", predictions: "予想災害", countermeasures: "防止対策",
+  processes: "作業工程", cautions: "注意事項"
+};
+const MASTER_GROUPS = { 
+  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
+  TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
+};
 const RELEVANT_MASTER_KEYS: (keyof MasterData)[] = ['projects', 'contractors', 'locations', 'supervisors', 'subcontractors'];
 
 const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
@@ -105,7 +112,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [tempRole, setTempRole] = useState("職長");
   const [sigKey, setSigKey] = useState(0);
 
-  // マスタ管理ステート
+  // Master State
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
   const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
@@ -165,7 +172,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
 
   const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
 
-  // --- RENDER MASTER MANAGER ---
+  // --- Renders ---
   const renderMasterManager = () => (
     <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen flex flex-col">
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
@@ -176,9 +183,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       {selectedMasterKey ? (
         <div className="flex-1 overflow-hidden">
           <MasterSection 
-            title={LABEL_MAP[selectedMasterKey]} 
-            items={masterData[selectedMasterKey]} 
-            onBack={() => setSelectedMasterKey(null)}
+            title={LABEL_MAP[selectedMasterKey]} items={masterData[selectedMasterKey]} onBack={() => setSelectedMasterKey(null)}
             onUpdate={async (newItems) => { const newData = { ...masterData, [selectedMasterKey]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
             onDeleteRequest={(index, item) => {
               if (selectedMasterKey === 'projects') { setProjectDeleteTarget({ index, name: item }); } 
@@ -194,18 +199,9 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
             {MASTER_GROUPS[masterTab].map((key) => (
-              <button 
-                key={key}
-                onClick={() => setSelectedMasterKey(key as keyof MasterData)}
-                className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group"
-              >
-                <div>
-                  <h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3>
-                  <p className="text-xs text-gray-500">{masterData[key as keyof MasterData].length} 件の登録</p>
-                </div>
-                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
-                  <i className="fa-solid fa-chevron-right"></i>
-                </div>
+              <button key={key} onClick={() => setSelectedMasterKey(key as keyof MasterData)} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group">
+                <div><h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3><p className="text-xs text-gray-500">{masterData[key as keyof MasterData].length} 件の登録</p></div>
+                <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors"><i className="fa-solid fa-chevron-right"></i></div>
               </button>
             ))}
           </div>
@@ -245,6 +241,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           </button>
         </div>
       </div>
+      
       <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
         <div className="bg-white shadow-2xl" style={{ width: '794px', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
           <DisasterCouncilPrintLayout data={report} />
@@ -277,7 +274,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   if (isMasterMode) return (
     <>
       {renderMasterManager()}
-      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} />
+      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
       {projectDeleteTarget && (
         <ProjectDeleteModal 
           isOpen={!!projectDeleteTarget} 
@@ -309,7 +306,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         </footer>
       </div>
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
-      
       {showPreview && renderPreviewModal()}
       {renderPlanSelectionModal()}
       <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
