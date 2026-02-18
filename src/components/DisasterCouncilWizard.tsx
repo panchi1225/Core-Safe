@@ -57,22 +57,24 @@ const MasterSection: React.FC<{
   onBack: () => void;
 }> = ({ title, items, onUpdate, onDeleteRequest, onBack }) => {
   const [newItem, setNewItem] = useState("");
-  const handleAdd = () => { if (newItem.trim()) { onUpdate([...items, newItem.trim()]); setNewItem(""); } };
+  // 安全装置: itemsがundefinedの場合は空配列にする
+  const safeItems = items || [];
+  const handleAdd = () => { if (newItem.trim()) { onUpdate([...safeItems, newItem.trim()]); setNewItem(""); } };
   return (
     <div className="bg-white rounded-lg shadow-sm h-full flex flex-col">
       <div className="p-4 border-b flex items-center gap-3">
         <button onClick={onBack} className="text-gray-500 hover:text-blue-600"><i className="fa-solid fa-arrow-left text-xl"></i></button>
-        <h3 className="font-bold text-lg text-gray-800 flex-1">{title} <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-2">{items.length}件</span></h3>
+        <h3 className="font-bold text-lg text-gray-800 flex-1">{title} <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-2">{safeItems.length}件</span></h3>
       </div>
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
         <ul className="space-y-2">
-          {items.map((item, idx) => (
+          {safeItems.map((item, idx) => (
             <li key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded hover:bg-gray-100 transition-colors">
               <span className="text-sm text-gray-800 break-all mr-2">{item}</span>
               <button type="button" onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }} className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors"><i className="fa-solid fa-trash"></i></button>
             </li>
           ))}
-          {items.length === 0 && <li className="text-gray-400 text-sm italic text-center py-8">データがありません</li>}
+          {safeItems.length === 0 && <li className="text-gray-400 text-sm italic text-center py-8">データがありません</li>}
         </ul>
       </div>
       <div className="p-4 border-t bg-gray-50">
@@ -115,6 +117,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [tempRole, setTempRole] = useState("職長");
   const [sigKey, setSigKey] = useState(0);
 
+  // マスタ管理ステート
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
   const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
@@ -129,21 +132,23 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       try { 
         const data = await getMasterData(); 
         setMasterData(data); 
-        if (data.subcontractors.length > 0) { setTempCompany(data.subcontractors[0]); } 
-        if (data.roles.length > 0) { setTempRole(data.roles[0]); }
+        // 安全装置: データがない場合のエラー回避
+        const safeSubcontractors = data.subcontractors || [];
+        const safeRoles = data.roles || [];
+        
+        if (safeSubcontractors.length > 0) { setTempCompany(safeSubcontractors[0]); } 
+        if (safeRoles.length > 0) { setTempRole(safeRoles[0]); }
       } catch (e) { console.error("マスタ取得エラー", e); } 
     }; 
     loadMaster(); 
   }, []);
 
-  // 初期ロード時に固定役職をセット（安全装置付き）
+  // 初期ロード時に固定役職をセット
   useEffect(() => {
     if (!initialData) {
-      // 現在のリストをコピー
       const newAttendees = report.gcAttendees ? [...report.gcAttendees] : Array(8).fill({ role: "", name: "" });
       let changed = false;
       
-      // 固定役職をセット
       FIXED_ROLES.forEach((role, idx) => {
         if (!newAttendees[idx] || newAttendees[idx].role !== role) {
           newAttendees[idx] = { ...newAttendees[idx], role: role };
@@ -151,14 +156,20 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         }
       });
 
-      // 変更があった場合のみ更新
       if (changed) {
         setReport(prev => ({ ...prev, gcAttendees: newAttendees }));
       }
     }
-  }, [initialData]); // initialData依存を追加
+  }, [initialData]); 
 
-  useEffect(() => { if (masterData.subcontractors.length > 0 && !masterData.subcontractors.includes(tempCompany) && tempCompany !== "") { setTempCompany(masterData.subcontractors[0]); } }, [masterData.subcontractors, tempCompany]);
+  // tempCompanyの更新監視（安全装置追加）
+  useEffect(() => { 
+    const safeSubcontractors = masterData.subcontractors || [];
+    if (safeSubcontractors.length > 0 && !safeSubcontractors.includes(tempCompany) && tempCompany !== "") { 
+      setTempCompany(safeSubcontractors[0]); 
+    } 
+  }, [masterData.subcontractors, tempCompany]);
+
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
 
   const updateReport = (field: keyof DisasterCouncilReportData, value: any) => { setReport(prev => ({ ...prev, [field]: value })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
@@ -233,18 +244,18 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           <div className="flex-1 overflow-hidden col-span-2">
             <MasterSection 
               title={LABEL_MAP[selectedMasterKey]} 
-              items={masterData[selectedMasterKey]} 
+              items={masterData[selectedMasterKey] || []} // ★安全装置
               onBack={() => setSelectedMasterKey(null)}
               onUpdate={async (newItems) => { const newData = { ...masterData, [selectedMasterKey]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
               onDeleteRequest={(index, item) => {
                 if (selectedMasterKey === 'projects') { setProjectDeleteTarget({ index, name: item }); } 
-                else { setConfirmModal({ isOpen: true, message: `「${item}」を削除しますか？`, onConfirm: async () => { const newItems = [...masterData[selectedMasterKey]]; newItems.splice(index, 1); const newData = { ...masterData, [selectedMasterKey]: newItems }; setMasterData(newData); await saveMasterData(newData); setConfirmModal(prev => ({ ...prev, isOpen: false })); } }); }
+                else { setConfirmModal({ isOpen: true, message: `「${item}」を削除しますか？`, onConfirm: async () => { const newItems = [...(masterData[selectedMasterKey] || [])]; newItems.splice(index, 1); const newData = { ...masterData, [selectedMasterKey]: newItems }; setMasterData(newData); await saveMasterData(newData); setConfirmModal(prev => ({ ...prev, isOpen: false })); } }); }
               }} 
             />
           </div>
         ) : (
           MASTER_GROUPS[masterTab].map((key) => {
-            const list = masterData[key as keyof MasterData] || [];
+            const list = masterData[key as keyof MasterData] || []; // ★安全装置
             return (
               <button 
                 key={key}
@@ -270,16 +281,16 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 1: 表紙情報</h2>
       <div className="form-control"><label className="label font-bold text-gray-700">開催回数</label><div className="flex items-center gap-2"><span className="text-gray-600">第</span><select className="w-24 p-2 border border-gray-300 rounded text-center text-lg bg-white appearance-none" value={report.count} onChange={(e) => updateReport('count', parseInt(e.target.value) || 0)}>{Array.from({ length: 100 }, (_, i) => i + 1).map(num => (<option key={num} value={num}>{num}</option>))}</select><span className="text-gray-600">回</span></div></div>
-      <div className="form-control"><label className="label font-bold text-gray-700">工事名 (マスタ選択)</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white appearance-none" value={report.project} onChange={(e) => updateReport('project', e.target.value)}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+      <div className="form-control"><label className="label font-bold text-gray-700">工事名 (マスタ選択)</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white appearance-none" value={report.project} onChange={(e) => updateReport('project', e.target.value)}>{(masterData.projects || []).map(p => <option key={p} value={p}>{p}</option>)}</select></div>
       <div className="form-control"><label className="label font-bold text-gray-700">開催日</label><input type="date" className="w-full p-3 border border-gray-300 rounded-lg bg-white appearance-none" value={report.date} onChange={(e) => updateReport('date', e.target.value)} /></div>
-      <div className="form-control"><label className="label font-bold text-gray-700">施工者名 (マスタ選択)</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white appearance-none" value={report.contractor} onChange={(e) => updateReport('contractor', e.target.value)}>{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+      <div className="form-control"><label className="label font-bold text-gray-700">施工者名 (マスタ選択)</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white appearance-none" value={report.contractor} onChange={(e) => updateReport('contractor', e.target.value)}>{(masterData.contractors || []).map(c => <option key={c} value={c}>{c}</option>)}</select></div>
     </div>
   );
 
   const renderStep2 = () => (
     <div className="space-y-8">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 2: 出席者名簿</h2>
-      <div className="bg-gray-50 p-4 rounded border"><h3 className="font-bold text-gray-700 mb-3">開催情報</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-xs font-bold text-gray-500">場所 (マスタ選択)</label><select className="w-full p-2 border border-gray-300 rounded bg-white appearance-none" value={report.location} onChange={(e) => updateReport('location', e.target.value)}>{masterData.locations.map(s => <option key={s} value={s}>{s}</option>)}</select></div><div><label className="text-xs font-bold text-gray-500">時間</label><div className="flex items-center gap-2"><input type="time" className="p-2 border rounded appearance-none" value={report.startTime} onChange={(e) => updateReport('startTime', e.target.value)} /><span>～</span><input type="time" className="p-2 border rounded appearance-none" value={report.endTime} onChange={(e) => updateReport('endTime', e.target.value)} /></div></div></div></div>
+      <div className="bg-gray-50 p-4 rounded border"><h3 className="font-bold text-gray-700 mb-3">開催情報</h3><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label className="text-xs font-bold text-gray-500">場所 (マスタ選択)</label><select className="w-full p-2 border border-gray-300 rounded bg-white appearance-none" value={report.location} onChange={(e) => updateReport('location', e.target.value)}>{(masterData.locations || []).map(s => <option key={s} value={s}>{s}</option>)}</select></div><div><label className="text-xs font-bold text-gray-500">時間</label><div className="flex items-center gap-2"><input type="time" className="p-2 border rounded appearance-none" value={report.startTime} onChange={(e) => updateReport('startTime', e.target.value)} /><span>～</span><input type="time" className="p-2 border rounded appearance-none" value={report.endTime} onChange={(e) => updateReport('endTime', e.target.value)} /></div></div></div></div>
       <div className="bg-white p-4 rounded border shadow-sm"><h3 className="font-bold text-gray-700 mb-3 border-b pb-1">元請出席者</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {report.gcAttendees.map((attendee, idx) => (
@@ -295,7 +306,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
                   onChange={(e) => updateGCAttendee(idx, 'role', e.target.value)}
                 >
                   <option value="">(職務選択)</option>
-                  {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
+                  {/* ★安全装置: (masterData.roles || []) */}
+                  {(masterData.roles || []).map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               )}
               
@@ -305,14 +317,15 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
                 onChange={(e) => updateGCAttendee(idx, 'name', e.target.value)}
               >
                 <option value="">(選択してください)</option>
-                {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+                {/* ★安全装置 */}
+                {(masterData.supervisors || []).map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
           ))}
         </div>
       </div>
       
-      <div className="bg-white p-4 rounded border shadow-sm"><h3 className="font-bold text-gray-700 mb-3 border-b pb-1">専門工事会社（署名）</h3><div className="mb-6 p-4 bg-gray-50 rounded"><div className="grid grid-cols-2 gap-3 mb-3"><div><label className="block text-xs font-bold text-gray-500 mb-1">会社名 (マスタ選択)</label><select className="w-full p-2 border border-gray-300 rounded appearance-none" value={tempCompany} onChange={(e) => setTempCompany(e.target.value)}>{masterData.subcontractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+      <div className="bg-white p-4 rounded border shadow-sm"><h3 className="font-bold text-gray-700 mb-3 border-b pb-1">専門工事会社（署名）</h3><div className="mb-6 p-4 bg-gray-50 rounded"><div className="grid grid-cols-2 gap-3 mb-3"><div><label className="block text-xs font-bold text-gray-500 mb-1">会社名 (マスタ選択)</label><select className="w-full p-2 border border-gray-300 rounded appearance-none" value={tempCompany} onChange={(e) => setTempCompany(e.target.value)}>{(masterData.subcontractors || []).map(s => <option key={s} value={s}>{s}</option>)}</select></div>
       
       <div>
         <label className="block text-xs font-bold text-gray-500 mb-1">役職</label>
@@ -321,7 +334,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           value={tempRole}
           onChange={(e) => setTempRole(e.target.value)}
         >
-          {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
+          {/* ★安全装置 */}
+          {(masterData.roles || []).map(r => <option key={r} value={r}>{r}</option>)}
         </select>
       </div>
       
