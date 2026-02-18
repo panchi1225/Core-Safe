@@ -17,12 +17,14 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
     const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
     base = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
   } else {
+    // 新規作成時、経験年数と健康診断受診日を空にする
     base = {
       ...base,
       experienceYears: undefined,
-      healthCheckDay: undefined,
+      experienceMonths: undefined,
       healthCheckYear: undefined, 
-      healthCheckMonth: undefined 
+      healthCheckMonth: undefined,
+      healthCheckDay: undefined
     };
   }
   return base;
@@ -118,10 +120,10 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
 
-  // ★修正: 初回ロード時およびステップ変更時に画面最上部へスクロール
+  // 初回ロード時およびステップ変更時に画面最上部へスクロール
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, [step]); // stepが変わるたび、または初回マウント時に実行
+  }, [step]);
 
   useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
@@ -355,8 +357,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <input type="text" className={`w-48 p-2 border rounded ${getErrorClass('phone')}`} placeholder="090-0000-0000" value={report.phone} onChange={(e) => updateReport({phone: e.target.value})} />
         </div>
 
-        {/* --- 緊急連絡先 (修正版: レスポンシブ対応) --- */}
-        <div className="form-control bg-gray-50 p-3 rounded border-2 border-red-500 w-full md:w-fit">
+        {/* --- 緊急連絡先 (修正版: w-full で中身を1/2ずつ) --- */}
+        <div className="form-control bg-gray-50 p-3 rounded border-2 border-red-500 w-full">
           <label className="label font-bold text-gray-700 mb-2 block">緊急連絡先</label>
           
           <div className="mb-2">
@@ -364,14 +366,14 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             <div className="flex gap-2">
               <input 
                 type="text" 
-                className={`flex-1 md:w-48 p-2 border rounded ${getErrorClass('emergencyContactSei')}`} 
+                className={`w-1/2 p-2 border rounded ${getErrorClass('emergencyContactSei')}`} 
                 placeholder="氏" 
                 value={report.emergencyContactSei} 
                 onChange={(e) => updateReport({emergencyContactSei: e.target.value})} 
               />
               <input 
                 type="text" 
-                className={`flex-1 md:w-48 p-2 border rounded ${getErrorClass('emergencyContactMei')}`} 
+                className={`w-1/2 p-2 border rounded ${getErrorClass('emergencyContactMei')}`} 
                 placeholder="名" 
                 value={report.emergencyContactMei} 
                 onChange={(e) => updateReport({emergencyContactMei: e.target.value})} 
@@ -379,11 +381,11 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             </div>
           </div>
           
-          <div className="flex flex-col md:flex-row gap-3">
-            <div className="w-full md:w-auto">
+          <div className="flex gap-2">
+            <div className="w-1/2">
               <label className="text-xs text-gray-500 font-bold mb-1 block">続柄</label>
               <select 
-                className={`w-full md:w-48 p-2 border rounded ${getErrorClass('emergencyContactRelation')}`} 
+                className={`w-full p-2 border rounded ${getErrorClass('emergencyContactRelation')}`} 
                 value={report.emergencyContactRelation} 
                 onChange={(e) => updateReport({emergencyContactRelation: e.target.value})}
               >
@@ -394,11 +396,11 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                 <option value="同居人">同居人</option><option value="その他">その他</option>
               </select>
             </div>
-            <div className="w-full md:w-auto">
+            <div className="w-1/2">
               <label className="text-xs text-gray-500 font-bold mb-1 block">緊急電話番号</label>
               <input 
                 type="text" 
-                className={`w-full md:w-48 p-2 border rounded ${getErrorClass('emergencyContactPhone')}`} 
+                className={`w-full p-2 border rounded ${getErrorClass('emergencyContactPhone')}`} 
                 placeholder="090-0000-0000" 
                 value={report.emergencyContactPhone} 
                 onChange={(e) => updateReport({emergencyContactPhone: e.target.value})} 
@@ -426,7 +428,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             </div>
           </div>
         </div>
-        <div className="form-control"><label className="label font-bold text-gray-700">建退協加入</label><div className="flex gap-4 mt-1"><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'Joined'} onChange={() => updateReport({kentaikyo: 'Joined'})} />加入している</label><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'NotJoined'} onChange={() => updateReport({kentaikyo: 'NotJoined'})} />加入していない</label></div></div>
+        {/* ★修正: 文言変更 */}
+        <div className="form-control"><label className="label font-bold text-gray-700">建退共加入状況</label><div className="flex gap-4 mt-1"><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'Joined'} onChange={() => updateReport({kentaikyo: 'Joined'})} />加入している</label><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'NotJoined'} onChange={() => updateReport({kentaikyo: 'NotJoined'})} />加入していない</label></div></div>
       </div>
     );
   };
@@ -522,7 +525,11 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                    setConfirmModal({ 
                      isOpen: true, 
                      message: `「${item}」を削除しますか？`, 
+                     leftButtonLabel: 'キャンセル',
+                     leftButtonClass: 'px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600',
                      onLeftButtonClick: () => setConfirmModal(prev => ({ ...prev, isOpen: false })),
+                     rightButtonLabel: '削除する',
+                     rightButtonClass: 'px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold',
                      onRightButtonClick: async () => { 
                        const newItems = [...(masterData[key as keyof MasterData] || [])]; 
                        newItems.splice(index, 1); 
@@ -530,11 +537,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                        setMasterData(newData); 
                        await saveMasterData(newData); 
                        setConfirmModal(prev => ({ ...prev, isOpen: false })); 
-                     },
-                     leftButtonLabel: 'キャンセル',
-                     rightButtonLabel: '削除する',
-                     leftButtonClass: 'px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600',
-                     rightButtonClass: 'px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold'
+                     } 
                    }); 
                  }
                }} 
@@ -624,7 +627,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       
-      {/* ★修正: 署名モーダル (即座に表示、余計なメッセージなし) */}
       {showSigModal && (
         <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center p-4">
           <div className="w-full max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col">
