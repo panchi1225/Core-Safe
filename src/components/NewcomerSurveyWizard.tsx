@@ -252,12 +252,14 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       setConfirmModal({ 
         isOpen: true, 
         message: "データが保存されていません！\n保存ボタンを押してください！", 
+        // 左: ホームに戻る (グレー)
         leftButtonLabel: "ホームに戻る",
         leftButtonClass: "px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300",
         onLeftButtonClick: () => { 
           setConfirmModal(prev => ({ ...prev, isOpen: false })); 
           onBackToMenu(); 
         },
+        // 右: 編集を続ける (赤)
         rightButtonLabel: "編集を続ける",
         rightButtonClass: "px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700",
         onRightButtonClick: () => {
@@ -617,18 +619,34 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       
-      {/* ★修正: 署名モーダル (即座に表示、余計なメッセージなし) */}
+      {/* ★修正: 署名モーダル (即座に全画面表示) */}
       {showSigModal && (
-        <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-90 flex flex-col items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white rounded-lg shadow-2xl overflow-hidden flex flex-col">
-            <div className="bg-gray-800 text-white p-3 flex justify-between items-center shrink-0">
-               <span className="font-bold">署名記入</span>
-               <button onClick={() => setShowSigModal(false)} className="text-gray-400 hover:text-white"><i className="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            
-            <div className="flex-1 bg-white p-2 h-64">
-               <SignatureCanvas key={sigKey} onSave={handleSignatureSave} onClear={()=>{ updateReport({signatureDataUrl: null}) }} lineWidth={5} />
-            </div>
+        <div className="fixed inset-0 z-[90] bg-gray-100 flex flex-col">
+          {/* Header */}
+          <div className="bg-white p-4 shadow-sm flex justify-between items-center shrink-0">
+             <div className="flex items-center">
+                <button onClick={() => setShowSigModal(false)} className="bg-gray-200 text-gray-700 px-4 py-2 rounded font-bold hover:bg-gray-300">
+                  閉じる
+                </button>
+             </div>
+             <h3 className="font-bold text-xl text-gray-800 flex items-center">
+               <i className="fa-solid fa-pen-nib mr-2"></i> 署名記入
+             </h3>
+             <div className="w-20"></div>
+          </div>
+          
+          <div className="flex-1 p-2 md:p-6 flex flex-col items-center justify-center">
+             <div className="w-full h-full bg-white rounded-lg shadow-md border overflow-hidden relative">
+                <SignatureCanvas 
+                  key={sigKey} 
+                  onSave={handleSignatureSave} 
+                  onClear={()=>{}} 
+                  lineWidth={4} 
+                />
+             </div>
+             <p className="mt-2 text-red-500 font-bold text-lg animate-pulse">
+               必ずフルネームで記入してください
+             </p>
           </div>
         </div>
       )}
