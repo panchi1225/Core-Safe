@@ -222,13 +222,13 @@ const App: React.FC = () => {
     const currentDrafts = drafts.filter(d => d.type === selectedReportType);
     
     // Group drafts by project
-    // ★修正: ここで現場名(project)をキーにしてグルーピングする際、省略せずにそのまま使う
     const draftsByProject = currentDrafts.reduce((acc, draft) => {
       let project = '';
       if (draft.type === 'NEWCOMER_SURVEY') {
          project = (draft.data as NewcomerSurveyReportData).name || '氏名未入力';
       } else {
-         // ★重要: split('(') などをせず、そのまま使う
+         // ★修正: ここで絶対に省略させない
+         // 以前のコードではここが split('(')[0] 等になっていた可能性があります
          project = draft.data.project || '名称未設定';
       }
       
@@ -397,7 +397,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">安全訓練報告書</h3>
             <p className="text-xs text-gray-500 text-center">
-              安全訓練の実施報告書を作成します。電子署名対応。
+              日々の安全訓練・朝礼の実施記録を作成します。電子署名対応。
             </p>
           </button>
 
@@ -411,7 +411,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">災害防止協議会</h3>
             <p className="text-xs text-gray-500 text-center">
-              災害防止協議会の報告書を作成します。電子署名対応。
+              月次の災害防止協議会の議事録・報告書を作成します。
             </p>
           </button>
 
@@ -425,7 +425,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">安全管理計画表</h3>
             <p className="text-xs text-gray-500 text-center">
-              安全管理計画表を作成します。報告書に自動添付。
+              施工安全管理計画表および週間工程の管理を行います。
             </p>
           </button>
 
@@ -439,7 +439,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">新規入場者アンケート</h3>
             <p className="text-xs text-gray-500 text-center">
-              新規入場者アンケートを作成します。QRコードから実施可能。
+              新規入場者の健康状態・経歴等を確認するアンケートを作成します。
             </p>
           </button>
         </div>
