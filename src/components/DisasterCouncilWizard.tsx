@@ -185,6 +185,13 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
 
+  // ★修正: 元請会社名を「松浦建設株式会社」に強制固定
+  useEffect(() => {
+    if (report.contractor !== "松浦建設株式会社") {
+      updateReport({ contractor: "松浦建設株式会社" });
+    }
+  }, [report.contractor]);
+
   const updateReport = (updates: Partial<DisasterCouncilReportData>) => { setReport(prev => ({ ...prev, ...updates })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
   const handleTempSave = async () => { 
@@ -276,7 +283,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         <div className="form-control"><label className="label font-bold text-gray-700">開始時間</label><input type="time" className="w-full p-3 border border-gray-300 rounded-lg" value={report.startTime} onChange={(e) => updateReport({startTime: e.target.value})} /></div>
         <div className="form-control"><label className="label font-bold text-gray-700">終了時間</label><input type="time" className="w-full p-3 border border-gray-300 rounded-lg" value={report.endTime} onChange={(e) => updateReport({endTime: e.target.value})} /></div>
       </div>
-      <div className="form-control"><label className="label font-bold text-gray-700">元請会社名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.contractor} onChange={(e) => updateReport({contractor: e.target.value})}>{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+      {/* ★修正: 元請会社名を固定の入力欄に変更 */}
+      <div className="form-control"><label className="label font-bold text-gray-700">元請会社名</label><input type="text" className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-black outline-none cursor-not-allowed font-bold" value="松浦建設株式会社" readOnly /></div>
     </div>
   );
 
@@ -292,8 +300,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [tempSubRole, setTempSubRole] = useState("職長");
   const [tempSubCompany, setTempSubCompany] = useState("");
   const [sigKey, setSigKey] = useState(0); 
-  // Initial company set
-  useEffect(() => { if (masterData.subcontractors.length > 0 && !tempSubCompany) setTempSubCompany(masterData.subcontractors[0]); }, [masterData.subcontractors, tempSubCompany]);
+  // ★修正: 初期値を contractors (会社名) からセット
+  useEffect(() => { if (masterData.contractors.length > 0 && !tempSubCompany) setTempSubCompany(masterData.contractors[0]); }, [masterData.contractors, tempSubCompany]);
 
   const addSubAttendee = (signatureDataUrl: string) => {
     if (!tempSubName || !tempSubCompany) return;
@@ -333,7 +341,9 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="font-bold text-gray-700 mb-3 text-center">協力会社 出席者登録</h3>
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <div><label className="text-xs font-bold text-gray-500">会社名</label><select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>{masterData.subcontractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+          <div><label className="text-xs font-bold text-gray-500">会社名</label>
+          {/* ★修正: subcontractors ではなく contractors (会社名) をリスト化 */}
+          <select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>{masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
           <div><label className="text-xs font-bold text-gray-500">役職</label><select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}><option>職長</option><option>作業員</option></select></div>
         </div>
         <div className="mb-3"><label className="text-xs font-bold text-gray-500">氏名</label><input type="text" className="w-full p-2 border rounded" placeholder="氏名を入力" value={tempSubName} onChange={(e) => setTempSubName(e.target.value)} /></div>
@@ -356,23 +366,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     </div>
   );
 
-  const renderPlanSelectionModal = () => {
-    if (!planSelectionModal) return null;
-    return (
-      <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-80 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 animate-fade-in">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">添付する安全管理計画表を選択</h3>
-          <p className="text-sm text-gray-600 mb-4">工事名「{report.project}」の計画表が見つかりました。</p>
-          <div className="space-y-3 mb-6 max-h-60 overflow-y-auto">
-             {availablePlans.map(plan => { const d = plan.data as SafetyPlanReportData; return ( <button key={plan.id} onClick={() => confirmPlanSelection(plan)} className="w-full text-left border rounded p-3 hover:bg-blue-50 transition-colors flex justify-between items-center"><div><div className="font-bold text-blue-800">{d.month}月度 計画表</div><div className="text-xs text-gray-500">更新: {new Date(plan.lastModified).toLocaleString('ja-JP')}</div></div><i className="fa-solid fa-chevron-right text-gray-400"></i></button> ) })}
-          </div>
-          <button onClick={() => setPlanSelectionModal(false)} className="w-full py-2 bg-gray-200 text-gray-700 rounded font-bold">キャンセル</button>
-        </div>
-      </div>
-    );
-  };
-
-  // ★追加: プレビューモーダルを描画する関数
+  // ★前回追加したプレビューモーダル関数（維持）
   const renderPreviewModal = () => {
     if (!showPreview) return null;
     return (
