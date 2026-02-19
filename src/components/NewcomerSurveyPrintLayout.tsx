@@ -13,7 +13,7 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
   
   const CheckBox = ({ checked, label }: { checked: boolean | undefined; label: string }) => (
     <div className="flex items-center text-[10px] leading-tight mb-0.5">
-      <div className={`w-3.5 h-3.5 border border-black flex items-center justify-center mr-1.5 text-[10px] shrink-0 font-sans`}>
+      <div className={`w-3.5 h-3.5 border border-black flex items-center justify-center mr-1.5 text-[10px] shrink-0 font-sans ${checked ? "font-bold" : ""}`}>
         {checked ? "✔" : ""}
       </div>
       <span className="whitespace-nowrap">{label}</span>
@@ -75,6 +75,7 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
              <div className={`w-24 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm`}>
                所属会社名
              </div>
+             {/* ★修正: data.company を表示 (固定値ではなく入力値を反映) */}
              <div className={`flex-1 ${borderClass} px-3 flex items-center`}>
                 <span className="text-base font-bold">{data.company}</span>
              </div>
@@ -140,18 +141,15 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
           {/* Row 5: Emergency Contact */}
           <div className="flex border-b border-black shrink-0 h-[48px]">
              <div className={`w-24 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm text-center leading-none`}>
-               緊急連絡先
-             </div>
-             <div className={`w-12 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-[10px]`}>
-               氏名
+               緊急連絡先<br/>氏名
              </div>
              <div className={`flex-1 ${borderClass} px-3 flex items-center text-sm`}>
                {data.emergencyContactSei}　{data.emergencyContactMei}
              </div>
-             <div className={`w-12 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-[10px]`}>
+             <div className={`w-16 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm`}>
                続柄
              </div>
-             <div className={`w-20 ${borderClass} flex items-center justify-center text-sm`}>
+             <div className={`w-20 ${borderClass} flex items-center justify-center text-sm font-bold`}>
                {data.emergencyContactRelation}
              </div>
              <div className={`w-16 ${borderClass} bg-gray-50 flex flex-col items-center justify-center font-bold text-[10px] p-1 leading-tight`}>
@@ -212,7 +210,7 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
              </div>
           </div>
 
-          {/* --- QUALIFICATIONS SECTION (★修正: 資格項目の追加) --- */}
+          {/* --- QUALIFICATIONS SECTION --- */}
           <div className="p-4 flex-1 flex flex-col border-b border-black">
              <div className="font-bold text-xs mb-3">あなたが現在取得している資格にレを記入して下さい。</div>
              
