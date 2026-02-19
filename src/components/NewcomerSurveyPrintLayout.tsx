@@ -59,12 +59,11 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                    <div className={`w-4 h-4 flex items-center justify-center ${data.birthEra === 'Showa' ? 'border border-black rounded-full font-bold' : 'text-gray-400'}`}>昭</div>
                    <div className={`w-4 h-4 flex items-center justify-center ${data.birthEra === 'Heisei' ? 'border border-black rounded-full font-bold' : 'text-gray-400'}`}>平</div>
                  </div>
-                 {/* ★修正: 数字をゴシック体(font-sans)に */}
-                 <span className="text-lg font-bold font-sans">{data.birthYear}</span>
+                 <span className="text-lg font-bold">{data.birthYear}</span>
                  <span className="text-xs">年</span>
-                 <span className="text-lg font-bold font-sans">{data.birthMonth}</span>
+                 <span className="text-lg font-bold">{data.birthMonth}</span>
                  <span className="text-xs">月</span>
-                 <span className="text-lg font-bold font-sans">{data.birthDay}</span>
+                 <span className="text-lg font-bold">{data.birthDay}</span>
                  <span className="text-xs">日</span>
                </div>
             </div>
@@ -75,8 +74,7 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                   <span className={data.gender === 'Female' ? 'font-bold rounded-full border border-black w-5 h-5 flex items-center justify-center' : 'w-5 h-5 flex items-center justify-center text-gray-400'}>女</span>
                </div>
                <div className="flex items-end gap-0.5">
-                 {/* ★修正: 数字をゴシック体(font-sans)に */}
-                 <span className="text-lg font-bold font-sans">{data.age}</span>
+                 <span className="text-lg font-bold">{data.age}</span>
                  <span className="text-[10px]">歳</span>
                </div>
             </div>
@@ -91,17 +89,15 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                 <span className="text-base font-bold">{data.company}</span>
              </div>
              <div className={`w-32 ${borderClass} flex items-center justify-center p-1 text-[11px]`}>
-                {/* ★修正: 数字をゴシック体(font-sans)に */}
-                ( <span className="w-6 text-center text-base font-bold font-sans">{data.subcontractorRank}</span> 次) 下請け
+                ( <span className="w-6 text-center text-base font-bold">{data.subcontractorRank}</span> 次) 下請け
              </div>
              <div className={`w-24 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm`}>
                経験年数
              </div>
              <div className={`w-40 border-b border-black flex items-center justify-center p-1`}>
-                {/* ★修正: 数字をゴシック体(font-sans)に */}
-                <span className="text-lg font-bold w-6 text-right mr-1 font-sans">{data.experienceYears}</span>
+                <span className="text-lg font-bold w-6 text-right mr-1">{data.experienceYears}</span>
                 <span className="text-xs mr-2">年</span>
-                <span className="text-lg font-bold w-5 text-right mr-1 font-sans">{data.experienceMonths}</span>
+                <span className="text-lg font-bold w-5 text-right mr-1">{data.experienceMonths}</span>
                 <span className="text-xs">ヶ月</span>
              </div>
           </div>
@@ -140,15 +136,13 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                現　住　所
              </div>
              <div className={`flex-1 ${borderClass} px-3 flex items-center text-sm`}>
-               {/* 住所内の数字は通常明朝のままで違和感ないが、要望あればここも対象。今回は電話番号のみ指定と解釈 */}
                {data.address}
              </div>
              <div className={`w-16 ${borderClass} bg-gray-50 flex flex-col items-center justify-center font-bold text-[10px] p-1 leading-tight`}>
                 <span>本人</span>
                 <span>電話</span>
              </div>
-             {/* ★修正: 数字をゴシック体(font-sans)に */}
-             <div className={`w-48 border-b border-black px-3 flex items-center justify-center text-base font-bold tracking-wider font-sans`}>
+             <div className={`w-48 border-b border-black px-3 flex items-center justify-center text-base font-bold tracking-wider`}>
                {data.phone}
              </div>
           </div>
@@ -174,8 +168,7 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                 <span>緊急</span>
                 <span>電話</span>
              </div>
-             {/* ★修正: 数字をゴシック体(font-sans)に */}
-             <div className={`w-48 border-b border-black px-3 flex items-center justify-center text-base font-bold tracking-wider font-sans`}>
+             <div className={`w-48 border-b border-black px-3 flex items-center justify-center text-base font-bold tracking-wider`}>
                {data.emergencyContactPhone}
              </div>
           </div>
@@ -203,12 +196,11 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
             </div>
             <div className={`w-64 border-b border-black p-1 flex items-center justify-center`}>
               <span className="text-xs mr-1">令和</span>
-              {/* ★修正: 数字をゴシック体(font-sans)に */}
-              <span className="text-lg font-bold w-8 text-right mr-1 font-sans">{data.healthCheckYear}</span>
+              <span className="text-lg font-bold w-8 text-right mr-1">{data.healthCheckYear}</span>
               <span className="text-xs mr-2">年</span>
-              <span className="text-lg font-bold w-6 text-right mr-1 font-sans">{data.healthCheckMonth}</span>
+              <span className="text-lg font-bold w-6 text-right mr-1">{data.healthCheckMonth}</span>
               <span className="text-xs mr-2">月</span>
-              <span className="text-lg font-bold w-6 text-right mr-1 font-sans">{data.healthCheckDay}</span>
+              <span className="text-lg font-bold w-6 text-right mr-1">{data.healthCheckDay}</span>
               <span className="text-xs">日</span>
             </div>
           </div>
@@ -302,7 +294,8 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                 新規入場時誓約
               </h3>
               
-              <ul className="list-none pl-10 space-y-1 text-xs leading-snug">
+              {/* ★修正: 8項目を縦一列に配置、文字サイズ拡大、行間調整 */}
+              <ul className="list-none pl-2 space-y-1 text-xs leading-snug">
                  <li className="flex items-start"><span className="mr-1.5">-</span>私は当作業所の新規入場時教育を受けました。</li>
                  <li className="flex items-start"><span className="mr-1.5">-</span>作業所の遵守事項やルールを厳守し作業します。</li>
                  <li className="flex items-start"><span className="mr-1.5">-</span>どんな小さなケガでも、必ず当日に報告します。</li>
@@ -319,6 +312,7 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                <div className="w-[50%] space-y-2">
                   <div className="flex items-end border-b border-black pb-0.5">
                     <span className="text-[9px] font-bold w-12 mb-0.5 whitespace-nowrap">現場名</span>
+                    {/* ★修正: text-centerを追加して中央寄せ */}
                     <span className={`flex-1 font-bold px-1 text-center ${getProjectNameClass(data.project)}`}>
                       {data.project}
                     </span>
@@ -334,12 +328,11 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                <div className="w-[45%] flex flex-col items-end">
                   <div className="flex justify-center items-baseline mb-1 text-[10px] font-bold w-full">
                      <span className="mr-1">令和</span>
-                     {/* ★修正: 数字をゴシック体(font-sans)に */}
-                     <span className="text-base w-6 text-center mx-0.5 font-sans">{data.pledgeDateYear}</span>
+                     <span className="text-base w-6 text-center mx-0.5">{data.pledgeDateYear}</span>
                      <span>年</span>
-                     <span className="text-base w-5 text-center mx-0.5 font-sans">{data.pledgeDateMonth}</span>
+                     <span className="text-base w-5 text-center mx-0.5">{data.pledgeDateMonth}</span>
                      <span>月</span>
-                     <span className="text-base w-5 text-center mx-0.5 font-sans">{data.pledgeDateDay}</span>
+                     <span className="text-base w-5 text-center mx-0.5">{data.pledgeDateDay}</span>
                      <span>日</span>
                   </div>
                   
