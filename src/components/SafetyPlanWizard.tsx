@@ -82,10 +82,13 @@ const LABEL_MAP: Record<string, string> = {
   subcontractors: "協力会社名", roles: "役職", topics: "安全訓練内容", jobTypes: "工種", goals: "安全衛生目標", predictions: "予想災害", countermeasures: "防止対策",
   processes: "作業工程", cautions: "注意事項"
 };
+
+// ★修正箇所: 各種項目マスタの定義を指定されたリストに変更
 const MASTER_GROUPS = { 
   BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
-  TRAINING: ['goals', 'processes', 'topics', 'cautions'] 
+  TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
 };
+
 const RELEVANT_MASTER_KEYS: (keyof MasterData)[] = ['projects', 'supervisors', 'locations'];
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -190,7 +193,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
 
   const renderReportSheet = (isPreview: boolean = false) => (
     <div className="p-[10mm] w-full h-full flex flex-col font-serif">
-      {/* ... (renderReportSheetの内容は変更なし) ... */}
       <div className="flex justify-between items-start mb-2 h-[38mm]">
         <div className="flex-1 flex flex-col justify-center pb-2 h-full">
            <div className="flex items-end mb-4 pl-4"><span className="text-xl">令和</span><select className="w-12 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.year - 2018} onChange={(e)=>updateReport({year: 2018 + parseInt(e.target.value||'0')})}>{Array.from({length: 30}, (_, i) => i + 1).map(y => (<option key={y} value={y}>{y}</option>))}</select><span className="text-xl mr-4">年</span><select className="w-10 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.month} onChange={(e)=>updateReport({month: parseInt(e.target.value||'0')})}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}</option>))}</select><span className="text-xl mr-2">月度</span><h1 className="text-3xl font-bold border-b-2 border-black ml-4 px-2 tracking-widest">工事施工安全管理計画表</h1></div>
@@ -261,7 +263,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
       {showPreview && (<div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-95 flex flex-col no-print"><div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0"><h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i>印刷プレビュー</h2><div className="flex gap-4"><button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500 transition-colors">閉じる</button><button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center hover:bg-green-500 transition-colors"><i className="fa-solid fa-print mr-2"></i> 保存して印刷</button></div></div><div className="flex-1 overflow-y-auto p-8 flex justify-center items-start bg-gray-800"><div style={{ width: '297mm', transform: `scale(${previewScale})`, transformOrigin: 'top center', marginBottom: `${(previewScale - 1) * 100}%` }}><div className="bg-white shadow-2xl">{renderReportSheet(true)}</div></div></div></div>)}
       <div className="hidden print:block"><style>{`@media print { @page { size: landscape; } }`}</style><div className="print-page-landscape">{renderReportSheet(true)}</div></div>
       <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
-      {/* ★追加: 専用削除モーダル */}
       {projectDeleteTarget && (
         <ProjectDeleteModal 
           isOpen={!!projectDeleteTarget} 
