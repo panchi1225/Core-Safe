@@ -78,9 +78,8 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
           </div>
 
           <div className="flex items-center justify-center gap-3">
-             {/* Logo placeholder - using stylized text to mimic K logo */}
-            <span className="font-bold text-2xl italic flex items-center" style={{fontFamily: 'sans-serif'}}>
-              <span className="bg-red-600 text-white px-2 py-0.5 mr-2 skew-x-[-12deg] inline-block">K</span>
+             {/* 修正箇所1: ロゴマーク（Kマーク）を削除し、会社名のみ表示 */}
+            <span className="font-bold text-2xl">
               {data.contractor}
             </span>
           </div>
@@ -125,7 +124,8 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
       </div>
 
       {/* PAGE 3: ROSTER (Formerly Page 2) */}
-      <div className="print-page p-[20mm]">
+      {/* 修正箇所2: 最後のページに改ページ(pageBreakAfter: always)を付与して、続く安全管理計画表との重なりを防止 */}
+      <div className="print-page p-[20mm]" style={{ pageBreakAfter: 'always' }}>
         {/* Header */}
         <div className="flex justify-between items-end mb-4 px-2">
            <div className="text-xl font-bold">第 {data.count} 回</div>
