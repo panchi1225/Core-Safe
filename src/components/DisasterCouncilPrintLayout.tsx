@@ -49,11 +49,7 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
   };
 
   return (
-    // 修正箇所1: 親コンテナに 'flex flex-col print:block' を追加
-    // これにより画面プレビュー時（flex）は中身の高さに合わせてコンテナが確実に広がり、後続の要素（安全管理計画表）との重なりを防ぎます。
-    // 印刷時（print:block）は通常のブロック要素として振る舞い、改ページ設定を優先させます。
-    <div className="font-serif text-black leading-tight flex flex-col print:block w-full">
-      
+    <div className="font-serif text-black leading-tight">
       {/* PAGE 1: COVER */}
       <div className="print-page relative p-[25mm] flex flex-col justify-between items-center text-center">
         {/* Top: Count */}
@@ -127,8 +123,10 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
       </div>
 
       {/* PAGE 3: ROSTER */}
-      {/* 修正箇所2: 最後のページに pageBreakAfter: 'always' を維持しつつ、画面上での余白確保のため margin-bottom は不要だが flexが解決するはず */}
-      <div className="print-page p-[20mm]" style={{ pageBreakAfter: 'always' }}>
+      {/* 修正箇所: style={{ pageBreakAfter: 'always' }} を削除しました。
+          これにより、画面プレビュー時に無駄な空白ページ（4ページ目）が生成されるのを防ぎます。
+          印刷時の改ページは親コンポーネント（Wizard側）で制御、または必要に応じてクラスで対応します。 */}
+      <div className="print-page p-[20mm]">
         {/* Header */}
         <div className="flex justify-between items-end mb-4 px-2">
            <div className="text-xl font-bold">第 {data.count} 回</div>
