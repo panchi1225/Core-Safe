@@ -1,3 +1,12 @@
+export interface SavedDraft {
+  id: string;
+  type: ReportTypeString;
+  data: any;
+  lastModified: number;
+}
+
+export type ReportTypeString = 'SAFETY_TRAINING' | 'DISASTER_COUNCIL' | 'SAFETY_PLAN' | 'NEWCOMER_SURVEY';
+
 export interface MasterData {
   // --- 基本・共通 ---
   projects: string[];       // 工事名
@@ -20,6 +29,24 @@ export interface MasterData {
   cautions: string[];       // 注意事項
 }
 
+export const INITIAL_MASTER_DATA: MasterData = {
+  projects: ["公共運動公園周辺地区整備工事"],
+  workplaces: ["現場事務所"],
+  contractors: ["松浦建設株式会社"],
+  subcontractors: ["（株）田中土木"],
+  supervisors: ["大須賀 久敬"],
+  locations: ["本社会議室"],
+  goals: ["重機災害の防止"],
+  processes: ["準備工"],
+  topics: ["新規入場者教育の実施について"],
+  cautions: ["現場内整理整頓"],
+  roles: ["職長"],
+  jobTypes: ["土工", "鳶", "大工", "オペ"],
+  predictions: ["重機との接触"],
+  countermeasures: ["作業範囲の立入禁止"],
+};
+
+// --- Safety Training Report ---
 export interface WorkerSignature {
   id: string;
   company: string;
@@ -32,9 +59,9 @@ export interface ReportData {
   month: number;
   contractor: string;
   date: string;
+  location: string;
   startTime: string;
   endTime: string;
-  location: string;
   instructor: string;
   goal: string;
   process: string;
@@ -44,6 +71,24 @@ export interface ReportData {
   signatures: WorkerSignature[];
 }
 
+export const INITIAL_REPORT: ReportData = {
+  project: INITIAL_MASTER_DATA.projects[0],
+  month: new Date().getMonth() + 1,
+  contractor: INITIAL_MASTER_DATA.contractors[0],
+  date: new Date().toISOString().split('T')[0],
+  location: INITIAL_MASTER_DATA.locations[0],
+  startTime: "08:00",
+  endTime: "08:30",
+  instructor: INITIAL_MASTER_DATA.supervisors[0],
+  topic: INITIAL_MASTER_DATA.topics[0],
+  goal: INITIAL_MASTER_DATA.goals[0],
+  process: INITIAL_MASTER_DATA.processes[0],
+  caution: INITIAL_MASTER_DATA.cautions[0],
+  photoUrl: null,
+  signatures: []
+};
+
+// --- Disaster Council Report ---
 export interface GCAttendee {
   role: string;
   name: string;
@@ -69,6 +114,19 @@ export interface DisasterCouncilReportData {
   subcontractorAttendees: SubcontractorAttendee[];
 }
 
+export const INITIAL_DISASTER_COUNCIL_REPORT: DisasterCouncilReportData = {
+  count: 1,
+  project: INITIAL_MASTER_DATA.projects[0],
+  date: new Date().toISOString().split('T')[0],
+  contractor: INITIAL_MASTER_DATA.contractors[0],
+  startTime: "13:00",
+  endTime: "14:00",
+  location: INITIAL_MASTER_DATA.locations[0],
+  gcAttendees: Array(8).fill({ role: "", name: "" }),
+  subcontractorAttendees: []
+};
+
+// --- Safety Plan Report ---
 export interface PlanProcessBar {
   startDay: number;
   endDay: number;
@@ -101,132 +159,6 @@ export interface SafetyPlanReportData {
   lastMonthReflection: string;
 }
 
-export interface Qualifications {
-  vehicle_leveling: boolean;
-  vehicle_demolition: boolean;
-  mobile_crane: boolean;
-  slinging: boolean;
-  gas_welding: boolean;
-  earth_retaining: boolean;
-  excavation: boolean;
-  scaffolding: boolean;
-  formwork: boolean;
-  oxygen_deficiency: boolean;
-  rough_terrain: boolean;
-  arc_welding: boolean;
-  grinding_wheel: boolean;
-  low_voltage: boolean;
-  roller: boolean;
-  asbestos: boolean;
-  foreman: boolean;
-  otherText1: string;
-  otherText2: string;
-  otherText3: string;
-}
-
-export interface NewcomerSurveyReportData {
-  project: string;
-  director: string;
-  
-  // ★変更: 氏名を分割
-  furiganaSei: string; // フリガナ(氏)
-  furiganaMei: string; // フリガナ(名)
-  nameSei: string;     // 氏名(氏)
-  nameMei: string;     // 氏名(名)
-  
-  birthEra: 'Showa' | 'Heisei';
-  birthYear: number | '';
-  birthMonth: number | '';
-  birthDay: number | '';
-  gender: 'Male' | 'Female';
-  age: number;
-  company: string;
-  subcontractorRank: string;
-  experienceYears: number;
-  experienceMonths: number;
-  jobType: string;
-  jobTypeOther: string;
-  address: string;
-  phone: string;
-  
-  // ★変更: 緊急連絡先氏名を分割
-  emergencyContactSei: string; // 緊急連絡先(氏)
-  emergencyContactMei: string; // 緊急連絡先(名)
-  
-  emergencyContactRelation: string;
-  emergencyContactPhone: string;
-  
-  bloodType: string;
-  // ★変更: 'Unknown'を追加
-  bloodTypeRh: 'Plus' | 'Minus' | 'Unknown';
-  
-  healthCheckYear: number;
-  healthCheckMonth: number;
-  healthCheckDay: number;
-  kentaikyo: 'Joined' | 'NotJoined';
-  qualifications: Qualifications;
-  pledgeDateYear: number;
-  pledgeDateMonth: number;
-  pledgeDateDay: number;
-  signatureDataUrl: string | null;
-}
-
-export type ReportDataType = ReportData | DisasterCouncilReportData | SafetyPlanReportData | NewcomerSurveyReportData;
-export type ReportTypeString = 'SAFETY_TRAINING' | 'DISASTER_COUNCIL' | 'SAFETY_PLAN' | 'NEWCOMER_SURVEY';
-
-export interface SavedDraft {
-  id: string;
-  type: ReportTypeString;
-  lastModified: number;
-  data: any;
-}
-
-export const INITIAL_MASTER_DATA: MasterData = {
-  projects: ["公共運動公園周辺地区整備工事"],
-  workplaces: ["現場事務所"],
-  contractors: ["松浦建設株式会社"],
-  subcontractors: ["（株）田中土木"],
-  supervisors: ["大須賀 久敬"],
-  locations: ["本社会議室"],
-  goals: ["重機災害の防止"],
-  processes: ["準備工"],
-  topics: ["新規入場者教育の実施について"],
-  cautions: ["現場内整理整頓"],
-  roles: ["職長"],
-  jobTypes: ["土工", "鳶", "大工", "オペ"],
-  predictions: ["重機との接触"],
-  countermeasures: ["作業範囲の立入禁止"]
-};
-
-export const INITIAL_REPORT: ReportData = {
-  project: INITIAL_MASTER_DATA.projects[0],
-  month: new Date().getMonth() + 1,
-  contractor: INITIAL_MASTER_DATA.contractors[0],
-  date: new Date().toISOString().split('T')[0],
-  startTime: "08:00",
-  endTime: "08:30",
-  location: INITIAL_MASTER_DATA.locations[0],
-  instructor: INITIAL_MASTER_DATA.supervisors[0],
-  goal: INITIAL_MASTER_DATA.goals[0],
-  process: INITIAL_MASTER_DATA.processes[0],
-  topic: INITIAL_MASTER_DATA.topics[0],
-  caution: INITIAL_MASTER_DATA.cautions[0],
-  photoUrl: null,
-  signatures: []
-};
-
-export const INITIAL_DISASTER_COUNCIL_REPORT: DisasterCouncilReportData = {
-  count: 1,
-  project: INITIAL_MASTER_DATA.projects[0],
-  date: new Date().toISOString().split('T')[0],
-  contractor: INITIAL_MASTER_DATA.contractors[0],
-  startTime: "13:00",
-  endTime: "14:00",
-  location: INITIAL_MASTER_DATA.locations[0],
-  gcAttendees: Array(8).fill({ role: "", name: "" }),
-  subcontractorAttendees: []
-};
-
 export const INITIAL_SAFETY_PLAN_REPORT: SafetyPlanReportData = {
   year: new Date().getFullYear(),
   month: new Date().getMonth() + 1,
@@ -247,50 +179,152 @@ export const INITIAL_SAFETY_PLAN_REPORT: SafetyPlanReportData = {
   lastMonthReflection: ""
 };
 
-export const INITIAL_NEWCOMER_SURVEY_REPORT: NewcomerSurveyReportData = {
-  project: INITIAL_MASTER_DATA.projects[0],
-  director: INITIAL_MASTER_DATA.supervisors[0],
+// --- Newcomer Survey Report ---
+export interface Qualifications {
+  vehicle_leveling: boolean;
+  vehicle_demolition: boolean;
+  mobile_crane: boolean;
+  slinging: boolean;
+  gas_welding: boolean;
+  earth_retaining: boolean;
+  excavation: boolean;
+  scaffolding: boolean;
+  formwork: boolean;
+  oxygen_deficiency: boolean;
+  rough_terrain: boolean;
+  arc_welding: boolean;
+  grinding_wheel: boolean;
+  low_voltage: boolean;
+  roller: boolean;
+  asbestos: boolean;
+  foreman: boolean;
+  // Licenses
+  license_regular?: boolean;
+  license_large?: boolean;
+  license_large_special?: boolean;
+  license_towing?: boolean;
+  // Other text
+  otherText1: string;
+  otherText2: string;
+  otherText3: string;
+}
+
+export interface NewcomerSurveyReportData {
+  // Meta (表示用)
+  name?: string; 
+
+  project: string;
+  director: string;
   
-  // ★変更: 氏名の初期値分割
+  // 氏名分割
+  furiganaSei: string;
+  furiganaMei: string;
+  nameSei: string;
+  nameMei: string;
+  
+  birthEra: 'Showa' | 'Heisei';
+  birthYear: number | '';
+  birthMonth: number | '';
+  birthDay: number | '';
+  gender: 'Male' | 'Female';
+  age: number;
+  
+  company: string;
+  subcontractorRank: string;
+  
+  // ★修正: null許容に変更
+  experienceYears: number | null;
+  experienceMonths: number | null;
+  
+  jobType: string;
+  jobTypeOther: string;
+  
+  address: string;
+  phone: string;
+  
+  // 緊急連絡先分割
+  emergencyContactSei: string;
+  emergencyContactMei: string;
+  
+  emergencyContactRelation: string;
+  emergencyContactPhone: string;
+  
+  bloodType: string;
+  bloodTypeRh: 'Plus' | 'Minus' | 'Unknown';
+  
+  // ★修正: null許容に変更
+  healthCheckYear: number | null;
+  healthCheckMonth: number | null;
+  healthCheckDay: number | null;
+  
+  kentaikyo: 'Joined' | 'NotJoined';
+  
+  qualifications: Qualifications;
+  
+  // ★修正: null許容に変更
+  pledgeDateYear: number | null;
+  pledgeDateMonth: number | null;
+  pledgeDateDay: number | null;
+  
+  signatureDataUrl: string | null;
+}
+
+export const INITIAL_NEWCOMER_SURVEY_REPORT: NewcomerSurveyReportData = {
+  project: "",
+  director: "",
+  
   furiganaSei: "",
   furiganaMei: "",
   nameSei: "",
   nameMei: "",
   
-  birthEra: 'Showa',
+  birthEra: 'Heisei',
   birthYear: '',
   birthMonth: '',
   birthDay: '',
   gender: 'Male',
   age: 0,
-  company: INITIAL_MASTER_DATA.subcontractors[0],
+  
+  // ★修正: ここが田中土木の原因でした。空文字にします。
+  company: "", 
+  
   subcontractorRank: "", 
-  experienceYears: 10,
-  experienceMonths: 0,
+  
+  // ★修正: 初期値をnull(空欄)にする
+  experienceYears: null,
+  experienceMonths: null,
+  
   jobType: "土工",
   jobTypeOther: "",
+  
   address: "",
   phone: "",
   
-  // ★変更: 緊急連絡先の初期値分割
   emergencyContactSei: "",
   emergencyContactMei: "",
-  
   emergencyContactRelation: "",
   emergencyContactPhone: "",
+  
   bloodType: "A",
-  // ★変更: 初期値を Unknown に
   bloodTypeRh: "Unknown", 
   
-  healthCheckYear: new Date().getFullYear() - 2018,
-  healthCheckMonth: new Date().getMonth() + 1,
-  healthCheckDay: new Date().getDate(),
+  // ★修正: 初期値をnull(空欄)にする
+  healthCheckYear: null,
+  healthCheckMonth: null,
+  healthCheckDay: null,
+  
   kentaikyo: 'Joined',
+  
   qualifications: {
-    vehicle_leveling: false, vehicle_demolition: false, mobile_crane: false, slinging: false, gas_welding: false, earth_retaining: false, excavation: false, scaffolding: false, formwork: false, oxygen_deficiency: false, rough_terrain: false, arc_welding: false, grinding_wheel: false, low_voltage: false, roller: false, asbestos: false, foreman: false, otherText1: "", otherText2: "", otherText3: ""
+    vehicle_leveling: false, vehicle_demolition: false, mobile_crane: false, slinging: false, gas_welding: false, earth_retaining: false, excavation: false, scaffolding: false, formwork: false, oxygen_deficiency: false, rough_terrain: false, arc_welding: false, grinding_wheel: false, low_voltage: false, roller: false, asbestos: false, foreman: false, 
+    license_regular: false, license_large: false, license_large_special: false, license_towing: false,
+    otherText1: "", otherText2: "", otherText3: ""
   },
-  pledgeDateYear: new Date().getFullYear() - 2018,
-  pledgeDateMonth: new Date().getMonth() + 1,
-  pledgeDateDay: new Date().getDate(),
+  
+  // ★修正: 誓約日も初期はnull (Wizard側で当日をセットするロジックがあればそちらが優先される)
+  pledgeDateYear: null,
+  pledgeDateMonth: null,
+  pledgeDateDay: null,
+  
   signatureDataUrl: null
 };
