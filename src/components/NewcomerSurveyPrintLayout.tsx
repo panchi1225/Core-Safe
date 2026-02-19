@@ -182,7 +182,6 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
               <span className="text-lg font-bold w-6 text-center">{data.bloodType}</span>
               <span className="text-xs">型</span>
               <span className="ml-4 text-xs font-bold">（ ＲＨ </span>
-              {/* ★修正: 「不明」の場合は線をなくし、文字サイズを小さく */}
               {data.bloodTypeRh === 'Unknown' || data.bloodTypeRh === undefined ? (
                 <span className="w-10 text-center text-xs">不明</span>
               ) : (
@@ -295,29 +294,26 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                 新規入場時誓約
               </h3>
               
-              <div className="grid grid-cols-2 gap-x-4 pl-2 text-[9px] leading-tight mb-2">
-                <div className="space-y-0.5">
-                  <div className="flex items-start"><span className="mr-1">-</span>私は当作業所の新規入場時教育を受けました。</div>
-                  <div className="flex items-start"><span className="mr-1">-</span>作業所の遵守事項やルールを厳守し作業します。</div>
-                  <div className="flex items-start"><span className="mr-1">-</span>どんな小さなケガでも、必ず当日に報告します。</div>
-                  <div className="flex items-start"><span className="mr-1">-</span>自分の身を守り、また周囲の人の安全にも気を配ります。</div>
-                </div>
-                <div className="space-y-0.5">
-                  <div className="flex items-start"><span className="mr-1">-</span>危険個所を発見したときは、直ちに現場責任者へ連絡します。</div>
-                  <div className="flex items-start"><span className="mr-1">-</span>作業中は有資格者証を携帯します。</div>
-                  <div className="flex items-start"><span className="mr-1">-</span>記載した個人情報を労務・安全管理に使用することに同意します。</div>
-                  <div className="flex items-start"><span className="mr-1">-</span>上記の事項を相違なく報告します。</div>
-                </div>
-              </div>
+              {/* ★修正: 8項目を縦一列に配置、文字サイズ拡大、行間調整 */}
+              <ul className="list-none pl-2 space-y-1 text-xs leading-snug">
+                 <li className="flex items-start"><span className="mr-1.5">-</span>私は当作業所の新規入場時教育を受けました。</li>
+                 <li className="flex items-start"><span className="mr-1.5">-</span>作業所の遵守事項やルールを厳守し作業します。</li>
+                 <li className="flex items-start"><span className="mr-1.5">-</span>どんな小さなケガでも、必ず当日に報告します。</li>
+                 <li className="flex items-start"><span className="mr-1.5">-</span>自分の身を守り、また周囲の人の安全にも気を配ります。</li>
+                 <li className="flex items-start"><span className="mr-1.5">-</span>危険個所を発見したときは、直ちに現場責任者へ連絡します。</li>
+                 <li className="flex items-start"><span className="mr-1.5">-</span>作業中は有資格者証を携帯します。</li>
+                 <li className="flex items-start"><span className="mr-1.5">-</span>記載した個人情報を労務・安全管理に使用することに同意します。</li>
+                 <li className="flex items-start"><span className="mr-1.5">-</span>上記の事項を相違なく報告します。</li>
+              </ul>
             </div>
 
             <div className="flex justify-between items-end px-1 mt-auto">
                {/* Left: Project Info */}
                <div className="w-[50%] space-y-2">
                   <div className="flex items-end border-b border-black pb-0.5">
-                    {/* ★修正: 「現場名」に変更し、長い場合は文字サイズ自動縮小 */}
                     <span className="text-[9px] font-bold w-12 mb-0.5 whitespace-nowrap">現場名</span>
-                    <span className={`flex-1 font-bold px-1 ${getProjectNameClass(data.project)}`}>
+                    {/* ★修正: text-centerを追加して中央寄せ */}
+                    <span className={`flex-1 font-bold px-1 text-center ${getProjectNameClass(data.project)}`}>
                       {data.project}
                     </span>
                   </div>
