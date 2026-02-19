@@ -75,8 +75,8 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
              <div className={`w-24 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm`}>
                所属会社名
              </div>
-             {/* ★修正: data.company を表示 (固定値ではなく入力値を反映) */}
              <div className={`flex-1 ${borderClass} px-3 flex items-center`}>
+                {/* ★修正: 固定文字列ではなく入力データを表示 */}
                 <span className="text-base font-bold">{data.company}</span>
              </div>
              <div className={`w-32 ${borderClass} flex items-center justify-center p-1 text-[11px]`}>
@@ -250,7 +250,6 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                    <div className="font-bold text-[10px] mb-2 text-center bg-gray-100 py-0.5">【 その他 】</div>
                    <CheckBox checked={qual.foreman} label="職長教育" />
                    
-                   {/* ★追加: 運転免許系の表示 */}
                    <div className="mt-1 pt-1 border-t border-dashed border-gray-300"></div>
                    <CheckBox checked={(qual as any).license_regular} label="普通自動車免許" />
                    <CheckBox checked={(qual as any).license_large} label="大型自動車免許" />
