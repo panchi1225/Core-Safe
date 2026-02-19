@@ -27,7 +27,11 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
       healthCheckDay: null as any,
       pledgeDateYear: null as any,
       pledgeDateMonth: null as any,
-      pledgeDateDay: null as any
+      pledgeDateDay: null as any,
+      // ★念のため明示的に空にする
+      project: "",
+      director: "",
+      company: ""
     };
     
     // 当日日付の自動設定
@@ -368,8 +372,32 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         
         <div className="bg-purple-50 p-4 rounded border border-purple-100 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
            <div className="col-span-1 md:col-span-2 text-sm text-purple-700 font-bold mb-1"><i className="fa-solid fa-circle-info mr-1"></i>はじめに現場を選択してください</div>
-           <div className="w-full overflow-hidden"><label className="block text-xs font-bold text-gray-700 mb-1">作業所名 (マスタ選択)</label><select className={`w-full p-2 border rounded font-bold max-w-full text-ellipsis ${getErrorClass('project')}`} value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
-           <div className="w-full overflow-hidden"><label className="block text-xs font-bold text-gray-700 mb-1">作業所長名 (マスタ選択)</label><select className={`w-full p-2 border rounded max-w-full text-ellipsis ${getErrorClass('director')}`} value={report.director} onChange={(e)=>updateReport({director: e.target.value})}>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+           
+           <div className="w-full overflow-hidden">
+             <label className="block text-xs font-bold text-gray-700 mb-1">作業所名 (マスタ選択)</label>
+             <select 
+               className={`w-full p-2 border rounded font-bold max-w-full text-ellipsis ${getErrorClass('project')}`} 
+               value={report.project} 
+               onChange={(e)=>updateReport({project: e.target.value})}
+             >
+               {/* 修正: 空の選択肢を追加 */}
+               <option value="">選択してください</option>
+               {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
+             </select>
+           </div>
+           
+           <div className="w-full overflow-hidden">
+             <label className="block text-xs font-bold text-gray-700 mb-1">作業所長名 (マスタ選択)</label>
+             <select 
+               className={`w-full p-2 border rounded max-w-full text-ellipsis ${getErrorClass('director')}`} 
+               value={report.director} 
+               onChange={(e)=>updateReport({director: e.target.value})}
+             >
+               {/* 修正: 空の選択肢を追加 */}
+               <option value="">選択してください</option>
+               {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+             </select>
+           </div>
         </div>
 
         {/* Name */}
@@ -407,8 +435,15 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label font-bold text-gray-700">所属会社名 (マスタ選択)</label>
-            {/* ★修正: masterData.subcontractors (協力会社名) を使用してリスト化 */}
-            <select className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} value={report.company} onChange={(e) => updateReport({company: e.target.value})}>{masterData.subcontractors.map(c => <option key={c} value={c}>{c}</option>)}</select>
+            <select 
+              className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} 
+              value={report.company} 
+              onChange={(e) => updateReport({company: e.target.value})}
+            >
+              {/* 修正: 空の選択肢を追加 */}
+              <option value="">選択してください</option>
+              {masterData.subcontractors.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
             <div className="flex items-center gap-2 text-sm"><span>(</span><input type="text" className={`w-10 border-b text-center ${getErrorClass('subcontractorRank')}`} value={report.subcontractorRank} onChange={(e)=>updateReport({subcontractorRank: e.target.value})} /><span>次) 下請け</span></div>
           </div>
           <div className="form-control">
