@@ -111,7 +111,6 @@ const MasterSection: React.FC<{
   );
 };
 
-// ★修正: 他の帳票と設定項目を統一
 const LABEL_MAP: Record<string, string> = { 
   projects: "工事名", 
   contractors: "会社名", 
@@ -166,7 +165,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   
-  // ★修正: マスタ管理用のStateを追加 (他帳票と同期)
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
   const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
@@ -384,7 +382,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label font-bold text-gray-700">所属会社名 (マスタ選択)</label>
-            <select className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} value={report.company} onChange={(e) => updateReport({company: e.target.value})}>{masterData.subcontractors.map(c => <option key={c} value={c}>{c}</option>)}</select>
+            {/* ★修正: masterData.subcontractors ではなく masterData.contractors (会社名) を使用 */}
+            <select className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} value={report.company} onChange={(e) => updateReport({company: e.target.value})}>{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select>
             <div className="flex items-center gap-2 text-sm"><span>(</span><input type="text" className={`w-10 border-b text-center ${getErrorClass('subcontractorRank')}`} value={report.subcontractorRank} onChange={(e)=>updateReport({subcontractorRank: e.target.value})} /><span>次) 下請け</span></div>
           </div>
           <div className="form-control">
@@ -564,7 +563,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     </div>
   );
 
-  // ★修正: 他の帳票と設定画面のUI/ロジックを統一
   const renderMasterManager = () => (
     <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen flex flex-col">
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
