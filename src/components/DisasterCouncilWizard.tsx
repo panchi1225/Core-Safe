@@ -146,7 +146,8 @@ const LABEL_MAP: Record<string, string> = {
 };
 
 const MASTER_GROUPS = { 
-  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces', 'subcontractors'], 
+  // 修正箇所2: 'subcontractors' (協力会社名) を削除
+  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
   TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
 };
 
@@ -335,31 +336,70 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const renderStep2 = () => (
     <div className="space-y-8">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 2: 出席者</h2>
+      
+      {/* GC Attendees */}
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
         <h3 className="font-bold text-gray-700 mb-3">元請 出席者</h3>
         <div className="grid grid-cols-1 gap-3">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex items-center gap-2">
-              {i < 4 ? (<span className="w-40 text-xs font-bold bg-white px-2 py-1 border rounded text-center bg-gray-50 text-gray-700">{TOP_FIXED_ROLES[i]}</span>) : (<select className="w-40 text-xs font-bold bg-white px-2 py-1 border rounded text-center outline-none appearance-none" value={report.gcAttendees[i]?.role || ""} onChange={(e) => updateGCAttendee(i, 'role', e.target.value)}><option value="">(役職選択)</option>{masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}</select>)}
-              <select className="flex-1 p-2 border rounded text-sm bg-white text-black outline-none appearance-none" value={report.gcAttendees[i]?.name || ""} onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}><option value="">選択してください</option>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select>
+              {i < 4 ? (
+                // 修正箇所1: 固定表示のspanに flex items-center justify-center h-10 を追加して高さを統一
+                <span className="w-40 h-10 flex items-center justify-center text-xs font-bold bg-gray-50 px-2 border rounded text-gray-700">
+                  {TOP_FIXED_ROLES[i]}
+                </span>
+              ) : (
+                // 修正箇所1: 選択式selectに h-10 を追加して高さを統一
+                <select 
+                  className="w-40 h-10 text-xs font-bold bg-white px-2 border rounded text-center outline-none appearance-none"
+                  value={report.gcAttendees[i]?.role || ""}
+                  onChange={(e) => updateGCAttendee(i, 'role', e.target.value)}
+                >
+                  <option value="">(役職選択)</option>
+                  {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              )}
+              {/* 名前選択欄も h-10 に揃える */}
+              <select 
+                className="flex-1 h-10 p-2 border rounded text-sm bg-white text-black outline-none appearance-none" 
+                value={report.gcAttendees[i]?.name || ""} 
+                onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}
+              >
+                <option value="">選択してください</option>
+                {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Subcontractor Attendees */}
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="font-bold text-gray-700 mb-3 text-center">協力会社 出席者登録</h3>
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div><label className="text-xs font-bold text-gray-500">会社名</label><select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>{masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
           <div><label className="text-xs font-bold text-gray-500">役職</label><select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>{masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
         </div>
+        
         <div className="mb-3"><label className="text-xs font-bold text-gray-500 mb-1 block">署名</label><div className="border border-gray-300 rounded"><SignatureCanvas key={sigKey} onSave={(data) => addSubAttendee(data)} onClear={() => {}} lineWidth={4} keepOpenOnSave={true} /></div></div>
       </div>
+
+      {/* List */}
       <div>
         <h3 className="font-bold text-gray-700 mb-2">登録済み協力会社一覧 ({report.subcontractorAttendees.length}名)</h3>
         <div className="space-y-2">
           {report.subcontractorAttendees.map((att) => (
             <div key={att.id} className="flex justify-between items-center p-3 bg-white border rounded shadow-sm">
-              <div><div className="font-bold text-sm">{att.company}</div><div className="flex items-center gap-2 mt-1"><span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{att.role}</span>{att.signatureDataUrl && (<img src={att.signatureDataUrl} alt="sig" className="h-6 object-contain border border-gray-200 bg-white" />)}</div></div><button onClick={() => updateReport({ subcontractorAttendees: report.subcontractorAttendees.filter(a => a.id !== att.id) })} className="text-red-400 hover:text-red-600"><i className="fa-solid fa-trash"></i></button>
+              <div>
+                <div className="font-bold text-sm">{att.company}</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{att.role}</span>
+                  {att.signatureDataUrl && (
+                    <img src={att.signatureDataUrl} alt="sig" className="h-6 object-contain border border-gray-200 bg-white" />
+                  )}
+                </div>
+              </div>
+              <button onClick={() => updateReport({ subcontractorAttendees: report.subcontractorAttendees.filter(a => a.id !== att.id) })} className="text-red-400 hover:text-red-600"><i className="fa-solid fa-trash"></i></button>
             </div>
           ))}
           {report.subcontractorAttendees.length === 0 && <div className="text-center text-gray-400 text-sm py-4">登録なし</div>}
@@ -384,7 +424,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     );
   };
 
-  // ★修正: SafetyTrainingWizardと完全に同一の構造 (width: 794px 指定)
   const renderPreviewModal = () => {
     if (!showPreview) return null;
     return (
@@ -397,11 +436,9 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
-          {/* Disaster Council Pages (3 pages) */}
           <div className="bg-white shadow-2xl" style={{ width: '794px', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
             <DisasterCouncilPrintLayout data={report} />
           </div>
-          {/* Safety Plan (Horizontal) */}
           {selectedPlan && (
             <div className="bg-white shadow-2xl" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
                <SafetyPlanPrintLayout data={selectedPlan} />
