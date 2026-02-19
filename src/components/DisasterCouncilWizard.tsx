@@ -182,7 +182,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
 
-  // ★修正: 役職(roles)が読み込まれたら、確実に先頭の値を初期値としてセットする
   useEffect(() => { 
     const loadMaster = async () => { 
       try { 
@@ -310,19 +309,26 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   };
 
   // Helper for adding/removing subcontractor attendee
-  // ★修正: 初期値を空文字にする
   const [tempSubRole, setTempSubRole] = useState("");
   const [tempSubCompany, setTempSubCompany] = useState("");
   const [sigKey, setSigKey] = useState(0); 
   
-  // ★修正: useEffect内でマスタデータ読み込み時に初期値をセット (上部のuseEffectに統合)
+  // ★修正: マスタ読み込み時に初期値をセット (上部のuseEffectに統合済みだが、依存関係の都合でここでもチェック)
+  // (実際には上部のuseEffectでセットされるはずですが、もし空ならここで再度セット)
+  useEffect(() => { 
+    if (masterData.contractors.length > 0 && !tempSubCompany) setTempSubCompany(masterData.contractors[0]); 
+  }, [masterData.contractors, tempSubCompany]);
+
+  useEffect(() => { 
+    if (masterData.roles.length > 0 && !tempSubRole) setTempSubRole(masterData.roles[0]); 
+  }, [masterData.roles, tempSubRole]);
 
   const addSubAttendee = (signatureDataUrl: string) => {
     if (!tempSubCompany || !tempSubRole) return;
     const newAttendee = {
       id: Date.now().toString(),
       company: tempSubCompany,
-      role: tempSubRole, // ★修正: ここで選択された値(またはマスタ先頭値)が使われる
+      role: tempSubRole,
       name: "", 
       signatureDataUrl
     };
@@ -369,7 +375,16 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         <div className="space-y-2">
           {report.subcontractorAttendees.map((att) => (
             <div key={att.id} className="flex justify-between items-center p-3 bg-white border rounded shadow-sm">
-              <div><div className="font-bold text-sm">{att.company}</div><div className="text-xs text-gray-500">{att.role}</div></div>
+              <div>
+                <div className="font-bold text-sm">{att.company}</div>
+                {/* ★修正: 役職だけでなく署名画像も表示 */}
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{att.role}</span>
+                  {att.signatureDataUrl && (
+                    <img src={att.signatureDataUrl} alt="sig" className="h-6 object-contain border border-gray-200 bg-white" />
+                  )}
+                </div>
+              </div>
               <button onClick={() => updateReport({ subcontractorAttendees: report.subcontractorAttendees.filter(a => a.id !== att.id) })} className="text-red-400 hover:text-red-600"><i className="fa-solid fa-trash"></i></button>
             </div>
           ))}
