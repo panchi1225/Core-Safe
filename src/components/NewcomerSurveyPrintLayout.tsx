@@ -76,7 +76,7 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                所属会社名
              </div>
              <div className={`flex-1 ${borderClass} px-3 flex items-center`}>
-                {/* ★修正: 固定文字列ではなく入力データを表示 */}
+                {/* ★修正: 固定文字ではなく、入力された会社名を表示 */}
                 <span className="text-base font-bold">{data.company}</span>
              </div>
              <div className={`w-32 ${borderClass} flex items-center justify-center p-1 text-[11px]`}>
