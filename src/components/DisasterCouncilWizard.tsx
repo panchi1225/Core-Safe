@@ -462,8 +462,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
-          {/* ★修正: flex-colとheight:autoを追加して、コンテナが中身（3ページ分）に合わせて伸びるように修正 */}
-          <div className="bg-white shadow-2xl flex flex-col" style={{ width: '210mm', minHeight: '297mm', height: 'auto', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
+          {/* ★修正: 高さを '891mm' (297*3) に固定し、強制的に3ページ分のスペースを確保 */}
+          <div className="bg-white shadow-2xl flex flex-col" style={{ width: '210mm', height: '891mm', minHeight: '891mm', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
             <DisasterCouncilPrintLayout data={report} />
           </div>
           {selectedPlan && (
