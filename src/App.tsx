@@ -99,6 +99,7 @@ const App: React.FC = () => {
     const formType = params.get('form');
     
     if (formType === 'newcomer') {
+      // パラメータがある場合、直接新規入場者アンケートを開く
       setWizardInitialData(undefined);
       setWizardDraftId(null);
       setCurrentView('NEWCOMER_SURVEY');
@@ -223,19 +224,12 @@ const App: React.FC = () => {
     
     // Group drafts by project
     const draftsByProject = currentDrafts.reduce((acc, draft) => {
-      let project = '';
-      if (draft.type === 'NEWCOMER_SURVEY') {
-         project = (draft.data as NewcomerSurveyReportData).name || '氏名未入力';
-      } else {
-         // ★修正: ここで絶対に省略させない
-         // 以前のコードではここが split('(')[0] 等になっていた可能性があります
-         project = draft.data.project || '名称未設定';
-      }
+      const projectKey = draft.data.project || '名称未設定';
       
-      if (!acc[project]) {
-        acc[project] = [];
+      if (!acc[projectKey]) {
+        acc[projectKey] = [];
       }
-      acc[project].push(draft);
+      acc[projectKey].push(draft);
       return acc;
     }, {} as Record<string, SavedDraft[]>);
 
