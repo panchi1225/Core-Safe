@@ -136,7 +136,7 @@ const LABEL_MAP: Record<string, string> = {
   workplaces: "作業所名",
   subcontractors: "協力会社名", 
   roles: "役職",
-  topics: "安全訓練内容",
+  topics: "安全訓練内容", 
   jobTypes: "工種",
   goals: "安全衛生目標",
   predictions: "予想災害",
@@ -150,7 +150,6 @@ const MASTER_GROUPS = {
   TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
 };
 
-// ★修正: 固定する上位4つの役職
 const TOP_FIXED_ROLES = [
   "統括安全衛生責任者",
   "副統括安全衛生責任者",
@@ -194,32 +193,25 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
 
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
 
-  // 元請会社名を「松浦建設株式会社」に強制固定
   useEffect(() => {
     if (report.contractor !== "松浦建設株式会社") {
       updateReport({ contractor: "松浦建設株式会社" });
     }
   }, [report.contractor]);
 
-  // ★修正: 元請出席者の上位4役職を強制固定
   useEffect(() => {
     let hasChanged = false;
     const nextAttendees = [...report.gcAttendees];
-    
-    // データ長が足りない場合は補充
     while(nextAttendees.length < 8) {
       nextAttendees.push({ role: "", name: "" });
       hasChanged = true;
     }
-
-    // 上位4つの役職名が一致しない場合は修正
     TOP_FIXED_ROLES.forEach((role, idx) => {
       if (nextAttendees[idx].role !== role) {
         nextAttendees[idx] = { ...nextAttendees[idx], role: role };
         hasChanged = true;
       }
     });
-
     if (hasChanged) {
       updateReport({ gcAttendees: nextAttendees });
     }
@@ -261,7 +253,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const handlePrint = () => { const prevTitle = document.title; document.title = `災害防止協議会_${report.project}_第${report.count}回`; window.print(); document.title = prevTitle; };
   const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
 
-  // --- RENDER MASTER MANAGER ---
   const renderMasterManager = () => (
     <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen flex flex-col">
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
@@ -320,37 +311,23 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     </div>
   );
 
-  // Helper for step2
   const updateGCAttendee = (index: number, field: 'role' | 'name', value: string) => {
     const newAttendees = [...report.gcAttendees];
-    // 未定義なら初期化
     if (!newAttendees[index]) newAttendees[index] = { role: '', name: '' };
     newAttendees[index] = { ...newAttendees[index], [field]: value };
     updateReport({ gcAttendees: newAttendees });
   };
 
-  // Helper for adding/removing subcontractor attendee
   const [tempSubRole, setTempSubRole] = useState("");
   const [tempSubCompany, setTempSubCompany] = useState("");
   const [sigKey, setSigKey] = useState(0); 
   
-  useEffect(() => { 
-    if (masterData.contractors.length > 0 && !tempSubCompany) setTempSubCompany(masterData.contractors[0]); 
-  }, [masterData.contractors, tempSubCompany]);
-
-  useEffect(() => { 
-    if (masterData.roles.length > 0 && !tempSubRole) setTempSubRole(masterData.roles[0]); 
-  }, [masterData.roles, tempSubRole]);
+  useEffect(() => { if (masterData.contractors.length > 0 && !tempSubCompany) setTempSubCompany(masterData.contractors[0]); }, [masterData.contractors, tempSubCompany]);
+  useEffect(() => { if (masterData.roles.length > 0 && !tempSubRole) setTempSubRole(masterData.roles[0]); }, [masterData.roles, tempSubRole]);
 
   const addSubAttendee = (signatureDataUrl: string) => {
     if (!tempSubCompany || !tempSubRole) return;
-    const newAttendee = {
-      id: Date.now().toString(),
-      company: tempSubCompany,
-      role: tempSubRole,
-      name: "", 
-      signatureDataUrl
-    };
+    const newAttendee = { id: Date.now().toString(), company: tempSubCompany, role: tempSubRole, name: "", signatureDataUrl };
     updateReport({ subcontractorAttendees: [...report.subcontractorAttendees, newAttendee] });
     setSigKey(prev => prev + 1);
   };
@@ -358,74 +335,31 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const renderStep2 = () => (
     <div className="space-y-8">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 2: 出席者</h2>
-      
-      {/* GC Attendees */}
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
         <h3 className="font-bold text-gray-700 mb-3">元請 出席者</h3>
         <div className="grid grid-cols-1 gap-3">
-          {/* ★修正: 8行分ループし、上4つは固定、下4つは選択式に */}
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex items-center gap-2">
-              {i < 4 ? (
-                // 固定役職 (Top 4)
-                <span className="w-40 text-xs font-bold bg-white px-2 py-1 border rounded text-center bg-gray-50 text-gray-700">
-                  {TOP_FIXED_ROLES[i]}
-                </span>
-              ) : (
-                // 選択式役職 (Bottom 4)
-                <select 
-                  className="w-40 text-xs font-bold bg-white px-2 py-1 border rounded text-center outline-none appearance-none"
-                  value={report.gcAttendees[i]?.role || ""}
-                  onChange={(e) => updateGCAttendee(i, 'role', e.target.value)}
-                >
-                  <option value="">(役職選択)</option>
-                  {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-              )}
-              
-              {/* 名前選択 (共通) */}
-              <select 
-                className="flex-1 p-2 border rounded text-sm bg-white text-black outline-none appearance-none" 
-                value={report.gcAttendees[i]?.name || ""} 
-                onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}
-              >
-                <option value="">選択してください</option>
-                {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              {i < 4 ? (<span className="w-40 text-xs font-bold bg-white px-2 py-1 border rounded text-center bg-gray-50 text-gray-700">{TOP_FIXED_ROLES[i]}</span>) : (<select className="w-40 text-xs font-bold bg-white px-2 py-1 border rounded text-center outline-none appearance-none" value={report.gcAttendees[i]?.role || ""} onChange={(e) => updateGCAttendee(i, 'role', e.target.value)}><option value="">(役職選択)</option>{masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}</select>)}
+              <select className="flex-1 p-2 border rounded text-sm bg-white text-black outline-none appearance-none" value={report.gcAttendees[i]?.name || ""} onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}><option value="">選択してください</option>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select>
             </div>
           ))}
         </div>
       </div>
-
-      {/* Subcontractor Attendees */}
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="font-bold text-gray-700 mb-3 text-center">協力会社 出席者登録</h3>
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <div><label className="text-xs font-bold text-gray-500">会社名</label>
-          <select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>{masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-          <div><label className="text-xs font-bold text-gray-500">役職</label>
-          <select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>{masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
+          <div><label className="text-xs font-bold text-gray-500">会社名</label><select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>{masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+          <div><label className="text-xs font-bold text-gray-500">役職</label><select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>{masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
         </div>
-        
         <div className="mb-3"><label className="text-xs font-bold text-gray-500 mb-1 block">署名</label><div className="border border-gray-300 rounded"><SignatureCanvas key={sigKey} onSave={(data) => addSubAttendee(data)} onClear={() => {}} lineWidth={4} keepOpenOnSave={true} /></div></div>
       </div>
-
-      {/* List */}
       <div>
         <h3 className="font-bold text-gray-700 mb-2">登録済み協力会社一覧 ({report.subcontractorAttendees.length}名)</h3>
         <div className="space-y-2">
           {report.subcontractorAttendees.map((att) => (
             <div key={att.id} className="flex justify-between items-center p-3 bg-white border rounded shadow-sm">
-              <div>
-                <div className="font-bold text-sm">{att.company}</div>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{att.role}</span>
-                  {att.signatureDataUrl && (
-                    <img src={att.signatureDataUrl} alt="sig" className="h-6 object-contain border border-gray-200 bg-white" />
-                  )}
-                </div>
-              </div>
-              <button onClick={() => updateReport({ subcontractorAttendees: report.subcontractorAttendees.filter(a => a.id !== att.id) })} className="text-red-400 hover:text-red-600"><i className="fa-solid fa-trash"></i></button>
+              <div><div className="font-bold text-sm">{att.company}</div><div className="flex items-center gap-2 mt-1"><span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{att.role}</span>{att.signatureDataUrl && (<img src={att.signatureDataUrl} alt="sig" className="h-6 object-contain border border-gray-200 bg-white" />)}</div></div><button onClick={() => updateReport({ subcontractorAttendees: report.subcontractorAttendees.filter(a => a.id !== att.id) })} className="text-red-400 hover:text-red-600"><i className="fa-solid fa-trash"></i></button>
             </div>
           ))}
           {report.subcontractorAttendees.length === 0 && <div className="text-center text-gray-400 text-sm py-4">登録なし</div>}
@@ -450,6 +384,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     );
   };
 
+  // ★修正: SafetyTrainingWizardと完全に同一の構造 (width: 794px 指定)
   const renderPreviewModal = () => {
     if (!showPreview) return null;
     return (
@@ -462,16 +397,13 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
-          {/* ★修正: 高さを '1188mm' (297*4) にさらに拡張し、強制的に4ページ分のスペースを確保 */}
-          {/* さらに mb-16 を追加して下方向へのマージンも確保 */}
-          <div className="bg-white shadow-2xl flex flex-col mb-16" style={{ width: '210mm', height: '1188mm', minHeight: '1188mm', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
+          {/* Disaster Council Pages (3 pages) */}
+          <div className="bg-white shadow-2xl" style={{ width: '794px', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
             <DisasterCouncilPrintLayout data={report} />
           </div>
-          {/* 安全管理計画表は「別コンテナ」として下に描画させるのではなく、
-              本来は上記のDisasterCouncilPrintLayoutの中に組み込むのが正解だが、
-              ここでは物理的な距離を離すために marginTop を大幅に追加 */}
+          {/* Safety Plan (Horizontal) */}
           {selectedPlan && (
-            <div className="bg-white shadow-2xl mt-16" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
+            <div className="bg-white shadow-2xl" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
                <SafetyPlanPrintLayout data={selectedPlan} />
             </div>
           )}
@@ -484,22 +416,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     <>
       {renderMasterManager()}
       <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))} />
-      {projectDeleteTarget && (
-        <ProjectDeleteModal 
-          isOpen={!!projectDeleteTarget} 
-          projectName={projectDeleteTarget.name}
-          onCancel={() => setProjectDeleteTarget(null)}
-          onConfirm={async () => {
-            const items = [...masterData.projects];
-            items.splice(projectDeleteTarget.index, 1);
-            await deleteDraftsByProject(projectDeleteTarget.name);
-            const newData = { ...masterData, projects: items };
-            setMasterData(newData);
-            await saveMasterData(newData);
-            setProjectDeleteTarget(null);
-          }}
-        />
-      )}
+      {projectDeleteTarget && (<ProjectDeleteModal isOpen={!!projectDeleteTarget} projectName={projectDeleteTarget.name} onCancel={() => setProjectDeleteTarget(null)} onConfirm={async () => { const items = [...masterData.projects]; items.splice(projectDeleteTarget.index, 1); await deleteDraftsByProject(projectDeleteTarget.name); const newData = { ...masterData, projects: items }; setMasterData(newData); await saveMasterData(newData); setProjectDeleteTarget(null); }} />)}
     </>
   );
 
@@ -517,7 +434,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       {showPreview && renderPreviewModal()}
       {renderPlanSelectionModal()}
       <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
-      
       <div className="hidden print:block">
          <DisasterCouncilPrintLayout data={report} />
          {selectedPlan && (

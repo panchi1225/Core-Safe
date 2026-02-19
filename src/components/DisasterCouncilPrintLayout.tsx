@@ -17,7 +17,8 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
   };
 
   // Ensure subcontractors list fills at least a few rows for visuals
-  const subRows = Math.max(10, data.subcontractorAttendees.length);
+  // 修正箇所1: 最小行数を10から7に減らし、ページ溢れを防ぐ
+  const subRows = Math.max(7, data.subcontractorAttendees.length);
   const blankSubRows = Array.from({ length: subRows - data.subcontractorAttendees.length });
 
   // Dynamic font size for Project Name to fit in one line
@@ -49,8 +50,8 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
   };
 
   return (
-    // 修正箇所: h-auto を追加し、余分な高さを取らないようにする
-    <div className="font-serif text-black leading-tight h-auto">
+    // 修正箇所2: h-autoを削除し、余計なスタイルを排除
+    <div className="font-serif text-black leading-tight bg-white">
       {/* PAGE 1: COVER */}
       <div className="print-page relative p-[25mm] flex flex-col justify-between items-center text-center page-break-after-always">
         {/* Top: Count */}
@@ -124,7 +125,6 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
       </div>
 
       {/* PAGE 3: ROSTER */}
-      {/* 修正箇所: ここには page-break 指定を一切入れない。高さを自動にするため style属性も削除 */}
       <div className="print-page p-[20mm]">
         {/* Header */}
         <div className="flex justify-between items-end mb-4 px-2">
