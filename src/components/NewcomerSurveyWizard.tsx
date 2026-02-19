@@ -155,7 +155,8 @@ const LABEL_MAP: Record<string, string> = {
 };
 
 const MASTER_GROUPS = { 
-  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces', 'subcontractors'], 
+  // 修正箇所1: 'subcontractors' (協力会社名) を削除
+  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
   TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
 };
 
@@ -435,6 +436,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label font-bold text-gray-700">所属会社名 (マスタ選択)</label>
+            {/* 修正箇所2: subcontractors ではなく contractors を参照するように変更 */}
             <select 
               className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} 
               value={report.company} 
@@ -442,7 +444,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             >
               {/* 修正: 空の選択肢を追加 */}
               <option value="">選択してください</option>
-              {masterData.subcontractors.map(c => <option key={c} value={c}>{c}</option>)}
+              {masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             <div className="flex items-center gap-2 text-sm"><span>(</span><input type="text" className={`w-10 border-b text-center ${getErrorClass('subcontractorRank')}`} value={report.subcontractorRank} onChange={(e)=>updateReport({subcontractorRank: e.target.value})} /><span>次) 下請け</span></div>
           </div>
