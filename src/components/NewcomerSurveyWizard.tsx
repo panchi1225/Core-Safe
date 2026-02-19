@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import ReactSignatureCanvas from 'react-signature-canvas'; // ★修正: ライブラリを直接使用
+import React, { useState, useEffect } from 'react';
 import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA } from '../types';
 import { getMasterData, saveDraft, saveMasterData, deleteDraftsByProject } from '../services/firebaseService';
-// import SignatureCanvas from './SignatureCanvas'; // ★修正: 既存コンポーネントは使用しない
+import SignatureCanvas from './SignatureCanvas'; // ★修正: コンポーネントを使用
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
 
 interface Props {
@@ -18,7 +17,6 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
     const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
     base = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
   } else {
-    // 新規作成時初期化
     base = {
       ...base,
       experienceYears: null as any,
@@ -31,7 +29,6 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
       pledgeDateDay: null as any
     };
     
-    // 当日日付の自動設定
     const today = new Date();
     const reiwaYear = today.getFullYear() - 2018; 
     base.pledgeDateYear = reiwaYear;
@@ -123,12 +120,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   });
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [sigKey, setSigKey] = useState(0);
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
-  const [showSigModal, setShowSigModal] = useState(false);
-  
-  // ★修正: ライブラリ直接制御用
-  const sigCanvasRef = useRef<ReactSignatureCanvas>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
@@ -137,16 +130,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [step]);
-
-  // モーダルが開いたときにキャンバスサイズを調整
-  useEffect(() => {
-    if (showSigModal && containerRef.current && sigCanvasRef.current) {
-      const canvas = sigCanvasRef.current.getCanvas();
-      const container = containerRef.current;
-      canvas.width = container.clientWidth;
-      canvas.height = container.clientHeight;
-    }
-  }, [showSigModal]);
 
   useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
@@ -302,24 +285,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     } 
   };
   
-  // ★修正: ライブラリ直接使用時の保存処理
-  const handleSignatureSave = () => {
-    if (sigCanvasRef.current) {
-        if (sigCanvasRef.current.isEmpty()) {
-            alert("署名がされていません");
-            return;
-        }
-        const dataUrl = sigCanvasRef.current.getTrimmedCanvas().toDataURL('image/png');
-        updateReport({ signatureDataUrl: dataUrl });
-        setShowSigModal(false);
-    }
-  };
-
-  // ★修正: ライブラリ直接使用時のクリア処理
-  const handleSignatureClear = () => {
-    if (sigCanvasRef.current) {
-        sigCanvasRef.current.clear();
-    }
+  const handleSignatureSave = (dataUrl: string) => { 
+    updateReport({ signatureDataUrl: dataUrl }); 
+    setSigKey(prev => prev + 1); 
   };
 
   const getErrorClass = (key: string) => errors[key] ? "border-red-500 bg-red-50 ring-1 ring-red-500" : "border-gray-300 bg-white";
@@ -534,10 +502,19 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <div className="bg-gray-50 p-6 rounded-lg border leading-relaxed text-gray-800"><h3 className="font-bold text-lg mb-4 text-center">新規入場時誓約</h3><ul className="list-disc pl-5 space-y-2 mb-6"><li>私は当作業所の新規入場時教育を受けました。</li><li>作業所の遵守事項やルールを厳守し作業します。</li><li>どんな小さなケガでも、必ず当日に報告します。</li><li>自分の身を守り、また周囲の人の安全にも気を配ります。</li><li>危険個所を発見したときは、直ちに現場責任者もしくは元請職員に連絡します。</li><li>作業中は有資格者証を携帯します。</li><li>記載した個人情報を緊急時連絡等、労務・安全衛生管理に使用することに同意します。</li><li>上記の事項を相違なく報告します。</li></ul><div className="bg-white p-4 rounded border text-center"><div className="mb-4"><label className="font-bold mr-2">誓約日 (令和)</label>
       <input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateYear ?? ''} onChange={(e)=>updateReport({pledgeDateYear: e.target.value === '' ? null : parseInt(e.target.value)})} />年<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateMonth ?? ''} onChange={(e)=>updateReport({pledgeDateMonth: e.target.value === '' ? null : parseInt(e.target.value)})} />月<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateDay ?? ''} onChange={(e)=>updateReport({pledgeDateDay: e.target.value === '' ? null : parseInt(e.target.value)})} />日</div><label className="block font-bold text-gray-700 mb-2">本人署名</label><div className="mx-auto w-full max-w-sm">
       
+      {/* ★修正: SafetyTrainingWizardと同じコンポーネント配置に統一 */}
       {report.signatureDataUrl ? (
         <div className="mt-4"><p className="text-xs text-green-600 font-bold mb-1">署名済み</p><div className="cursor-pointer hover:opacity-80 transition-opacity inline-block border border-transparent hover:border-blue-300 rounded p-1" onClick={() => setPreviewSigUrl(report.signatureDataUrl)} title="タップして拡大"><img src={report.signatureDataUrl} alt="Signature" className="h-10 mx-auto border" /></div><button onClick={()=>updateReport({signatureDataUrl: null})} className="ml-4 text-xs text-red-500 underline">削除</button></div>
       ) : (
-        <button type="button" onClick={() => setShowSigModal(true)} className="w-full h-32 border-2 border-dashed border-gray-400 rounded bg-gray-50 flex flex-col items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors"><i className="fa-solid fa-pen-nib text-2xl mb-2"></i><span className="font-bold">タップして署名する</span></button>
+        <div className="w-full">
+          <SignatureCanvas 
+            key={sigKey} 
+            onSave={(dataUrl) => { updateReport({ signatureDataUrl: dataUrl }); setSigKey(prev => prev + 1); }} 
+            onClear={() => {}} 
+            lineWidth={6} 
+            keepOpenOnSave={true} 
+          />
+        </div>
       )}
       
       </div></div></div>
@@ -672,47 +649,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       
-      {/* ★修正: 待機画面を持つコンポーネントを使わず、直接全画面キャンバスを描画する */}
-      {showSigModal && (
-        <div className="fixed inset-0 z-[999] bg-white flex flex-col animate-fadeIn">
-          {/* ヘッダー */}
-          <div className="bg-slate-800 text-white p-4 flex justify-between items-center shrink-0 shadow-md">
-             <span className="font-bold text-lg"><i className="fa-solid fa-pen-nib mr-2"></i>署名記入</span>
-             {/* 閉じるボタン */}
-             <button onClick={() => setShowSigModal(false)} className="text-gray-300 hover:text-white px-3 py-1">
-               <i className="fa-solid fa-xmark text-2xl"></i>
-             </button>
-          </div>
-          
-          {/* キャンバスエリア (全画面) */}
-          <div className="flex-1 bg-gray-100 p-4 flex flex-col items-center justify-center overflow-hidden">
-             <div ref={containerRef} className="w-full h-full max-w-5xl bg-white shadow-lg border rounded-lg overflow-hidden flex flex-col">
-                <ReactSignatureCanvas 
-                  ref={sigCanvasRef} 
-                  canvasProps={{ className: 'sigCanvas w-full h-full' }}
-                  backgroundColor="white"
-                />
-             </div>
-          </div>
-
-          {/* フッター (クリア・確定ボタン) */}
-          <div className="p-4 bg-white border-t flex justify-end gap-4 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-             <button 
-               onClick={handleSignatureClear}
-               className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition-colors flex items-center"
-             >
-               <i className="fa-solid fa-eraser mr-2"></i>書き直し
-             </button>
-             <button 
-               onClick={handleSignatureSave}
-               className="px-8 py-3 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 transition-colors flex items-center"
-             >
-               <i className="fa-solid fa-check mr-2"></i>確定
-             </button>
-          </div>
-        </div>
-      )}
-
       <ConfirmationModal 
         isOpen={confirmModal.isOpen} 
         message={confirmModal.message} 
