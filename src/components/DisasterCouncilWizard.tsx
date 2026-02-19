@@ -190,7 +190,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const handleTempSave = async () => { 
     setSaveStatus('saving'); 
     try { 
-      // ★修正: report.project をそのまま使用し、省略せずに保存する
       const newId = await saveDraft(draftId, 'DISASTER_COUNCIL', report); 
       setDraftId(newId); 
       setSaveStatus('saved'); 
@@ -206,7 +205,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const handlePreviewClick = async () => {
     setSaveStatus('saving');
     try {
-      // ★修正: こちらも report をそのまま使用
       const newId = await saveDraft(draftId, 'DISASTER_COUNCIL', report); 
       setDraftId(newId); 
       setSaveStatus('saved'); 
@@ -369,6 +367,32 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
              {availablePlans.map(plan => { const d = plan.data as SafetyPlanReportData; return ( <button key={plan.id} onClick={() => confirmPlanSelection(plan)} className="w-full text-left border rounded p-3 hover:bg-blue-50 transition-colors flex justify-between items-center"><div><div className="font-bold text-blue-800">{d.month}月度 計画表</div><div className="text-xs text-gray-500">更新: {new Date(plan.lastModified).toLocaleString('ja-JP')}</div></div><i className="fa-solid fa-chevron-right text-gray-400"></i></button> ) })}
           </div>
           <button onClick={() => setPlanSelectionModal(false)} className="w-full py-2 bg-gray-200 text-gray-700 rounded font-bold">キャンセル</button>
+        </div>
+      </div>
+    );
+  };
+
+  // ★追加: プレビューモーダルを描画する関数
+  const renderPreviewModal = () => {
+    if (!showPreview) return null;
+    return (
+      <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-90 flex flex-col no-print">
+        <div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0">
+          <h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i> 印刷プレビュー</h2>
+          <div className="flex gap-4">
+            <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
+            <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold hover:bg-green-500 shadow-md flex items-center"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
+          <div className="bg-white shadow-2xl" style={{ width: '210mm', minHeight: '297mm', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
+            <DisasterCouncilPrintLayout data={report} />
+          </div>
+          {selectedPlan && (
+            <div className="bg-white shadow-2xl" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
+               <SafetyPlanPrintLayout data={selectedPlan} />
+            </div>
+          )}
         </div>
       </div>
     );
