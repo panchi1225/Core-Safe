@@ -49,7 +49,8 @@ const PrintLayout: React.FC<Props> = ({ data }) => {
     return (
       <div className="print-page p-[15mm] flex flex-col h-full justify-between">
         <div>
-          <h3 className="text-xl font-bold text-center mb-4">{data.month} 月度安全訓練実施者名簿 ({startIndex + 1}～{startIndex + totalPageRows})</h3>
+          {/* ★修正: (1～10) などの範囲表記を削除 */}
+          <h3 className="text-xl font-bold text-center mb-4">{data.month} 月度安全訓練実施者名簿</h3>
           
           <table className="w-full border-collapse border-2 border-black">
             <thead>
@@ -91,7 +92,6 @@ const PrintLayout: React.FC<Props> = ({ data }) => {
 
         <div className="text-center mb-20">
           <p className="text-4xl font-bold mb-16">{data.month} 月度</p>
-          {/* ★修正: 画像を削除し、会社名のみを表示 */}
           <div className="flex items-center justify-center gap-2">
             <span className="font-bold text-xl italic" style={{fontFamily: 'sans-serif'}}>
               {data.contractor}
