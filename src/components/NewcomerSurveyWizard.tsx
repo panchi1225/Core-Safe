@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA } from '../types';
 import { getMasterData, saveDraft, saveMasterData, deleteDraftsByProject } from '../services/firebaseService';
-import SignatureCanvas from './SignatureCanvas'; // ★修正: コンポーネントを使用
+import SignatureCanvas from './SignatureCanvas';
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
 
 interface Props {
@@ -17,6 +17,7 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
     const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
     base = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
   } else {
+    // 新規作成時初期化
     base = {
       ...base,
       experienceYears: null as any,
@@ -29,6 +30,7 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
       pledgeDateDay: null as any
     };
     
+    // 当日日付の自動設定
     const today = new Date();
     const reiwaYear = today.getFullYear() - 2018; 
     base.pledgeDateYear = reiwaYear;
@@ -71,26 +73,65 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({
   );
 };
 
-// --- Master Section ---
-const MasterSection: React.FC<{title: string; items: string[]; onUpdate: (items: string[]) => void; onDeleteRequest: (index: number, item: string) => void;}> = ({ title, items, onUpdate, onDeleteRequest }) => {
+// --- Master Section (List View - Synchronized with SafetyTraining) ---
+const MasterSection: React.FC<{
+  title: string;
+  items: string[];
+  onUpdate: (items: string[]) => void;
+  onDeleteRequest: (index: number, item: string) => void;
+  onBack: () => void;
+}> = ({ title, items, onUpdate, onDeleteRequest, onBack }) => {
   const [newItem, setNewItem] = useState("");
-  const handleAdd = () => { if (newItem.trim()) { onUpdate([...items, newItem.trim()]); setNewItem(""); } };
+  const safeItems = items || [];
+  const handleAdd = () => { if (newItem.trim()) { onUpdate([...safeItems, newItem.trim()]); setNewItem(""); } };
   return (
-    <div className="border border-gray-200 p-4 rounded-lg bg-white shadow-sm break-inside-avoid">
-      <h3 className="font-bold mb-3 text-lg text-gray-800 border-b pb-2 flex justify-between items-center">{title}<span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full">{items.length}件</span></h3>
-      <ul className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
-        {items.map((item, idx) => (<li key={idx} className="flex justify-between items-center bg-gray-50 p-2 rounded hover:bg-gray-100 transition-colors"><span className="text-sm text-gray-800 break-all mr-2">{item}</span><button type="button" onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }} className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors"><i className="fa-solid fa-trash"></i></button></li>))}
-        {items.length === 0 && <li className="text-gray-400 text-sm italic text-center py-2">データがありません</li>}
-      </ul>
-      <div className="flex gap-2"><input type="text" className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm bg-white text-black focus:ring-2 focus:ring-blue-500 outline-none" placeholder="新規項目を追加..." value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} /><button onClick={handleAdd} className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 whitespace-nowrap shadow-sm transition-colors"><i className="fa-solid fa-plus mr-1"></i>追加</button></div>
+    <div className="bg-white rounded-lg shadow-sm h-full flex flex-col">
+      <div className="p-4 border-b flex items-center gap-3">
+        <button onClick={onBack} className="text-gray-500 hover:text-blue-600"><i className="fa-solid fa-arrow-left text-xl"></i></button>
+        <h3 className="font-bold text-lg text-gray-800 flex-1">{title} <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-2">{safeItems.length}件</span></h3>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+        <ul className="space-y-2">
+          {safeItems.map((item, idx) => (
+            <li key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded hover:bg-gray-100 transition-colors">
+              <span className="text-sm text-gray-800 break-all mr-2">{item}</span>
+              <button type="button" onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }} className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50 transition-colors"><i className="fa-solid fa-trash"></i></button>
+            </li>
+          ))}
+          {safeItems.length === 0 && <li className="text-gray-400 text-sm italic text-center py-8">データがありません</li>}
+        </ul>
+      </div>
+      <div className="p-4 border-t bg-gray-50">
+        <div className="flex gap-2">
+          <input type="text" className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm bg-white text-black outline-none focus:ring-2 focus:ring-blue-500" placeholder="新規項目を追加..." value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
+          <button onClick={handleAdd} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md"><i className="fa-solid fa-plus mr-1"></i>追加</button>
+        </div>
+      </div>
     </div>
   );
 };
 
-const LABEL_MAP: Record<string, string> = { projects: "工事名", supervisors: "実施者（職長・監督）", subcontractors: "協力会社名" };
-const MASTER_GROUPS: Record<string, string[]> = {
-  BASIC: ['projects', 'supervisors', 'subcontractors'],
-  TRAINING: []
+// ★修正: 他の帳票と設定項目を統一
+const LABEL_MAP: Record<string, string> = { 
+  projects: "工事名", 
+  contractors: "会社名", 
+  supervisors: "現場責任者", 
+  locations: "場所", 
+  workplaces: "作業所名",
+  subcontractors: "協力会社名", 
+  roles: "役職",
+  topics: "安全訓練内容",
+  jobTypes: "工種",
+  goals: "安全衛生目標",
+  predictions: "予想災害",
+  countermeasures: "防止対策",
+  processes: "作業工程", 
+  cautions: "注意事項"
+};
+
+const MASTER_GROUPS = { 
+  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces', 'subcontractors'], 
+  TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
 };
 
 const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
@@ -124,7 +165,10 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
   
   const [errors, setErrors] = useState<Record<string, boolean>>({});
+  
+  // ★修正: マスタ管理用のStateを追加 (他帳票と同期)
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
+  const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
 
   useEffect(() => {
@@ -502,7 +546,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <div className="bg-gray-50 p-6 rounded-lg border leading-relaxed text-gray-800"><h3 className="font-bold text-lg mb-4 text-center">新規入場時誓約</h3><ul className="list-disc pl-5 space-y-2 mb-6"><li>私は当作業所の新規入場時教育を受けました。</li><li>作業所の遵守事項やルールを厳守し作業します。</li><li>どんな小さなケガでも、必ず当日に報告します。</li><li>自分の身を守り、また周囲の人の安全にも気を配ります。</li><li>危険個所を発見したときは、直ちに現場責任者もしくは元請職員に連絡します。</li><li>作業中は有資格者証を携帯します。</li><li>記載した個人情報を緊急時連絡等、労務・安全衛生管理に使用することに同意します。</li><li>上記の事項を相違なく報告します。</li></ul><div className="bg-white p-4 rounded border text-center"><div className="mb-4"><label className="font-bold mr-2">誓約日 (令和)</label>
       <input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateYear ?? ''} onChange={(e)=>updateReport({pledgeDateYear: e.target.value === '' ? null : parseInt(e.target.value)})} />年<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateMonth ?? ''} onChange={(e)=>updateReport({pledgeDateMonth: e.target.value === '' ? null : parseInt(e.target.value)})} />月<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateDay ?? ''} onChange={(e)=>updateReport({pledgeDateDay: e.target.value === '' ? null : parseInt(e.target.value)})} />日</div><label className="block font-bold text-gray-700 mb-2">本人署名</label><div className="mx-auto w-full max-w-sm">
       
-      {/* ★修正: SafetyTrainingWizardと同じコンポーネント配置に統一 */}
       {report.signatureDataUrl ? (
         <div className="mt-4"><p className="text-xs text-green-600 font-bold mb-1">署名済み</p><div className="cursor-pointer hover:opacity-80 transition-opacity inline-block border border-transparent hover:border-blue-300 rounded p-1" onClick={() => setPreviewSigUrl(report.signatureDataUrl)} title="タップして拡大"><img src={report.signatureDataUrl} alt="Signature" className="h-10 mx-auto border" /></div><button onClick={()=>updateReport({signatureDataUrl: null})} className="ml-4 text-xs text-red-500 underline">削除</button></div>
       ) : (
@@ -521,54 +564,61 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     </div>
   );
 
+  // ★修正: 他の帳票と設定画面のUI/ロジックを統一
   const renderMasterManager = () => (
     <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen flex flex-col">
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
         <h2 className="text-2xl font-bold text-gray-800"><i className="fa-solid fa-database mr-2"></i>マスタ管理</h2>
-        <button onClick={() => setIsMasterMode(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button>
+        <button onClick={() => { setIsMasterMode(false); setSelectedMasterKey(null); }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 font-bold"><i className="fa-solid fa-xmark mr-1"></i>閉じる</button>
       </div>
       
-      <div className="flex gap-4 mb-6 shrink-0">
-        <button onClick={() => setMasterTab('BASIC')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-house-chimney mr-2"></i>基本・共通マスタ</button>
-        <button onClick={() => setMasterTab('TRAINING')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-list-check mr-2"></i>各種項目マスタ</button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
-        {(MASTER_GROUPS[masterTab] || []).map((key) => {
-           const title = LABEL_MAP[key] || key;
-           return (
-             <MasterSection 
-               key={key} 
-               title={title} 
-               items={masterData[key as keyof MasterData] || []} 
-               onUpdate={async (newItems) => { const newData = { ...masterData, [key]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
-               onDeleteRequest={(index, item) => {
-                 if (key === 'projects') {
-                   setProjectDeleteTarget({ index, name: item });
-                 } else {
-                   setConfirmModal({ 
-                     isOpen: true, 
-                     message: `「${item}」を削除しますか？`, 
-                     onLeftButtonClick: () => setConfirmModal(prev => ({ ...prev, isOpen: false })),
-                     onRightButtonClick: async () => { 
-                       const newItems = [...(masterData[key as keyof MasterData] || [])]; 
-                       newItems.splice(index, 1); 
-                       const newData = { ...masterData, [key]: newItems }; 
-                       setMasterData(newData); 
-                       await saveMasterData(newData); 
-                       setConfirmModal(prev => ({ ...prev, isOpen: false })); 
-                     },
-                     leftButtonLabel: 'キャンセル',
-                     rightButtonLabel: '削除する',
-                     leftButtonClass: 'px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600',
-                     rightButtonClass: 'px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold'
-                   }); 
-                 }
-               }} 
-             />
-           )
-        })}
-      </div>
+      {selectedMasterKey ? (
+        <div className="flex-1 overflow-hidden">
+          <MasterSection 
+            title={LABEL_MAP[selectedMasterKey]} 
+            items={masterData[selectedMasterKey as keyof MasterData] || []}
+            onBack={() => setSelectedMasterKey(null)}
+            onUpdate={async (newItems) => { const newData = { ...masterData, [selectedMasterKey]: newItems }; setMasterData(newData); await saveMasterData(newData); }} 
+            onDeleteRequest={(index, item) => {
+              if (selectedMasterKey === 'projects') { setProjectDeleteTarget({ index, name: item }); } 
+              else { setConfirmModal({ 
+                isOpen: true, 
+                message: `「${item}」を削除しますか？`, 
+                onLeftButtonClick: () => setConfirmModal(prev => ({ ...prev, isOpen: false })),
+                onRightButtonClick: async () => { 
+                  const newItems = [...(masterData[selectedMasterKey as keyof MasterData] || [])]; 
+                  newItems.splice(index, 1); 
+                  const newData = { ...masterData, [selectedMasterKey]: newItems }; 
+                  setMasterData(newData); 
+                  await saveMasterData(newData); 
+                  setConfirmModal(prev => ({ ...prev, isOpen: false })); 
+                },
+                leftButtonLabel: 'キャンセル',
+                rightButtonLabel: '削除する',
+                leftButtonClass: 'px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600',
+                rightButtonClass: 'px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold'
+              }); }
+            }} 
+          />
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-4 mb-6 shrink-0">
+            <button onClick={() => setMasterTab('BASIC')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-house-chimney mr-2"></i>基本・共通マスタ</button>
+            <button onClick={() => setMasterTab('TRAINING')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-list-check mr-2"></i>各種項目マスタ</button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
+            {(MASTER_GROUPS[masterTab] || []).map((key) => {
+              const list = masterData[key as keyof MasterData] || [];
+              return (
+                <button key={key} onClick={() => setSelectedMasterKey(key as keyof MasterData)} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group">
+                  <div><h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3><p className="text-xs text-gray-500">{list.length} 件の登録</p></div><div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors"><i className="fa-solid fa-chevron-right"></i></div>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
     </div>
   );
 
