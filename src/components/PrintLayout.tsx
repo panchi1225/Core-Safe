@@ -9,6 +9,7 @@ interface Props {
 const getProjectNameClass = (text: string) => {
   if (!text) return "text-5xl";
   const len = text.length;
+  // ★修正: より細かいサイズ調整
   if (len > 40) return "text-sm";
   if (len > 30) return "text-lg";
   if (len > 22) return "text-2xl";
