@@ -49,7 +49,11 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
   };
 
   return (
-    <div className="font-serif text-black leading-tight">
+    // 修正箇所1: 親コンテナに 'flex flex-col print:block' を追加
+    // これにより画面プレビュー時（flex）は中身の高さに合わせてコンテナが確実に広がり、後続の要素（安全管理計画表）との重なりを防ぎます。
+    // 印刷時（print:block）は通常のブロック要素として振る舞い、改ページ設定を優先させます。
+    <div className="font-serif text-black leading-tight flex flex-col print:block w-full">
+      
       {/* PAGE 1: COVER */}
       <div className="print-page relative p-[25mm] flex flex-col justify-between items-center text-center">
         {/* Top: Count */}
@@ -78,7 +82,7 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
           </div>
 
           <div className="flex items-center justify-center gap-3">
-             {/* 修正箇所1: ロゴマーク（Kマーク）を削除し、会社名のみ表示 */}
+             {/* Logo removed as requested */}
             <span className="font-bold text-2xl">
               {data.contractor}
             </span>
@@ -86,11 +90,10 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
         </div>
       </div>
 
-      {/* PAGE 2: AGENDA (Inserted as requested) */}
+      {/* PAGE 2: AGENDA */}
       <div className="print-page p-[30mm] flex flex-col items-center">
         {/* Title: Underlined with padding */}
         <div className="mt-20 mb-24 border-b-2 border-black px-12 pb-2">
-           {/* Adjusted text to have space between characters */}
            <h2 className="text-4xl font-normal tracking-[0.2em] ml-2">次　第</h2>
         </div>
 
@@ -123,8 +126,8 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
         </div>
       </div>
 
-      {/* PAGE 3: ROSTER (Formerly Page 2) */}
-      {/* 修正箇所2: 最後のページに改ページ(pageBreakAfter: always)を付与して、続く安全管理計画表との重なりを防止 */}
+      {/* PAGE 3: ROSTER */}
+      {/* 修正箇所2: 最後のページに pageBreakAfter: 'always' を維持しつつ、画面上での余白確保のため margin-bottom は不要だが flexが解決するはず */}
       <div className="print-page p-[20mm]" style={{ pageBreakAfter: 'always' }}>
         {/* Header */}
         <div className="flex justify-between items-end mb-4 px-2">
@@ -138,7 +141,7 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
           <tbody>
             <tr>
               <td className={`${borderClass} p-2 w-32 text-center`}>作 業 所 名</td>
-              <td className={`${borderClass} p-2`}>芝崎作業所 {/* Typically hardcoded or derived short name, using project for now or mock */}</td>
+              <td className={`${borderClass} p-2`}>芝崎作業所</td>
             </tr>
             <tr>
               <td className={`${borderClass} p-2 text-center`}>開 催 日 時</td>
