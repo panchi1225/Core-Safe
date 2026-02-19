@@ -17,7 +17,6 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
     const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
     base = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
   } else {
-    // 新規作成時初期化
     base = {
       ...base,
       experienceYears: null as any,
@@ -30,7 +29,6 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
       pledgeDateDay: null as any
     };
     
-    // 当日日付の自動設定
     const today = new Date();
     const reiwaYear = today.getFullYear() - 2018; 
     base.pledgeDateYear = reiwaYear;
@@ -61,13 +59,35 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[60] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
+      <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-fadeIn">
         <h3 className="text-lg font-bold text-gray-800 mb-4">確認</h3>
         <p className="text-gray-600 mb-6 whitespace-pre-wrap font-bold text-red-600">{message}</p>
         <div className="flex justify-end gap-3">
           <button onClick={onLeftButtonClick} className={leftButtonClass}>{leftButtonLabel}</button>
           <button onClick={onRightButtonClick} className={rightButtonClass}>{rightButtonLabel}</button>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// ★追加: 保存完了モーダル
+const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen, onOk }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-60 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full p-8 text-center animate-fadeIn">
+        <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i className="fa-solid fa-check text-3xl"></i>
+        </div>
+        <h3 className="text-xl font-bold text-gray-800 mb-2">保存完了</h3>
+        <p className="text-gray-600 mb-6">データの保存が完了しました。</p>
+        <button 
+          onClick={onOk} 
+          className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 transition-colors"
+        >
+          OK（ホームへ戻る）
+        </button>
       </div>
     </div>
   );
@@ -118,7 +138,7 @@ const LABEL_MAP: Record<string, string> = {
   locations: "場所", 
   workplaces: "作業所名",
   subcontractors: "協力会社名", 
-  roles: "役職",
+  roles: "役職", 
   topics: "安全訓練内容",
   jobTypes: "工種",
   goals: "安全衛生目標",
@@ -158,6 +178,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     leftButtonLabel: '', rightButtonLabel: '',
     leftButtonClass: '', rightButtonClass: ''
   });
+
+  // ★追加: 完了モーダル表示フラグ
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [sigKey, setSigKey] = useState(0);
@@ -265,7 +288,10 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       setDraftId(newId); 
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
-      alert("保存しました");
+      
+      // ★修正: alertを廃止し、完了モーダルを表示
+      setShowCompleteModal(true);
+      
       setTimeout(() => setSaveStatus('idle'), 2000); 
     } catch (e) { 
       console.error(e); 
@@ -543,7 +569,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 3: 誓約・署名</h2>
       <div className="bg-gray-50 p-6 rounded-lg border leading-relaxed text-gray-800"><h3 className="font-bold text-lg mb-4 text-center">新規入場時誓約</h3><ul className="list-disc pl-5 space-y-2 mb-6"><li>私は当作業所の新規入場時教育を受けました。</li><li>作業所の遵守事項やルールを厳守し作業します。</li><li>どんな小さなケガでも、必ず当日に報告します。</li><li>自分の身を守り、また周囲の人の安全にも気を配ります。</li><li>危険個所を発見したときは、直ちに現場責任者もしくは元請職員に連絡します。</li><li>作業中は有資格者証を携帯します。</li><li>記載した個人情報を緊急時連絡等、労務・安全衛生管理に使用することに同意します。</li><li>上記の事項を相違なく報告します。</li></ul><div className="bg-white p-4 rounded border text-center">
       
-      {/* ★修正: 誓約日のレイアウト調整 (iPhoneでの折り返し防止) */}
+      {/* 誓約日のレイアウト調整 (iPhoneでの折り返し防止) */}
       <div className="mb-4 flex flex-row items-center justify-center gap-1 flex-nowrap">
         <label className="font-bold whitespace-nowrap text-sm md:text-base">誓約日(令和)</label>
         <input type="number" className="w-10 md:w-12 p-2 border rounded text-center text-sm md:text-base" value={report.pledgeDateYear ?? ''} onChange={(e)=>updateReport({pledgeDateYear: e.target.value === '' ? null : parseInt(e.target.value)})} />
@@ -705,6 +731,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         </footer>
       </div>
       
+      {/* 完了モーダル */}
+      <CompleteModal isOpen={showCompleteModal} onOk={() => { setShowCompleteModal(false); onBackToMenu(); }} />
+
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       
