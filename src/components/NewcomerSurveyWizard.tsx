@@ -17,6 +17,7 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
     const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
     base = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
   } else {
+    // 新規作成時初期化
     base = {
       ...base,
       experienceYears: null as any,
@@ -29,6 +30,7 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
       pledgeDateDay: null as any
     };
     
+    // 当日日付の自動設定
     const today = new Date();
     const reiwaYear = today.getFullYear() - 2018; 
     base.pledgeDateYear = reiwaYear;
@@ -71,7 +73,7 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({
   );
 };
 
-// ★追加: 保存完了モーダル
+// 保存完了モーダル
 const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen, onOk }) => {
   if (!isOpen) return null;
   return (
@@ -179,9 +181,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     leftButtonClass: '', rightButtonClass: ''
   });
 
-  // ★追加: 完了モーダル表示フラグ
   const [showCompleteModal, setShowCompleteModal] = useState(false);
-
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [sigKey, setSigKey] = useState(0);
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
@@ -289,7 +289,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
       
-      // ★修正: alertを廃止し、完了モーダルを表示
       setShowCompleteModal(true);
       
       setTimeout(() => setSaveStatus('idle'), 2000); 
@@ -408,7 +407,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label font-bold text-gray-700">所属会社名 (マスタ選択)</label>
-            <select className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} value={report.company} onChange={(e) => updateReport({company: e.target.value})}>{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select>
+            {/* ★修正: masterData.subcontractors (協力会社名) を使用してリスト化 */}
+            <select className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} value={report.company} onChange={(e) => updateReport({company: e.target.value})}>{masterData.subcontractors.map(c => <option key={c} value={c}>{c}</option>)}</select>
             <div className="flex items-center gap-2 text-sm"><span>(</span><input type="text" className={`w-10 border-b text-center ${getErrorClass('subcontractorRank')}`} value={report.subcontractorRank} onChange={(e)=>updateReport({subcontractorRank: e.target.value})} /><span>次) 下請け</span></div>
           </div>
           <div className="form-control">
