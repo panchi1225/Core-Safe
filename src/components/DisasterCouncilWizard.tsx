@@ -197,7 +197,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const handleTempSave = async () => { 
     setSaveStatus('saving'); 
     try { 
-      // report.project をそのまま使用し、省略せずに保存
       const newId = await saveDraft(draftId, 'DISASTER_COUNCIL', report); 
       setDraftId(newId); 
       setSaveStatus('saved'); 
@@ -213,7 +212,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const handlePreviewClick = async () => {
     setSaveStatus('saving');
     try {
-      // report をそのまま使用
       const newId = await saveDraft(draftId, 'DISASTER_COUNCIL', report); 
       setDraftId(newId); 
       setSaveStatus('saved'); 
@@ -297,23 +295,31 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   };
 
   // Helper for adding/removing subcontractor attendee
-  // ★修正: 氏名(tempSubName)ステートは削除
+  // ★修正: 初期値を空文字にする
   const [tempSubRole, setTempSubRole] = useState("");
   const [tempSubCompany, setTempSubCompany] = useState("");
   const [sigKey, setSigKey] = useState(0); 
   
-  // ★修正: 初期値をそれぞれマスタからセット
-  useEffect(() => { if (masterData.contractors.length > 0 && !tempSubCompany) setTempSubCompany(masterData.contractors[0]); }, [masterData.contractors, tempSubCompany]);
-  useEffect(() => { if (masterData.roles.length > 0 && !tempSubRole) setTempSubRole(masterData.roles[0]); }, [masterData.roles, tempSubRole]);
+  // ★修正: マスタデータが読み込まれたら、初期値を正しくセットする
+  useEffect(() => { 
+    if (masterData.contractors.length > 0 && !tempSubCompany) {
+      setTempSubCompany(masterData.contractors[0]); 
+    }
+  }, [masterData.contractors, tempSubCompany]);
+
+  useEffect(() => { 
+    if (masterData.roles.length > 0 && !tempSubRole) {
+      setTempSubRole(masterData.roles[0]); 
+    }
+  }, [masterData.roles, tempSubRole]);
 
   const addSubAttendee = (signatureDataUrl: string) => {
-    // ★修正: 氏名入力必須チェックを削除
-    if (!tempSubCompany) return;
+    if (!tempSubCompany || !tempSubRole) return;
     const newAttendee = {
       id: Date.now().toString(),
       company: tempSubCompany,
       role: tempSubRole,
-      name: "", // ★修正: 氏名は空文字で登録（署名画像のみ）
+      name: "", 
       signatureDataUrl
     };
     updateReport({ subcontractorAttendees: [...report.subcontractorAttendees, newAttendee] });
@@ -345,14 +351,10 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         <h3 className="font-bold text-gray-700 mb-3 text-center">協力会社 出席者登録</h3>
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div><label className="text-xs font-bold text-gray-500">会社名</label>
-          {/* ★修正: contractors (会社名) リストを使用 */}
           <select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>{masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
           <div><label className="text-xs font-bold text-gray-500">役職</label>
-          {/* ★修正: roles (役職) リストを使用 */}
           <select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>{masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
         </div>
-        
-        {/* ★修正: 氏名入力欄を削除 */}
         
         <div className="mb-3"><label className="text-xs font-bold text-gray-500 mb-1 block">署名</label><div className="border border-gray-300 rounded"><SignatureCanvas key={sigKey} onSave={(data) => addSubAttendee(data)} onClear={() => {}} lineWidth={4} keepOpenOnSave={true} /></div></div>
       </div>
