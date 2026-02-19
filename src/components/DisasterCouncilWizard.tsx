@@ -182,7 +182,22 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
 
-  useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
+  // ★修正: 役職(roles)が読み込まれたら、確実に先頭の値を初期値としてセットする
+  useEffect(() => { 
+    const loadMaster = async () => { 
+      try { 
+        const data = await getMasterData(); 
+        setMasterData(data);
+        // マスタ読み込み直後に初期値を同期
+        if (data.contractors.length > 0) setTempSubCompany(data.contractors[0]);
+        if (data.roles.length > 0) setTempSubRole(data.roles[0]);
+      } catch (e) { 
+        console.error("マスタ取得エラー", e); 
+      } 
+    }; 
+    loadMaster(); 
+  }, []);
+
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
 
   // 元請会社名を「松浦建設株式会社」に強制固定
@@ -300,25 +315,14 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [tempSubCompany, setTempSubCompany] = useState("");
   const [sigKey, setSigKey] = useState(0); 
   
-  // ★修正: マスタデータが読み込まれたら、初期値を正しくセットする
-  useEffect(() => { 
-    if (masterData.contractors.length > 0 && !tempSubCompany) {
-      setTempSubCompany(masterData.contractors[0]); 
-    }
-  }, [masterData.contractors, tempSubCompany]);
-
-  useEffect(() => { 
-    if (masterData.roles.length > 0 && !tempSubRole) {
-      setTempSubRole(masterData.roles[0]); 
-    }
-  }, [masterData.roles, tempSubRole]);
+  // ★修正: useEffect内でマスタデータ読み込み時に初期値をセット (上部のuseEffectに統合)
 
   const addSubAttendee = (signatureDataUrl: string) => {
     if (!tempSubCompany || !tempSubRole) return;
     const newAttendee = {
       id: Date.now().toString(),
       company: tempSubCompany,
-      role: tempSubRole,
+      role: tempSubRole, // ★修正: ここで選択された値(またはマスタ先頭値)が使われる
       name: "", 
       signatureDataUrl
     };
