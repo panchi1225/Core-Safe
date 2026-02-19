@@ -174,6 +174,13 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
 
+  // ★修正: 施工者名を「松浦建設株式会社」に強制固定
+  useEffect(() => {
+    if (report.contractor !== "松浦建設株式会社") {
+      updateReport('contractor', "松浦建設株式会社");
+    }
+  }, [report.contractor]);
+
   const updateReport = (field: keyof ReportData, value: any) => { setReport(prev => ({ ...prev, [field]: value })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   const handleNext = () => setStep(prev => Math.min(prev + 1, 3));
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
@@ -182,7 +189,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const handleTempSave = async () => { 
     setSaveStatus('saving'); 
     try { 
-      // ★修正: report.project をそのまま使用し、省略せずに保存
+      // 現場名を省略せずに保存
       const newId = await saveDraft(draftId, 'SAFETY_TRAINING', report); 
       setDraftId(newId); 
       setSaveStatus('saved'); 
@@ -200,7 +207,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const handlePreviewClick = async () => {
     setSaveStatus('saving');
     try {
-      // ★修正: こちらも report をそのまま使用
       const newId = await saveDraft(draftId, 'SAFETY_TRAINING', report); 
       setDraftId(newId); 
       setSaveStatus('saved'); 
@@ -260,9 +266,11 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const renderStep1 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 1: 表紙情報</h2>
+      {/* 修正: appearance-none を追加してiOSのデフォルトスタイルを解除 */}
       <div className="form-control"><label className="label font-bold text-gray-700">工事名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.project} onChange={(e) => updateReport('project', e.target.value)}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
       <div className="form-control"><label className="label font-bold text-gray-700">実施月</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.month} onChange={(e) => updateReport('month', parseInt(e.target.value))}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}月</option>))}</select></div>
-      <div className="form-control"><label className="label font-bold text-gray-700">施工者名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.contractor} onChange={(e) => updateReport('contractor', e.target.value)}>{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+      {/* ★修正: 施工者名を固定の入力欄（編集不可）に変更 */}
+      <div className="form-control"><label className="label font-bold text-gray-700">施工者名</label><input type="text" className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-black outline-none cursor-not-allowed font-bold" value="松浦建設株式会社" readOnly /></div>
     </div>
   );
 
@@ -327,7 +335,8 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   );
 
   const [tempCompany, setTempCompany] = useState("");
-  useEffect(() => { if (masterData.subcontractors.length > 0 && !tempCompany) { setTempCompany(masterData.subcontractors[0]); } }, [masterData.subcontractors, tempCompany]);
+  // ★修正: 初期値を contractors (会社名) からセットするよう変更
+  useEffect(() => { if (masterData.contractors.length > 0 && !tempCompany) { setTempCompany(masterData.contractors[0]); } }, [masterData.contractors, tempCompany]);
   const [sigKey, setSigKey] = useState(0); 
   const renderStep3 = () => (
     <div className="space-y-6">
@@ -336,7 +345,8 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <h3 className="font-bold text-lg mb-4 text-center">新規署名</h3>
         <div className="mb-4">
           <label className="block text-sm font-bold text-gray-700 mb-1">会社名</label>
-          <select className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-lg text-black outline-none appearance-none" value={tempCompany} onChange={(e) => setTempCompany(e.target.value)}>{masterData.subcontractors.map(s => <option key={s} value={s}>{s}</option>)}</select>
+          {/* ★修正: 選択リストを subcontractors ではなく contractors (会社名) に変更 */}
+          <select className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-lg text-black outline-none appearance-none" value={tempCompany} onChange={(e) => setTempCompany(e.target.value)}>{masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}</select>
         </div>
         <div className="mb-2"><label className="block text-sm font-bold text-gray-700 mb-2 text-center">氏名 (手書き)</label><div className="w-full"><SignatureCanvas key={sigKey} onSave={(dataUrl) => { addSignature(tempCompany, dataUrl); }} onClear={() => {}} lineWidth={6} keepOpenOnSave={true} /></div></div>
       </div>
