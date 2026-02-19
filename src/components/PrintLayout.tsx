@@ -11,12 +11,11 @@ const PrintLayout: React.FC<Props> = ({ data }) => {
   const labelClass = "text-center bg-gray-100 font-bold";
 
   // Calculate font size for project name to fit in one line
-  // ★修正: より細かいサイズ調整を追加し、長文でも1行に収まるようにする
   const getProjectNameClass = (text: string) => {
     if (!text) return "text-5xl";
     const len = text.length;
-    if (len > 40) return "text-[10px]"; // 極小
-    if (len > 30) return "text-base";   // 小
+    if (len > 40) return "text-[10px]"; 
+    if (len > 30) return "text-base";   
     if (len > 22) return "text-xl";
     if (len > 15) return "text-2xl";
     if (len > 10) return "text-4xl";
@@ -73,16 +72,12 @@ const PrintLayout: React.FC<Props> = ({ data }) => {
     );
   };
 
-  // ★修正: ロゴ画像のBase64データ
-  const LOGO_BASE64 = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/4QAiRXhpZgAATU0AKgAAAAgAAQESAAMAAAABAAEAAAAAAAD/2wBDAAIBAQIBAQICAgICAgICAwUDAwMDAwYEBAMFBwYHBwcGBwcICQsJCAgKCAcHCg0KCgsMDAwMBwkODw0MDgsMDAz/2wBDAQICAgMDAwYDAwYMCAcIDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAz/wAARCAAeAFcDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD9/KKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigD/9k=";
-
   return (
     <div className="font-serif text-black leading-tight">
       {/* PAGE 1: COVER */}
       <div className="print-page relative p-[20mm] flex flex-col justify-between items-center">
         {/* Project Name */}
         <div className="w-full text-center mt-24">
-          {/* ★修正: whitespace-nowrap overflow-hidden を追加して折り返しを禁止 */}
           <h1 className={`${getProjectNameClass(data.project)} font-bold mb-4 leading-normal whitespace-nowrap overflow-hidden text-ellipsis px-4`}>
             {data.project}
           </h1>
@@ -96,14 +91,9 @@ const PrintLayout: React.FC<Props> = ({ data }) => {
 
         <div className="text-center mb-20">
           <p className="text-4xl font-bold mb-16">{data.month} 月度</p>
+          {/* ★修正: 画像を削除し、会社名のみを表示 */}
           <div className="flex items-center justify-center gap-2">
-            <span className="font-bold text-xl italic flex items-center justify-center" style={{fontFamily: 'sans-serif'}}>
-              {/* ★修正: Base64画像を埋め込み */}
-              <img 
-                src={LOGO_BASE64} 
-                alt="Logo" 
-                className="h-10 object-contain mr-2"
-              />
+            <span className="font-bold text-xl italic" style={{fontFamily: 'sans-serif'}}>
               {data.contractor}
             </span>
           </div>
