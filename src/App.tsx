@@ -221,19 +221,19 @@ const App: React.FC = () => {
     if (!isModalOpen || !selectedReportType) return null;
 
     const currentDrafts = drafts.filter(d => d.type === selectedReportType);
-    const draftsByProject: Record<string, SavedDraft[]> = {};
-    currentDrafts.forEach(draft => {
-      let project = '';
-      if (draft.type === 'NEWCOMER_SURVEY') {
-         project = (draft.data as NewcomerSurveyReportData).name || '氏名未入力';
-      } else {
-         project = draft.data.project || '名称未設定';
+    
+    // Group drafts by project
+    const draftsByProject = currentDrafts.reduce((acc, draft) => {
+      // ★修正: 新規入場者アンケートでも「現場名(project)」をキーにしてグルーピングする
+      // これにより、(株)田中土木(R7...)のような現場名がそのままフォルダ名になる
+      const projectKey = draft.data.project || '名称未設定';
+      
+      if (!acc[projectKey]) {
+        acc[projectKey] = [];
       }
-      if (!draftsByProject[project]) {
-        draftsByProject[project] = [];
-      }
-      draftsByProject[project].push(draft);
-    });
+      acc[projectKey].push(draft);
+      return acc;
+    }, {} as Record<string, SavedDraft[]>);
 
     return (
       <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4">
@@ -334,6 +334,7 @@ const App: React.FC = () => {
                         <div className="cursor-pointer flex-1" onClick={() => handleResumeDraft(draft)}>
                           <div className="font-bold text-blue-800 text-lg">
                             <i className="fa-regular fa-calendar-check mr-2"></i>
+                            {/* 表示内容の分岐: 新規入場者アンケートは氏名を表示 */}
                             {draft.type === 'SAFETY_TRAINING' ? `${(draft.data as ReportData).month}月度` : 
                              draft.type === 'DISASTER_COUNCIL' ? `第${(draft.data as DisasterCouncilReportData).count}回` :
                              draft.type === 'NEWCOMER_SURVEY' ? ((draft.data as NewcomerSurveyReportData).name || '氏名未入力') :
@@ -365,13 +366,10 @@ const App: React.FC = () => {
     );
   };
 
-  // 生成するQRコードのURL
   const qrUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?form=newcomer`;
 
-  // Home Screen UI
   return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-800">
-      {/* ★追加: バージョン確認用スタンプ (デプロイ確認用) */}
       <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] px-2 py-1 z-50 font-bold">v2.0</div>
 
       <header className="bg-slate-800 text-white p-6 shadow-md text-center">
@@ -459,6 +457,7 @@ const App: React.FC = () => {
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
 
+      {/* QRコード表示モーダル */}
       <QRCodeModal 
         isOpen={isQRModalOpen}
         onClose={() => setIsQRModalOpen(false)}
