@@ -76,7 +76,6 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                所属会社名
              </div>
              <div className={`flex-1 ${borderClass} px-3 flex items-center`}>
-                {/* ★修正: 固定文字ではなく、入力された会社名を表示 */}
                 <span className="text-base font-bold">{data.company}</span>
              </div>
              <div className={`w-32 ${borderClass} flex items-center justify-center p-1 text-[11px]`}>
@@ -138,10 +137,13 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
              </div>
           </div>
 
-          {/* Row 5: Emergency Contact */}
+          {/* Row 5: Emergency Contact (★修正: 枠を分割) */}
           <div className="flex border-b border-black shrink-0 h-[48px]">
-             <div className={`w-24 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm text-center leading-none`}>
-               緊急連絡先<br/>氏名
+             <div className={`w-24 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm`}>
+               緊急連絡先
+             </div>
+             <div className={`w-12 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-[10px]`}>
+               氏名
              </div>
              <div className={`flex-1 ${borderClass} px-3 flex items-center text-sm`}>
                {data.emergencyContactSei}　{data.emergencyContactMei}
@@ -189,10 +191,10 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
             </div>
           </div>
           
-          {/* Row 7: Kentaikyo */}
+          {/* Row 7: Kentaikyo (★修正: 文言変更) */}
           <div className="flex border-b border-black shrink-0 h-[40px]">
              <div className={`w-1/2 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm`}>
-               建退協退職金制度の加入
+               建退共の加入状況
              </div>
              <div className={`w-1/2 border-b border-black flex items-center justify-center gap-10 p-1`}>
                <div className="flex items-center gap-2">
