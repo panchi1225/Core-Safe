@@ -462,12 +462,16 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
-          {/* ★修正: 高さを '891mm' (297*3) に固定し、強制的に3ページ分のスペースを確保 */}
-          <div className="bg-white shadow-2xl flex flex-col" style={{ width: '210mm', height: '891mm', minHeight: '891mm', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
+          {/* ★修正: 高さを '1188mm' (297*4) にさらに拡張し、強制的に4ページ分のスペースを確保 */}
+          {/* さらに mb-16 を追加して下方向へのマージンも確保 */}
+          <div className="bg-white shadow-2xl flex flex-col mb-16" style={{ width: '210mm', height: '1188mm', minHeight: '1188mm', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
             <DisasterCouncilPrintLayout data={report} />
           </div>
+          {/* 安全管理計画表は「別コンテナ」として下に描画させるのではなく、
+              本来は上記のDisasterCouncilPrintLayoutの中に組み込むのが正解だが、
+              ここでは物理的な距離を離すために marginTop を大幅に追加 */}
           {selectedPlan && (
-            <div className="bg-white shadow-2xl" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
+            <div className="bg-white shadow-2xl mt-16" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
                <SafetyPlanPrintLayout data={selectedPlan} />
             </div>
           )}
