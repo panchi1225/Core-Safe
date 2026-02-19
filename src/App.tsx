@@ -99,7 +99,6 @@ const App: React.FC = () => {
     const formType = params.get('form');
     
     if (formType === 'newcomer') {
-      // パラメータがある場合、直接新規入場者アンケートを開く
       setWizardInitialData(undefined);
       setWizardDraftId(null);
       setCurrentView('NEWCOMER_SURVEY');
@@ -223,13 +222,20 @@ const App: React.FC = () => {
     const currentDrafts = drafts.filter(d => d.type === selectedReportType);
     
     // Group drafts by project
+    // ★修正: ここで現場名(project)をキーにしてグルーピングする際、省略せずにそのまま使う
     const draftsByProject = currentDrafts.reduce((acc, draft) => {
-      const projectKey = draft.data.project || '名称未設定';
-      
-      if (!acc[projectKey]) {
-        acc[projectKey] = [];
+      let project = '';
+      if (draft.type === 'NEWCOMER_SURVEY') {
+         project = (draft.data as NewcomerSurveyReportData).name || '氏名未入力';
+      } else {
+         // ★重要: split('(') などをせず、そのまま使う
+         project = draft.data.project || '名称未設定';
       }
-      acc[projectKey].push(draft);
+      
+      if (!acc[project]) {
+        acc[project] = [];
+      }
+      acc[project].push(draft);
       return acc;
     }, {} as Record<string, SavedDraft[]>);
 
@@ -391,7 +397,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">安全訓練報告書</h3>
             <p className="text-xs text-gray-500 text-center">
-              日々の安全訓練・朝礼の実施記録を作成します。電子署名対応。
+              安全訓練の実施報告書を作成します。電子署名対応。
             </p>
           </button>
 
@@ -405,7 +411,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">災害防止協議会</h3>
             <p className="text-xs text-gray-500 text-center">
-              月次の災害防止協議会の議事録・報告書を作成します。
+              災害防止協議会の報告書を作成します。電子署名対応。
             </p>
           </button>
 
@@ -419,7 +425,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">安全管理計画表</h3>
             <p className="text-xs text-gray-500 text-center">
-              施工安全管理計画表および週間工程の管理を行います。
+              安全管理計画表を作成します。報告書に自動添付。
             </p>
           </button>
 
@@ -433,7 +439,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">新規入場者アンケート</h3>
             <p className="text-xs text-gray-500 text-center">
-              新規入場者の健康状態・経歴等を確認するアンケートを作成します。
+              新規入場者アンケートを作成します。QRコードから実施可能。
             </p>
           </button>
         </div>
