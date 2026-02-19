@@ -5,6 +5,16 @@ interface Props {
   data: NewcomerSurveyReportData;
 }
 
+// 工事名の長さに応じてフォントサイズを返す関数
+const getProjectNameClass = (text: string) => {
+  if (!text) return "text-[10px]";
+  const len = text.length;
+  if (len > 40) return "text-[6px]";
+  if (len > 30) return "text-[7px]";
+  if (len > 20) return "text-[8px]";
+  return "text-[10px]";
+};
+
 const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
   if (!data) return null;
   const qual = data.qualifications || {};
@@ -139,7 +149,7 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
 
           {/* Row 5: Emergency Contact */}
           <div className="flex border-b border-black shrink-0 h-[48px]">
-             <div className={`w-24 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm text-center leading-none`}>
+             <div className={`w-24 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm`}>
                緊急連絡先
              </div>
              <div className={`w-12 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-[10px]`}>
@@ -172,10 +182,14 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
               <span className="text-lg font-bold w-6 text-center">{data.bloodType}</span>
               <span className="text-xs">型</span>
               <span className="ml-4 text-xs font-bold">（ ＲＨ </span>
-              <span className="w-10 text-center border-b border-black text-lg font-bold">
-                {/* ★修正: 不明の場合は「不明」と表示 */}
-                {data.bloodTypeRh === 'Plus' ? '+' : data.bloodTypeRh === 'Minus' ? '-' : '不明'}
-              </span>
+              {/* ★修正: 「不明」の場合は線をなくし、文字サイズを小さく */}
+              {data.bloodTypeRh === 'Unknown' || data.bloodTypeRh === undefined ? (
+                <span className="w-10 text-center text-xs">不明</span>
+              ) : (
+                <span className="w-10 text-center border-b border-black text-lg font-bold">
+                  {data.bloodTypeRh === 'Plus' ? '+' : '-'}
+                </span>
+              )}
               <span className="text-xs font-bold"> ）</span>
             </div>
             <div className={`w-32 ${borderClass} bg-gray-50 flex items-center justify-center font-bold text-[10px] p-1 text-center leading-tight`}>
@@ -301,8 +315,11 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                {/* Left: Project Info */}
                <div className="w-[50%] space-y-2">
                   <div className="flex items-end border-b border-black pb-0.5">
-                    <span className="text-[9px] font-bold w-12 mb-0.5">作業所名</span>
-                    <span className="flex-1 text-[10px] font-bold truncate px-1">{data.project}</span>
+                    {/* ★修正: 「現場名」に変更し、長い場合は文字サイズ自動縮小 */}
+                    <span className="text-[9px] font-bold w-12 mb-0.5 whitespace-nowrap">現場名</span>
+                    <span className={`flex-1 font-bold px-1 ${getProjectNameClass(data.project)}`}>
+                      {data.project}
+                    </span>
                   </div>
                   <div className="flex items-end border-b border-black pb-0.5">
                     <span className="text-[9px] font-bold w-12 mb-0.5">作業所長名</span>
@@ -315,7 +332,6 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                <div className="w-[45%] flex flex-col items-end">
                   <div className="flex justify-center items-baseline mb-1 text-[10px] font-bold w-full">
                      <span className="mr-1">令和</span>
-                     {/* ★修正: 誓約日の下線(border-b)を削除 */}
                      <span className="text-base w-6 text-center mx-0.5">{data.pledgeDateYear}</span>
                      <span>年</span>
                      <span className="text-base w-5 text-center mx-0.5">{data.pledgeDateMonth}</span>
