@@ -178,18 +178,41 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const handleNext = () => setStep(prev => Math.min(prev + 1, 3));
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files && e.target.files[0]) { const compressed = await compressImage(e.target.files[0]); updateReport('photoUrl', compressed); } };
-  const handleTempSave = async () => { setSaveStatus('saving'); try { const newId = await saveDraft(draftId, 'SAFETY_TRAINING', report); setDraftId(newId); setSaveStatus('saved'); setHasUnsavedChanges(false); setTimeout(() => setSaveStatus('idle'), 2000); } catch (e) { console.error(e); alert("保存に失敗しました"); setSaveStatus('idle'); } };
+  
+  const handleTempSave = async () => { 
+    setSaveStatus('saving'); 
+    try { 
+      // ★修正: report.project をそのまま使用し、省略せずに保存
+      const newId = await saveDraft(draftId, 'SAFETY_TRAINING', report); 
+      setDraftId(newId); 
+      setSaveStatus('saved'); 
+      setHasUnsavedChanges(false); 
+      setTimeout(() => setSaveStatus('idle'), 2000); 
+    } catch (e) { 
+      console.error(e); 
+      alert("保存に失敗しました"); 
+      setSaveStatus('idle'); 
+    } 
+  };
+  
   const addSignature = (company: string, sigData: string) => { const newSig: WorkerSignature = { id: Date.now().toString(), company, name: "Signed", signatureDataUrl: sigData }; setReport(prev => ({ ...prev, signatures: [...prev.signatures, newSig] })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
   const handlePreviewClick = async () => {
     setSaveStatus('saving');
     try {
-      const newId = await saveDraft(draftId, 'SAFETY_TRAINING', report); setDraftId(newId); setSaveStatus('saved'); setHasUnsavedChanges(false); setTimeout(() => setSaveStatus('idle'), 2000);
+      // ★修正: こちらも report をそのまま使用
+      const newId = await saveDraft(draftId, 'SAFETY_TRAINING', report); 
+      setDraftId(newId); 
+      setSaveStatus('saved'); 
+      setHasUnsavedChanges(false); 
+      setTimeout(() => setSaveStatus('idle'), 2000);
+      
       const plans = await fetchSafetyPlansByProject(report.project);
       if (plans.length === 0) { alert(`工事名「${report.project}」の安全管理計画表が見つかりません。\n\nホーム画面に戻って、先に「安全管理計画表」を作成・保存してください。`); return; }
       setAvailablePlans(plans); setPlanSelectionModal(true);
     } catch (e) { alert("エラーが発生しました"); setSaveStatus('idle'); }
   };
+  
   const confirmPlanSelection = (plan: SavedDraft) => { setSelectedPlan(plan.data as SafetyPlanReportData); setPlanSelectionModal(false); setShowPreview(true); };
   const handlePrint = () => { const prevTitle = document.title; document.title = `安全訓練_${report.project}_${report.month}月度`; window.print(); document.title = prevTitle; };
   const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
@@ -237,7 +260,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const renderStep1 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 1: 表紙情報</h2>
-      {/* 修正: appearance-none を追加してiOSのデフォルトスタイルを解除 */}
       <div className="form-control"><label className="label font-bold text-gray-700">工事名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.project} onChange={(e) => updateReport('project', e.target.value)}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
       <div className="form-control"><label className="label font-bold text-gray-700">実施月</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.month} onChange={(e) => updateReport('month', parseInt(e.target.value))}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}月</option>))}</select></div>
       <div className="form-control"><label className="label font-bold text-gray-700">施工者名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.contractor} onChange={(e) => updateReport('contractor', e.target.value)}>{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
