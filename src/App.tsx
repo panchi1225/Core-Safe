@@ -50,9 +50,7 @@ const QRCodeModal: React.FC<{ isOpen: boolean; onClose: () => void; url: string 
   return (
     <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-80 flex items-center justify-center p-4" onClick={onClose}>
       <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center animate-fade-in" onClick={e => e.stopPropagation()}>
-        {/* ★修正: 文言変更 */}
         <h3 className="text-xl font-bold text-gray-800 mb-2">新規入場者用 入力フォーム</h3>
-        {/* ★修正: 文言変更 */}
         <p className="text-sm text-gray-500 mb-6 text-center">入場者自身の端末で読み取ってください。<br/>自動的に入力画面が開きます。</p>
         <div className="p-4 border-4 border-gray-200 rounded-lg bg-white mb-6">
           <QRCodeCanvas value={url} size={250} level={"H"} includeMargin={true} />
@@ -223,19 +221,17 @@ const App: React.FC = () => {
     if (!isModalOpen || !selectedReportType) return null;
 
     const currentDrafts = drafts.filter(d => d.type === selectedReportType);
-    const draftsByProject: Record<string, SavedDraft[]> = {};
-    currentDrafts.forEach(draft => {
-      let project = '';
-      if (draft.type === 'NEWCOMER_SURVEY') {
-         project = (draft.data as NewcomerSurveyReportData).name || '氏名未入力';
-      } else {
-         project = draft.data.project || '名称未設定';
+    
+    // Group drafts by project
+    const draftsByProject = currentDrafts.reduce((acc, draft) => {
+      const projectKey = draft.data.project || '名称未設定';
+      
+      if (!acc[projectKey]) {
+        acc[projectKey] = [];
       }
-      if (!draftsByProject[project]) {
-        draftsByProject[project] = [];
-      }
-      draftsByProject[project].push(draft);
-    });
+      acc[projectKey].push(draft);
+      return acc;
+    }, {} as Record<string, SavedDraft[]>);
 
     return (
       <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4">
@@ -286,7 +282,6 @@ const App: React.FC = () => {
                         className="w-full py-4 bg-purple-600 text-white rounded-lg font-bold shadow-md hover:bg-purple-700 flex items-center justify-center gap-2 transition-transform transform hover:scale-[1.01]"
                       >
                         <i className="fa-solid fa-qrcode text-xl"></i>
-                        {/* ★修正: 文言変更 */}
                         新規入場者用QRコードを表示
                       </button>
                     )}
@@ -372,9 +367,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-800">
-      {/* バージョン確認用スタンプ */}
-      <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] px-2 py-1 z-50 font-bold">v2.0</div>
-
       <header className="bg-slate-800 text-white p-6 shadow-md text-center">
         <h1 className="text-2xl font-bold tracking-wide">
           <i className="fa-solid fa-building-shield mr-2"></i>
@@ -448,7 +440,8 @@ const App: React.FC = () => {
       </main>
 
       <footer className="mt-12 text-center text-gray-400 text-sm pb-8">
-        &copy; 2024 Safety Reporting App
+        <div>&copy; 2026 Matsuura Construction App</div>
+        <div className="mt-1">Ver.1.2.1</div>
       </footer>
 
       {renderSelectionModal()}
