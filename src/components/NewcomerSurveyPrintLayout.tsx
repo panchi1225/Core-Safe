@@ -294,8 +294,8 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                 新規入場時誓約
               </h3>
               
-              {/* ★修正: 8項目を縦一列に配置、文字サイズ拡大、行間調整 */}
-              <ul className="list-none pl-2 space-y-1 text-xs leading-snug">
+              {/* ★修正: pl-2 -> pl-10 に変更し、右へ3文字分程度移動 */}
+              <ul className="list-none pl-10 space-y-1 text-xs leading-snug">
                  <li className="flex items-start"><span className="mr-1.5">-</span>私は当作業所の新規入場時教育を受けました。</li>
                  <li className="flex items-start"><span className="mr-1.5">-</span>作業所の遵守事項やルールを厳守し作業します。</li>
                  <li className="flex items-start"><span className="mr-1.5">-</span>どんな小さなケガでも、必ず当日に報告します。</li>
@@ -312,7 +312,6 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                <div className="w-[50%] space-y-2">
                   <div className="flex items-end border-b border-black pb-0.5">
                     <span className="text-[9px] font-bold w-12 mb-0.5 whitespace-nowrap">現場名</span>
-                    {/* ★修正: text-centerを追加して中央寄せ */}
                     <span className={`flex-1 font-bold px-1 text-center ${getProjectNameClass(data.project)}`}>
                       {data.project}
                     </span>
