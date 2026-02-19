@@ -137,9 +137,9 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
              </div>
           </div>
 
-          {/* Row 5: Emergency Contact (★修正: 枠を分割) */}
+          {/* Row 5: Emergency Contact */}
           <div className="flex border-b border-black shrink-0 h-[48px]">
-             <div className={`w-24 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm`}>
+             <div className={`w-24 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm text-center leading-none`}>
                緊急連絡先
              </div>
              <div className={`w-12 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-[10px]`}>
@@ -173,7 +173,8 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
               <span className="text-xs">型</span>
               <span className="ml-4 text-xs font-bold">（ ＲＨ </span>
               <span className="w-10 text-center border-b border-black text-lg font-bold">
-                {data.bloodTypeRh === 'Plus' ? '+' : data.bloodTypeRh === 'Minus' ? '-' : ''}
+                {/* ★修正: 不明の場合は「不明」と表示 */}
+                {data.bloodTypeRh === 'Plus' ? '+' : data.bloodTypeRh === 'Minus' ? '-' : '不明'}
               </span>
               <span className="text-xs font-bold"> ）</span>
             </div>
@@ -191,7 +192,7 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
             </div>
           </div>
           
-          {/* Row 7: Kentaikyo (★修正: 文言変更) */}
+          {/* Row 7: Kentaikyo */}
           <div className="flex border-b border-black shrink-0 h-[40px]">
              <div className={`w-1/2 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm`}>
                建退共の加入状況
@@ -314,11 +315,12 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                <div className="w-[45%] flex flex-col items-end">
                   <div className="flex justify-center items-baseline mb-1 text-[10px] font-bold w-full">
                      <span className="mr-1">令和</span>
-                     <span className="text-base w-6 text-center border-b border-black mx-0.5">{data.pledgeDateYear}</span>
+                     {/* ★修正: 誓約日の下線(border-b)を削除 */}
+                     <span className="text-base w-6 text-center mx-0.5">{data.pledgeDateYear}</span>
                      <span>年</span>
-                     <span className="text-base w-5 text-center border-b border-black mx-0.5">{data.pledgeDateMonth}</span>
+                     <span className="text-base w-5 text-center mx-0.5">{data.pledgeDateMonth}</span>
                      <span>月</span>
-                     <span className="text-base w-5 text-center border-b border-black mx-0.5">{data.pledgeDateDay}</span>
+                     <span className="text-base w-5 text-center mx-0.5">{data.pledgeDateDay}</span>
                      <span>日</span>
                   </div>
                   
