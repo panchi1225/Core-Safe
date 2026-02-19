@@ -150,16 +150,12 @@ const MASTER_GROUPS = {
   TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
 };
 
-// Fixed roles
-const FIXED_ROLES = [
-  "総括安全衛生管理者",
-  "安全衛生責任者",
-  "安全衛生推進者",
-  "作業指揮者",
-  "作業指揮者",
-  "作業指揮者",
-  "作業指揮者",
-  "作業指揮者"
+// ★修正: 固定する上位4つの役職
+const TOP_FIXED_ROLES = [
+  "統括安全衛生責任者",
+  "副統括安全衛生責任者",
+  "書記",
+  "安全委員"
 ];
 
 const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
@@ -187,7 +183,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       try { 
         const data = await getMasterData(); 
         setMasterData(data);
-        // マスタ読み込み直後に初期値を同期
         if (data.contractors.length > 0) setTempSubCompany(data.contractors[0]);
         if (data.roles.length > 0) setTempSubRole(data.roles[0]);
       } catch (e) { 
@@ -205,6 +200,30 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       updateReport({ contractor: "松浦建設株式会社" });
     }
   }, [report.contractor]);
+
+  // ★修正: 元請出席者の上位4役職を強制固定
+  useEffect(() => {
+    let hasChanged = false;
+    const nextAttendees = [...report.gcAttendees];
+    
+    // データ長が足りない場合は補充
+    while(nextAttendees.length < 8) {
+      nextAttendees.push({ role: "", name: "" });
+      hasChanged = true;
+    }
+
+    // 上位4つの役職名が一致しない場合は修正
+    TOP_FIXED_ROLES.forEach((role, idx) => {
+      if (nextAttendees[idx].role !== role) {
+        nextAttendees[idx] = { ...nextAttendees[idx], role: role };
+        hasChanged = true;
+      }
+    });
+
+    if (hasChanged) {
+      updateReport({ gcAttendees: nextAttendees });
+    }
+  }, [report.gcAttendees]);
 
   const updateReport = (updates: Partial<DisasterCouncilReportData>) => { setReport(prev => ({ ...prev, ...updates })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
@@ -304,6 +323,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   // Helper for step2
   const updateGCAttendee = (index: number, field: 'role' | 'name', value: string) => {
     const newAttendees = [...report.gcAttendees];
+    // 未定義なら初期化
+    if (!newAttendees[index]) newAttendees[index] = { role: '', name: '' };
     newAttendees[index] = { ...newAttendees[index], [field]: value };
     updateReport({ gcAttendees: newAttendees });
   };
@@ -313,8 +334,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [tempSubCompany, setTempSubCompany] = useState("");
   const [sigKey, setSigKey] = useState(0); 
   
-  // ★修正: マスタ読み込み時に初期値をセット (上部のuseEffectに統合済みだが、依存関係の都合でここでもチェック)
-  // (実際には上部のuseEffectでセットされるはずですが、もし空ならここで再度セット)
   useEffect(() => { 
     if (masterData.contractors.length > 0 && !tempSubCompany) setTempSubCompany(masterData.contractors[0]); 
   }, [masterData.contractors, tempSubCompany]);
@@ -344,10 +363,32 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
         <h3 className="font-bold text-gray-700 mb-3">元請 出席者</h3>
         <div className="grid grid-cols-1 gap-3">
-          {FIXED_ROLES.map((role, i) => (
+          {/* ★修正: 8行分ループし、上4つは固定、下4つは選択式に */}
+          {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex items-center gap-2">
-              <span className="w-40 text-xs font-bold bg-white px-2 py-1 border rounded text-center">{role}</span>
-              <select className="flex-1 p-2 border rounded text-sm bg-white text-black outline-none appearance-none" value={report.gcAttendees[i]?.name || ""} onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}>
+              {i < 4 ? (
+                // 固定役職 (Top 4)
+                <span className="w-40 text-xs font-bold bg-white px-2 py-1 border rounded text-center bg-gray-50 text-gray-700">
+                  {TOP_FIXED_ROLES[i]}
+                </span>
+              ) : (
+                // 選択式役職 (Bottom 4)
+                <select 
+                  className="w-40 text-xs font-bold bg-white px-2 py-1 border rounded text-center outline-none appearance-none"
+                  value={report.gcAttendees[i]?.role || ""}
+                  onChange={(e) => updateGCAttendee(i, 'role', e.target.value)}
+                >
+                  <option value="">(役職選択)</option>
+                  {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              )}
+              
+              {/* 名前選択 (共通) */}
+              <select 
+                className="flex-1 p-2 border rounded text-sm bg-white text-black outline-none appearance-none" 
+                value={report.gcAttendees[i]?.name || ""} 
+                onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}
+              >
                 <option value="">選択してください</option>
                 {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -377,7 +418,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
             <div key={att.id} className="flex justify-between items-center p-3 bg-white border rounded shadow-sm">
               <div>
                 <div className="font-bold text-sm">{att.company}</div>
-                {/* ★修正: 役職だけでなく署名画像も表示 */}
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{att.role}</span>
                   {att.signatureDataUrl && (
