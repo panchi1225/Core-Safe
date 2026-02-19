@@ -17,7 +17,6 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
     const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
     base = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
   } else {
-    // 新規作成時初期化
     base = {
       ...base,
       experienceYears: null as any,
@@ -30,7 +29,6 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
       pledgeDateDay: null as any
     };
     
-    // 当日日付の自動設定
     const today = new Date();
     const reiwaYear = today.getFullYear() - 2018; 
     base.pledgeDateYear = reiwaYear;
@@ -124,9 +122,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [sigKey, setSigKey] = useState(0);
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
-  
-  // 修正: モーダル管理用の state を削除し、インライン表示用の isSigning を追加
-  const [isSigning, setIsSigning] = useState(false);
+  const [showSigModal, setShowSigModal] = useState(false);
   
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
@@ -293,7 +289,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const handleSignatureSave = (dataUrl: string) => { 
     updateReport({ signatureDataUrl: dataUrl }); 
     setSigKey(prev => prev + 1); 
-    setIsSigning(false); // 署名完了したらインライン入力を閉じる
+    setShowSigModal(false); 
   };
 
   const getErrorClass = (key: string) => errors[key] ? "border-red-500 bg-red-50 ring-1 ring-red-500" : "border-gray-300 bg-white";
@@ -508,16 +504,11 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <div className="bg-gray-50 p-6 rounded-lg border leading-relaxed text-gray-800"><h3 className="font-bold text-lg mb-4 text-center">新規入場時誓約</h3><ul className="list-disc pl-5 space-y-2 mb-6"><li>私は当作業所の新規入場時教育を受けました。</li><li>作業所の遵守事項やルールを厳守し作業します。</li><li>どんな小さなケガでも、必ず当日に報告します。</li><li>自分の身を守り、また周囲の人の安全にも気を配ります。</li><li>危険個所を発見したときは、直ちに現場責任者もしくは元請職員に連絡します。</li><li>作業中は有資格者証を携帯します。</li><li>記載した個人情報を緊急時連絡等、労務・安全衛生管理に使用することに同意します。</li><li>上記の事項を相違なく報告します。</li></ul><div className="bg-white p-4 rounded border text-center"><div className="mb-4"><label className="font-bold mr-2">誓約日 (令和)</label>
       <input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateYear ?? ''} onChange={(e)=>updateReport({pledgeDateYear: e.target.value === '' ? null : parseInt(e.target.value)})} />年<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateMonth ?? ''} onChange={(e)=>updateReport({pledgeDateMonth: e.target.value === '' ? null : parseInt(e.target.value)})} />月<input type="number" className="w-12 p-2 border rounded text-center" value={report.pledgeDateDay ?? ''} onChange={(e)=>updateReport({pledgeDateDay: e.target.value === '' ? null : parseInt(e.target.value)})} />日</div><label className="block font-bold text-gray-700 mb-2">本人署名</label><div className="mx-auto w-full max-w-sm">
       
-      {/* 修正: ボタンを押したらインラインで署名キャンバスを表示 (ウィンドウ表示なし) */}
+      {/* 修正: ボタンに戻す (タップすると即座に全画面モーダルを開く) */}
       {report.signatureDataUrl ? (
         <div className="mt-4"><p className="text-xs text-green-600 font-bold mb-1">署名済み</p><div className="cursor-pointer hover:opacity-80 transition-opacity inline-block border border-transparent hover:border-blue-300 rounded p-1" onClick={() => setPreviewSigUrl(report.signatureDataUrl)} title="タップして拡大"><img src={report.signatureDataUrl} alt="Signature" className="h-10 mx-auto border" /></div><button onClick={()=>updateReport({signatureDataUrl: null})} className="ml-4 text-xs text-red-500 underline">削除</button></div>
-      ) : isSigning ? (
-        <div className="border-2 border-dashed border-gray-400 rounded bg-gray-50 h-64 relative">
-           <SignatureCanvas key={sigKey} onSave={handleSignatureSave} onClear={()=>{}} lineWidth={5} />
-           <button onClick={()=>setIsSigning(false)} className="absolute top-2 right-2 bg-gray-200 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center font-bold hover:bg-gray-300">×</button>
-        </div>
       ) : (
-        <button type="button" onClick={() => setIsSigning(true)} className="w-full h-32 border-2 border-dashed border-gray-400 rounded bg-gray-50 flex flex-col items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors"><i className="fa-solid fa-pen-nib text-2xl mb-2"></i><span className="font-bold">タップして署名する</span></button>
+        <button type="button" onClick={() => setShowSigModal(true)} className="w-full h-32 border-2 border-dashed border-gray-400 rounded bg-gray-50 flex flex-col items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-blue-600 transition-colors"><i className="fa-solid fa-pen-nib text-2xl mb-2"></i><span className="font-bold">タップして署名する</span></button>
       )}
       
       </div></div></div>
@@ -652,7 +643,34 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       
-      {/* showSigModalは廃止したので、下の全画面モーダルコードは削除またはインライン統合済み */}
+      {/* 修正: 全画面の署名キャンバス (showSigModalで制御) */}
+      {showSigModal && (
+        <div className="fixed inset-0 z-[999] bg-white flex flex-col animate-fadeIn">
+          {/* ヘッダー */}
+          <div className="bg-slate-800 text-white p-4 flex justify-between items-center shrink-0 shadow-md">
+             <span className="font-bold text-lg"><i className="fa-solid fa-pen-nib mr-2"></i>署名記入</span>
+             {/* 閉じるボタン */}
+             <button onClick={() => setShowSigModal(false)} className="text-gray-300 hover:text-white px-3 py-1">
+               <i className="fa-solid fa-xmark text-2xl"></i>
+             </button>
+          </div>
+          
+          {/* キャンバスエリア (全画面) */}
+          <div className="flex-1 bg-gray-100 p-4 flex flex-col items-center justify-center overflow-hidden">
+             <div className="w-full h-full max-w-5xl bg-white shadow-lg border rounded-lg overflow-hidden flex flex-col">
+                <SignatureCanvas 
+                  key={sigKey} 
+                  onSave={(dataUrl) => {
+                    handleSignatureSave(dataUrl);
+                    setShowSigModal(false); // 保存時に閉じる
+                  }} 
+                  onClear={()=>{ /* クリア時は閉じない */ }} 
+                  lineWidth={5} 
+                />
+             </div>
+          </div>
+        </div>
+      )}
 
       <ConfirmationModal 
         isOpen={confirmModal.isOpen} 
