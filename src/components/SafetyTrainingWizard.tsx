@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { MasterData, ReportData, WorkerSignature, INITIAL_REPORT, INITIAL_MASTER_DATA, SavedDraft, SafetyPlanReportData } from '../types';
-import { getMasterData, saveMasterData, compressImage, saveDraft, deleteDraftsByProject, fetchSafetyPlansByProject } from '../services/firebaseService';
+import { MasterData, DisasterCouncilReportData, INITIAL_DISASTER_COUNCIL_REPORT, INITIAL_MASTER_DATA, SavedDraft, SafetyPlanReportData } from '../types';
+import { getMasterData, saveMasterData, saveDraft, deleteDraftsByProject, fetchSafetyPlansByProject } from '../services/firebaseService';
 import SignatureCanvas from './SignatureCanvas';
-import PrintLayout from './PrintLayout';
+import DisasterCouncilPrintLayout from './DisasterCouncilPrintLayout';
 import SafetyPlanPrintLayout from './SafetyPlanPrintLayout';
 
 interface Props {
-  initialData?: ReportData;
+  initialData?: any;
   initialDraftId?: string | null;
   onBackToMenu: () => void;
 }
@@ -90,7 +90,7 @@ const ProjectDeleteModal: React.FC<{
   );
 };
 
-// --- Master Section (List View) ---
+// --- Master Section ---
 const MasterSection: React.FC<{
   title: string;
   items: string[];
@@ -136,7 +136,7 @@ const LABEL_MAP: Record<string, string> = {
   workplaces: "作業所名",
   subcontractors: "協力会社名", 
   roles: "役職",
-  topics: "安全訓練内容",
+  topics: "安全訓練内容", 
   jobTypes: "工種",
   goals: "安全衛生目標",
   predictions: "予想災害",
@@ -146,51 +146,91 @@ const LABEL_MAP: Record<string, string> = {
 };
 
 const MASTER_GROUPS = { 
-  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
+  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces', 'subcontractors'], 
   TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
 };
 
-const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
+// ★修正: 固定する上位4つの役職
+const TOP_FIXED_ROLES = [
+  "統括安全衛生責任者",
+  "副統括安全衛生責任者",
+  "書記",
+  "安全委員"
+];
+
+const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
   const [step, setStep] = useState(1);
-  const [report, setReport] = useState<ReportData>(initialData || INITIAL_REPORT);
+  const [report, setReport] = useState<DisasterCouncilReportData>(initialData || INITIAL_DISASTER_COUNCIL_REPORT);
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
   const [isMasterMode, setIsMasterMode] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
   const [previewScale, setPreviewScale] = useState(1);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: () => {} });
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   const [planSelectionModal, setPlanSelectionModal] = useState(false);
   const [availablePlans, setAvailablePlans] = useState<SavedDraft[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<SafetyPlanReportData | null>(null);
-  
+
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
   const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
 
-  useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
+  useEffect(() => { 
+    const loadMaster = async () => { 
+      try { 
+        const data = await getMasterData(); 
+        setMasterData(data);
+        if (data.contractors.length > 0) setTempSubCompany(data.contractors[0]);
+        if (data.roles.length > 0) setTempSubRole(data.roles[0]);
+      } catch (e) { 
+        console.error("マスタ取得エラー", e); 
+      } 
+    }; 
+    loadMaster(); 
+  }, []);
+
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
 
-  // ★修正: 施工者名を「松浦建設株式会社」に強制固定
+  // 元請会社名を「松浦建設株式会社」に強制固定
   useEffect(() => {
     if (report.contractor !== "松浦建設株式会社") {
-      updateReport('contractor', "松浦建設株式会社");
+      updateReport({ contractor: "松浦建設株式会社" });
     }
   }, [report.contractor]);
 
-  const updateReport = (field: keyof ReportData, value: any) => { setReport(prev => ({ ...prev, [field]: value })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
-  const handleNext = () => setStep(prev => Math.min(prev + 1, 3));
-  const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => { if (e.target.files && e.target.files[0]) { const compressed = await compressImage(e.target.files[0]); updateReport('photoUrl', compressed); } };
+  // ★修正: 元請出席者の上位4役職を強制固定
+  useEffect(() => {
+    let hasChanged = false;
+    const nextAttendees = [...report.gcAttendees];
+    
+    // データ長が足りない場合は補充
+    while(nextAttendees.length < 8) {
+      nextAttendees.push({ role: "", name: "" });
+      hasChanged = true;
+    }
+
+    // 上位4つの役職名が一致しない場合は修正
+    TOP_FIXED_ROLES.forEach((role, idx) => {
+      if (nextAttendees[idx].role !== role) {
+        nextAttendees[idx] = { ...nextAttendees[idx], role: role };
+        hasChanged = true;
+      }
+    });
+
+    if (hasChanged) {
+      updateReport({ gcAttendees: nextAttendees });
+    }
+  }, [report.gcAttendees]);
+
+  const updateReport = (updates: Partial<DisasterCouncilReportData>) => { setReport(prev => ({ ...prev, ...updates })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
   const handleTempSave = async () => { 
     setSaveStatus('saving'); 
     try { 
-      // 現場名を省略せずに保存
-      const newId = await saveDraft(draftId, 'SAFETY_TRAINING', report); 
+      const newId = await saveDraft(draftId, 'DISASTER_COUNCIL', report); 
       setDraftId(newId); 
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
@@ -202,12 +242,10 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     } 
   };
   
-  const addSignature = (company: string, sigData: string) => { const newSig: WorkerSignature = { id: Date.now().toString(), company, name: "Signed", signatureDataUrl: sigData }; setReport(prev => ({ ...prev, signatures: [...prev.signatures, newSig] })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
-  
   const handlePreviewClick = async () => {
     setSaveStatus('saving');
     try {
-      const newId = await saveDraft(draftId, 'SAFETY_TRAINING', report); 
+      const newId = await saveDraft(draftId, 'DISASTER_COUNCIL', report); 
       setDraftId(newId); 
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
@@ -218,9 +256,9 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       setAvailablePlans(plans); setPlanSelectionModal(true);
     } catch (e) { alert("エラーが発生しました"); setSaveStatus('idle'); }
   };
-  
+
   const confirmPlanSelection = (plan: SavedDraft) => { setSelectedPlan(plan.data as SafetyPlanReportData); setPlanSelectionModal(false); setShowPreview(true); };
-  const handlePrint = () => { const prevTitle = document.title; document.title = `安全訓練_${report.project}_${report.month}月度`; window.print(); document.title = prevTitle; };
+  const handlePrint = () => { const prevTitle = document.title; document.title = `災害防止協議会_${report.project}_第${report.count}回`; window.print(); document.title = prevTitle; };
   const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
 
   // --- RENDER MASTER MANAGER ---
@@ -265,113 +303,133 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
   const renderStep1 = () => (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 1: 表紙情報</h2>
-      {/* 修正: appearance-none を追加してiOSのデフォルトスタイルを解除 */}
-      <div className="form-control"><label className="label font-bold text-gray-700">工事名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.project} onChange={(e) => updateReport('project', e.target.value)}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
-      <div className="form-control"><label className="label font-bold text-gray-700">実施月</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.month} onChange={(e) => updateReport('month', parseInt(e.target.value))}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}月</option>))}</select></div>
-      {/* ★修正: 施工者名を固定の入力欄（編集不可）に変更 */}
-      <div className="form-control"><label className="label font-bold text-gray-700">施工者名</label><input type="text" className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-black outline-none cursor-not-allowed font-bold" value="松浦建設株式会社" readOnly /></div>
+      <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 1: 基本情報</h2>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="form-control"><label className="label font-bold text-gray-700">工事名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.project} onChange={(e) => updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+        <div className="form-control"><label className="label font-bold text-gray-700">開催回</label><div className="flex items-center"><span className="mr-2">第</span><input type="number" className="w-20 p-3 border border-gray-300 rounded-lg text-center" value={report.count} onChange={(e) => updateReport({count: parseInt(e.target.value)})} /><span className="ml-2">回</span></div></div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="form-control"><label className="label font-bold text-gray-700">開催日</label><input type="date" className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.date} onChange={(e) => updateReport({date: e.target.value})} /></div>
+        <div className="form-control"><label className="label font-bold text-gray-700">場所</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.location} onChange={(e) => updateReport({location: e.target.value})}>{masterData.locations.map(l => <option key={l} value={l}>{l}</option>)}</select></div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="form-control"><label className="label font-bold text-gray-700">開始時間</label><input type="time" className="w-full p-3 border border-gray-300 rounded-lg" value={report.startTime} onChange={(e) => updateReport({startTime: e.target.value})} /></div>
+        <div className="form-control"><label className="label font-bold text-gray-700">終了時間</label><input type="time" className="w-full p-3 border border-gray-300 rounded-lg" value={report.endTime} onChange={(e) => updateReport({endTime: e.target.value})} /></div>
+      </div>
+      <div className="form-control"><label className="label font-bold text-gray-700">元請会社名</label><input type="text" className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-black outline-none cursor-not-allowed font-bold" value="松浦建設株式会社" readOnly /></div>
     </div>
   );
+
+  // Helper for step2
+  const updateGCAttendee = (index: number, field: 'role' | 'name', value: string) => {
+    const newAttendees = [...report.gcAttendees];
+    // 未定義なら初期化
+    if (!newAttendees[index]) newAttendees[index] = { role: '', name: '' };
+    newAttendees[index] = { ...newAttendees[index], [field]: value };
+    updateReport({ gcAttendees: newAttendees });
+  };
+
+  // Helper for adding/removing subcontractor attendee
+  const [tempSubRole, setTempSubRole] = useState("");
+  const [tempSubCompany, setTempSubCompany] = useState("");
+  const [sigKey, setSigKey] = useState(0); 
+  
+  useEffect(() => { 
+    if (masterData.contractors.length > 0 && !tempSubCompany) setTempSubCompany(masterData.contractors[0]); 
+  }, [masterData.contractors, tempSubCompany]);
+
+  useEffect(() => { 
+    if (masterData.roles.length > 0 && !tempSubRole) setTempSubRole(masterData.roles[0]); 
+  }, [masterData.roles, tempSubRole]);
+
+  const addSubAttendee = (signatureDataUrl: string) => {
+    if (!tempSubCompany || !tempSubRole) return;
+    const newAttendee = {
+      id: Date.now().toString(),
+      company: tempSubCompany,
+      role: tempSubRole,
+      name: "", 
+      signatureDataUrl
+    };
+    updateReport({ subcontractorAttendees: [...report.subcontractorAttendees, newAttendee] });
+    setSigKey(prev => prev + 1);
+  };
 
   const renderStep2 = () => (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 2: 実施内容</h2>
+    <div className="space-y-8">
+      <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 2: 出席者</h2>
       
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="label text-sm font-bold text-gray-700">実施日</label>
-          <input type="date" className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.date} onChange={(e) => updateReport('date', e.target.value)} />
-        </div>
-        <div>
-           <label className="label text-sm font-bold text-gray-700">場所</label>
-           <select className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.location} onChange={(e) => updateReport('location', e.target.value)}>{masterData.locations.map(s => <option key={s} value={s}>{s}</option>)}</select>
+      {/* GC Attendees */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <h3 className="font-bold text-gray-700 mb-3">元請 出席者</h3>
+        <div className="grid grid-cols-1 gap-3">
+          {/* ★修正: 8行分ループし、上4つは固定、下4つは選択式に */}
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-2">
+              {i < 4 ? (
+                // 固定役職 (Top 4)
+                <span className="w-40 text-xs font-bold bg-white px-2 py-1 border rounded text-center bg-gray-50 text-gray-700">
+                  {TOP_FIXED_ROLES[i]}
+                </span>
+              ) : (
+                // 選択式役職 (Bottom 4)
+                <select 
+                  className="w-40 text-xs font-bold bg-white px-2 py-1 border rounded text-center outline-none appearance-none"
+                  value={report.gcAttendees[i]?.role || ""}
+                  onChange={(e) => updateGCAttendee(i, 'role', e.target.value)}
+                >
+                  <option value="">(役職選択)</option>
+                  {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              )}
+              
+              {/* 名前選択 (共通) */}
+              <select 
+                className="flex-1 p-2 border rounded text-sm bg-white text-black outline-none appearance-none" 
+                value={report.gcAttendees[i]?.name || ""} 
+                onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}
+              >
+                <option value="">選択してください</option>
+                {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="label text-sm font-bold text-gray-700">開始時間</label>
-          <input type="time" className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.startTime} onChange={(e) => updateReport('startTime', e.target.value)} />
+      {/* Subcontractor Attendees */}
+      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        <h3 className="font-bold text-gray-700 mb-3 text-center">協力会社 出席者登録</h3>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div><label className="text-xs font-bold text-gray-500">会社名</label>
+          <select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>{masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+          <div><label className="text-xs font-bold text-gray-500">役職</label>
+          <select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>{masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
         </div>
-        <div>
-          <label className="label text-sm font-bold text-gray-700">終了時間</label>
-          <input type="time" className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.endTime} onChange={(e) => updateReport('endTime', e.target.value)} />
-        </div>
+        
+        <div className="mb-3"><label className="text-xs font-bold text-gray-500 mb-1 block">署名</label><div className="border border-gray-300 rounded"><SignatureCanvas key={sigKey} onSave={(data) => addSubAttendee(data)} onClear={() => {}} lineWidth={4} keepOpenOnSave={true} /></div></div>
       </div>
 
+      {/* List */}
       <div>
-          <label className="label text-sm font-bold text-gray-700">実施者</label>
-          <select className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.instructor} onChange={(e) => updateReport('instructor', e.target.value)}>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select>
-      </div>
-
-      <div className="bg-gray-100 p-4 rounded-lg space-y-4">
-        <h3 className="font-bold text-gray-700 mb-2">訓練内容</h3>
-        <div className="text-sm text-gray-600 pl-2 border-l-4 border-gray-300 space-y-2 py-1"><div className="flex gap-2"><span className="font-bold w-8">(1)</span><span>今月の災害防止目標 (固定)</span></div><div className="flex gap-2"><span className="font-bold w-8">(2)</span><span>今月の作業工程 (固定)</span></div></div>
-        
-        <div className="space-y-3">
-           <div className="flex items-center gap-2">
-             <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(3)</span>
-             <select className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm appearance-none" value={report.topic} onChange={(e) => updateReport('topic', e.target.value)}>{masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}</select>
-           </div>
-
-           <div className="flex items-center gap-2">
-             <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(4)</span>
-             <select className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm appearance-none" value={report.caution} onChange={(e) => updateReport('caution', e.target.value)}>{masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}</select>
-           </div>
+        <h3 className="font-bold text-gray-700 mb-2">登録済み協力会社一覧 ({report.subcontractorAttendees.length}名)</h3>
+        <div className="space-y-2">
+          {report.subcontractorAttendees.map((att) => (
+            <div key={att.id} className="flex justify-between items-center p-3 bg-white border rounded shadow-sm">
+              <div>
+                <div className="font-bold text-sm">{att.company}</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{att.role}</span>
+                  {att.signatureDataUrl && (
+                    <img src={att.signatureDataUrl} alt="sig" className="h-6 object-contain border border-gray-200 bg-white" />
+                  )}
+                </div>
+              </div>
+              <button onClick={() => updateReport({ subcontractorAttendees: report.subcontractorAttendees.filter(a => a.id !== att.id) })} className="text-red-400 hover:text-red-600"><i className="fa-solid fa-trash"></i></button>
+            </div>
+          ))}
+          {report.subcontractorAttendees.length === 0 && <div className="text-center text-gray-400 text-sm py-4">登録なし</div>}
         </div>
-        
-        <div className="text-sm text-gray-600 pl-2 border-l-4 border-gray-300 mt-2 space-y-2 py-1"><div className="flex gap-2"><span className="font-bold w-8">(5)</span><span>web資料・動画による安全教育 (固定)</span></div><div className="flex gap-2"><span className="font-bold w-8">(6)</span><span>質疑応答 (固定)</span></div></div>
-      </div>
-
-      <div className="form-control">
-        <label className="label font-bold flex justify-between text-gray-700">
-          <span>現場写真 (黒板入り)<span className="text-red-500 text-sm ml-1 font-bold">※必須</span></span>
-        </label>
-        <input type="file" accept="image/*" className="w-full mt-2 text-sm text-gray-500" onChange={handlePhotoUpload} />
-        {report.photoUrl && (<div className="mt-3"><img src={report.photoUrl} alt="preview" className="h-40 w-full object-contain border bg-gray-50 rounded" /></div>)}
-      </div>
-    </div>
-  );
-
-  const [tempCompany, setTempCompany] = useState("");
-  // ★修正: 初期値を contractors (会社名) からセットするよう変更
-  useEffect(() => { if (masterData.contractors.length > 0 && !tempCompany) { setTempCompany(masterData.contractors[0]); } }, [masterData.contractors, tempCompany]);
-  const [sigKey, setSigKey] = useState(0); 
-  const renderStep3 = () => (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 3: 参加者署名</h2>
-      <div className="bg-white p-6 shadow rounded-lg border border-gray-200">
-        <h3 className="font-bold text-lg mb-4 text-center">新規署名</h3>
-        <div className="mb-4">
-          <label className="block text-sm font-bold text-gray-700 mb-1">会社名</label>
-          {/* ★修正: 選択リストを subcontractors ではなく contractors (会社名) に変更 */}
-          <select className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-lg text-black outline-none appearance-none" value={tempCompany} onChange={(e) => setTempCompany(e.target.value)}>{masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}</select>
-        </div>
-        <div className="mb-2"><label className="block text-sm font-bold text-gray-700 mb-2 text-center">氏名 (手書き)</label><div className="w-full"><SignatureCanvas key={sigKey} onSave={(dataUrl) => { addSignature(tempCompany, dataUrl); }} onClear={() => {}} lineWidth={6} keepOpenOnSave={true} /></div></div>
-      </div>
-      <div className="mt-6"><h3 className="font-bold text-gray-700 mb-2">署名済みリスト ({report.signatures.length}名)</h3><div className="bg-white border rounded divide-y max-h-60 overflow-y-auto">{report.signatures.length === 0 && <div className="p-4 text-center text-gray-400">署名はまだありません</div>}{report.signatures.map((sig, idx) => (<div key={sig.id} className="p-3 flex items-center justify-between"><div className="flex items-center gap-3 flex-1 min-w-0"><span className="w-6 h-6 shrink-0 rounded-full bg-gray-200 text-xs flex items-center justify-center text-gray-700">{idx + 1}</span><div className="flex items-center gap-4 flex-1 min-w-0"><div className="text-sm font-bold text-gray-700 truncate flex-1">{sig.company}</div><div className="h-10 border border-gray-200 bg-gray-50 rounded cursor-pointer hover:border-blue-400 transition-colors flex items-center justify-center px-2 shrink-0" onClick={() => setPreviewSigUrl(sig.signatureDataUrl)} title="タップして拡大"><img src={sig.signatureDataUrl} alt="sig" className="h-full object-contain" /></div></div></div><button onClick={() => { setConfirmModal({ isOpen: true, message: `著名リスト${idx + 1}を削除しますか？`, onConfirm: () => { setReport(prev => ({...prev, signatures: prev.signatures.filter(s => s.id !== sig.id)})); setConfirmModal(prev => ({ ...prev, isOpen: false })); setHasUnsavedChanges(true); } }); }} className="ml-3 text-red-400 hover:text-red-600 p-2 shrink-0"><i className="fa-solid fa-trash"></i></button></div>))}</div></div>
-    </div>
-  );
-
-  const renderPreviewModal = () => (
-    <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-90 flex flex-col no-print">
-      <div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0">
-        <h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i> 印刷プレビュー</h2>
-        <div className="flex gap-4">
-          <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
-          <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold hover:bg-green-500 shadow-md flex items-center"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
-        </div>
-      </div>
-      <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
-        <div className="bg-white shadow-2xl" style={{ width: '794px', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
-          <PrintLayout data={report} />
-        </div>
-        {selectedPlan && (
-          <div className="bg-white shadow-2xl" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
-             <SafetyPlanPrintLayout data={selectedPlan} />
-          </div>
-        )}
       </div>
     </div>
   );
@@ -387,6 +445,32 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
              {availablePlans.map(plan => { const d = plan.data as SafetyPlanReportData; return ( <button key={plan.id} onClick={() => confirmPlanSelection(plan)} className="w-full text-left border rounded p-3 hover:bg-blue-50 transition-colors flex justify-between items-center"><div><div className="font-bold text-blue-800">{d.month}月度 計画表</div><div className="text-xs text-gray-500">更新: {new Date(plan.lastModified).toLocaleString('ja-JP')}</div></div><i className="fa-solid fa-chevron-right text-gray-400"></i></button> ) })}
           </div>
           <button onClick={() => setPlanSelectionModal(false)} className="w-full py-2 bg-gray-200 text-gray-700 rounded font-bold">キャンセル</button>
+        </div>
+      </div>
+    );
+  };
+
+  // ★修正: SafetyTrainingWizardと全く同じ要領で構造化
+  const renderPreviewModal = () => {
+    if (!showPreview) return null;
+    return (
+      <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-90 flex flex-col no-print">
+        <div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0">
+          <h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i> 印刷プレビュー</h2>
+          <div className="flex gap-4">
+            <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
+            <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold hover:bg-green-500 shadow-md flex items-center"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
+          <div className="bg-white shadow-2xl" style={{ width: '210mm', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
+            <DisasterCouncilPrintLayout data={report} />
+          </div>
+          {selectedPlan && (
+            <div className="bg-white shadow-2xl" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
+               <SafetyPlanPrintLayout data={selectedPlan} />
+            </div>
+          )}
         </div>
       </div>
     );
@@ -418,21 +502,20 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   return (
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
-        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-helmet-safety mr-2"></i>安全訓練報告</h1></div><button onClick={() => setIsMasterMode(true)} className="text-xs bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors"><i className="fa-solid fa-gear mr-1"></i>設定</button></header>
-        <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-blue-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-blue-600" : ""}>STEP 2</span><span className={step >= 3 ? "text-blue-600" : ""}>STEP 3</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
-        <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">{step === 1 && renderStep1()}{step === 2 && renderStep2()}{step === 3 && renderStep3()}</main>
+        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-people-group mr-2"></i>災害防止協議会</h1></div><button onClick={() => setIsMasterMode(true)} className="text-xs bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors"><i className="fa-solid fa-gear mr-1"></i>設定</button></header>
+        <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-green-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-green-600" : ""}>STEP 2</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-green-600 h-full transition-all duration-300" style={{ width: `${step * 50}%` }}></div></div></div>
+        <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">{step === 1 && renderStep1()}{step === 2 && renderStep2()}</main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
-          <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
-          {step < 3 ? (<button onClick={handleNext} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
+          <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className="px-4 py-3 rounded-lg font-bold border border-green-200 text-green-600 bg-green-50 hover:bg-green-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
+          {step < 2 ? (<button onClick={() => setStep(2)} className="px-8 py-3 bg-green-600 text-white rounded-lg font-bold shadow hover:bg-green-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
         </footer>
       </div>
-      {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       {renderPlanSelectionModal()}
       <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
       
       <div className="hidden print:block">
-         <PrintLayout data={report} />
+         <DisasterCouncilPrintLayout data={report} />
          {selectedPlan && (
             <>
                <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }}></div>
@@ -446,4 +529,4 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   );
 };
 
-export default SafetyTrainingWizard;
+export default DisasterCouncilWizard;
