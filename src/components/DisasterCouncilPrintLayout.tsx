@@ -49,9 +49,10 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
   };
 
   return (
-    <div className="font-serif text-black leading-tight">
+    // 修正箇所: h-auto を追加し、余分な高さを取らないようにする
+    <div className="font-serif text-black leading-tight h-auto">
       {/* PAGE 1: COVER */}
-      <div className="print-page relative p-[25mm] flex flex-col justify-between items-center text-center">
+      <div className="print-page relative p-[25mm] flex flex-col justify-between items-center text-center page-break-after-always">
         {/* Top: Count */}
         <div className="mt-16 text-3xl font-normal tracking-widest">
           第　{data.count}　回
@@ -87,7 +88,7 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
       </div>
 
       {/* PAGE 2: AGENDA */}
-      <div className="print-page p-[30mm] flex flex-col items-center">
+      <div className="print-page p-[30mm] flex flex-col items-center page-break-after-always">
         {/* Title: Underlined with padding */}
         <div className="mt-20 mb-24 border-b-2 border-black px-12 pb-2">
            <h2 className="text-4xl font-normal tracking-[0.2em] ml-2">次　第</h2>
@@ -123,9 +124,7 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
       </div>
 
       {/* PAGE 3: ROSTER */}
-      {/* 修正箇所: style={{ pageBreakAfter: 'always' }} を削除しました。
-          これにより、画面プレビュー時に無駄な空白ページ（4ページ目）が生成されるのを防ぎます。
-          印刷時の改ページは親コンポーネント（Wizard側）で制御、または必要に応じてクラスで対応します。 */}
+      {/* 修正箇所: ここには page-break 指定を一切入れない。高さを自動にするため style属性も削除 */}
       <div className="print-page p-[20mm]">
         {/* Header */}
         <div className="flex justify-between items-end mb-4 px-2">
