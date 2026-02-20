@@ -83,7 +83,6 @@ const LABEL_MAP: Record<string, string> = {
   processes: "作業工程", cautions: "注意事項"
 };
 
-// ★修正箇所: 各種項目マスタの定義を指定されたリストに変更
 const MASTER_GROUPS = { 
   BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
   TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
@@ -117,7 +116,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const [previewScale, setPreviewScale] = useState(1);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
-  // ★追加: マスタ管理ステート
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
   const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [projectDeleteTarget, setProjectDeleteTarget] = useState<{index: number, name: string} | null>(null);
@@ -139,7 +137,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
 
   const borderOuter = "border-2 border-black"; const borderThin = "border border-black"; const headerBg = "bg-cyan-100"; const inputBase = "w-full h-full bg-transparent outline-none text-center font-serif"; const selectBase = "w-full h-full bg-transparent outline-none text-center appearance-none font-serif text-center-last";
 
-  // --- ★変更: タブ付きマスタ管理画面 ---
   const renderMasterManager = () => (
     <div className="p-4 max-w-4xl mx-auto bg-gray-50 min-h-screen flex flex-col">
       <div className="flex justify-between items-center mb-6 sticky top-0 bg-gray-50 py-4 z-10 border-b">
@@ -192,8 +189,10 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   );
 
   const renderReportSheet = (isPreview: boolean = false) => (
-    <div className="p-[10mm] w-full h-full flex flex-col font-serif">
-      <div className="flex justify-between items-start mb-2 h-[38mm]">
+    // 修正箇所1: 余白をp-[5mm]に削減して全体の高さを圧縮
+    <div className="p-[5mm] w-full h-full flex flex-col font-serif">
+      {/* 修正箇所2: ヘッダーエリアをh-[32mm], mb-1に短縮 */}
+      <div className="flex justify-between items-start mb-1 h-[32mm]">
         <div className="flex-1 flex flex-col justify-center pb-2 h-full">
            <div className="flex items-end mb-4 pl-4"><span className="text-xl">令和</span><select className="w-12 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.year - 2018} onChange={(e)=>updateReport({year: 2018 + parseInt(e.target.value||'0')})}>{Array.from({length: 30}, (_, i) => i + 1).map(y => (<option key={y} value={y}>{y}</option>))}</select><span className="text-xl mr-4">年</span><select className="w-10 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.month} onChange={(e)=>updateReport({month: parseInt(e.target.value||'0')})}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}</option>))}</select><span className="text-xl mr-2">月度</span><h1 className="text-3xl font-bold border-b-2 border-black ml-4 px-2 tracking-widest">工事施工安全管理計画表</h1></div>
            <div className="flex flex-col gap-1 pl-4 text-sm"><div className="flex items-center"><span className="font-bold mr-2 w-16 text-right">工事名 :</span><select className="border-b border-black outline-none bg-transparent min-w-[300px] max-w-[500px]" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div><div className="flex items-center"><span className="font-bold mr-2 w-16 text-right">作業所 :</span><select className="border-b border-black outline-none bg-transparent min-w-[200px]" value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>{masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}</select></div></div>
@@ -220,8 +219,9 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
               {Array.from({length: Math.max(0, 12 - report.processRows.length)}).map((_, i) => (<tr key={`fill-${i}`} className="h-[6mm]"><td className={`${borderThin}`}></td>{daysInMonth.map(d => <td key={d.date} className={`${borderThin} ${d.bgClass}`}></td>)}<td className={`${borderThin}`}></td></tr>))}
            </tbody>
            <tfoot>
-              <tr className="h-[12mm]"><td className={`${borderThin} ${headerBg} text-center font-normal`}>予想される災害</td>{bottomColSpans.map((span, i) => (<td key={i} colSpan={span} className={`${borderThin} align-top p-0`}><select className="w-full h-full bg-transparent text-[9px] outline-none px-1 appearance-none" value={report.predictions[i] || ''} onChange={(e) => { const n = [...report.predictions]; n[i] = e.target.value; updateReport({predictions: n}); }}><option value="">-</option><option value="重機との接触事故">重機との接触事故</option><option value="ダンプトラックとの接触事故">ダンプトラックとの接触事故</option><option value="第三者との接触事故">第三者との接触事故</option><option value="墜落・転落">墜落・転落</option><option value="土砂崩壊">土砂崩壊</option></select></td>))}<td className={`${borderThin}`}></td></tr>
-              <tr className="h-[18mm]"><td className={`${borderThin} ${headerBg} text-center font-normal leading-tight`}>予想される災害<br/>への防止対策</td>{bottomColSpans.map((span, i) => (<td key={i} colSpan={span} className={`${borderThin} align-top p-0`}><textarea className="w-full h-full bg-transparent text-[9px] outline-none resize-none p-1 leading-tight" value={report.countermeasures[i] || ''} onChange={(e) => { const n = [...report.countermeasures]; n[i] = e.target.value; updateReport({countermeasures: n}); }} /></td>))}<td className={`${borderThin}`}></td></tr>
+              {/* 修正箇所3: フッター行の高さを微調整して全体を1ページに収める */}
+              <tr className="h-[10mm]"><td className={`${borderThin} ${headerBg} text-center font-normal`}>予想される災害</td>{bottomColSpans.map((span, i) => (<td key={i} colSpan={span} className={`${borderThin} align-top p-0`}><select className="w-full h-full bg-transparent text-[9px] outline-none px-1 appearance-none" value={report.predictions[i] || ''} onChange={(e) => { const n = [...report.predictions]; n[i] = e.target.value; updateReport({predictions: n}); }}><option value="">-</option><option value="重機との接触事故">重機との接触事故</option><option value="ダンプトラックとの接触事故">ダンプトラックとの接触事故</option><option value="第三者との接触事故">第三者との接触事故</option><option value="墜落・転落">墜落・転落</option><option value="土砂崩壊">土砂崩壊</option></select></td>))}<td className={`${borderThin}`}></td></tr>
+              <tr className="h-[15mm]"><td className={`${borderThin} ${headerBg} text-center font-normal leading-tight`}>予想される災害<br/>への防止対策</td>{bottomColSpans.map((span, i) => (<td key={i} colSpan={span} className={`${borderThin} align-top p-0`}><textarea className="w-full h-full bg-transparent text-[9px] outline-none resize-none p-1 leading-tight" value={report.countermeasures[i] || ''} onChange={(e) => { const n = [...report.countermeasures]; n[i] = e.target.value; updateReport({countermeasures: n}); }} /></td>))}<td className={`${borderThin}`}></td></tr>
               <tr className="h-[10mm]"><td className={`${borderThin} ${headerBg} text-center font-normal leading-tight`}>重点点検項目</td>{bottomColSpans.map((span, i) => (<td key={i} colSpan={span} className={`${borderThin} align-top p-0`}><input className="w-full h-full bg-transparent text-[9px] outline-none px-1" value={report.inspectionItems[i] || ''} onChange={(e) => { const n = [...report.inspectionItems]; n[i] = e.target.value; updateReport({inspectionItems: n}); }} /></td>))}<td className={`${borderThin}`}></td></tr>
               <tr className="h-[6mm]"><td className={`${borderThin} ${headerBg} text-center font-normal`}>安全当番</td>{daysInMonth.map(d => (<td key={d.date} className={`${borderThin} p-0 text-center`}><input className="w-full h-full text-[8px] text-center bg-transparent outline-none p-0" value={report.safetyDuty[d.date] || ''} onChange={(e) => updateReport({ safetyDuty: { ...report.safetyDuty, [d.date]: e.target.value }})} /></td>))}<td className={`${borderThin}`}></td></tr>
               <tr className="h-[10mm]"><td className={`${borderThin} ${headerBg} text-center font-normal`}>前月の反省</td><td colSpan={daysInMonth.length + 1} className={`${borderThin} p-0`}><textarea className="w-full h-full p-1 text-[10px] bg-transparent outline-none resize-none leading-tight" value={report.lastMonthReflection} onChange={(e) => updateReport({ lastMonthReflection: e.target.value })} /></td></tr>
