@@ -230,21 +230,27 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     <div className="p-[5mm] pt-[10mm] w-full h-full flex flex-col font-serif justify-start">
       <div className="flex justify-between items-start mb-1 h-[32mm]">
         <div className="flex-1 flex flex-col justify-center pb-2 h-full">
-           <div className="flex items-end mb-4 pl-4"><span className="text-xl">令和</span><select className="w-12 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.year - 2018} onChange={(e)=>updateReport({year: 2018 + parseInt(e.target.value||'0')})}>{Array.from({length: 30}, (_, i) => i + 1).map(y => (<option key={y} value={y}>{y}</option>))}</select><span className="text-xl mr-4">年</span><select className="w-10 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.month} onChange={(e)=>updateReport({month: parseInt(e.target.value||'0')})}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}</option>))}</select><span className="text-xl mr-2">月度</span><h1 className="text-3xl font-bold border-b-2 border-black ml-4 px-2 tracking-widest">工事施工安全管理計画表</h1></div>
+           <div className="flex items-end mb-4 pl-4">
+             <span className="text-xl">令和</span>
+             {isPreview ? <span className="w-12 text-center text-xl mx-1 inline-block">{report.year - 2018}</span> : <select className="w-12 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.year - 2018} onChange={(e)=>updateReport({year: 2018 + parseInt(e.target.value||'0')})}>{Array.from({length: 30}, (_, i) => i + 1).map(y => (<option key={y} value={y}>{y}</option>))}</select>}
+             <span className="text-xl mr-4">年</span>
+             {isPreview ? <span className="w-10 text-center text-xl mx-1 inline-block">{report.month}</span> : <select className="w-10 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.month} onChange={(e)=>updateReport({month: parseInt(e.target.value||'0')})}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}</option>))}</select>}
+             <span className="text-xl mr-2">月度</span>
+             <h1 className="text-3xl font-bold border-b-2 border-black ml-4 px-2 tracking-widest">工事施工安全管理計画表</h1>
+           </div>
            <div className="flex flex-col gap-1 pl-4 text-sm">
              <div className="flex items-center">
                <span className="font-bold mr-2 w-16 text-right">工事名 :</span>
-               <select className="outline-none bg-transparent appearance-none min-w-[300px] max-w-[500px]" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select>
+               {isPreview ? <span className="min-w-[300px] max-w-[500px] inline-block">{report.project}</span> : <select className="outline-none bg-transparent appearance-none min-w-[300px] max-w-[500px]" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select>}
              </div>
              <div className="flex items-center">
                <span className="font-bold mr-2 w-16 text-right">作業所 :</span>
-               <select className="outline-none bg-transparent appearance-none min-w-[200px]" value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>{masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}</select>
+               {isPreview ? <span className="min-w-[200px] inline-block">{report.location}</span> : <select className="outline-none bg-transparent appearance-none min-w-[200px]" value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>{masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}</select>}
              </div>
            </div>
         </div>
         <div className="w-[115mm] h-full flex flex-col justify-end">
           <div className="flex justify-end items-center mb-0.5 text-[10px]">
-            {/* 修正箇所: 作成日 - プレビュー時はテキスト表示 */}
             <span>（作成日：</span>
             {isPreview ? (
               <span className="text-[10px] font-serif ml-1">{report.createdDate ? report.createdDate.replace(/-/g, '/') : ''}</span>
@@ -252,9 +258,9 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
               <input type="date" className="bg-transparent text-[10px] w-auto text-left font-serif ml-1" value={report.createdDate} onChange={(e)=>updateReport({createdDate: e.target.value})} />
             )}
             <span className="ml-2">作成者：</span>
-            {/* 修正箇所: 作成者 - プレビュー時はテキスト表示 */}
             {isPreview ? (
-              <span className="border-b border-black w-20 text-[10px] inline-block text-center">{report.author}</span>
+              // 修正箇所: border-b border-black 削除
+              <span className="w-20 text-[10px] inline-block text-center">{report.author}</span>
             ) : (
               <select className="border-b border-black outline-none bg-transparent w-20 text-[10px]" value={report.author} onChange={(e)=>updateReport({author: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select>
             )}
@@ -269,9 +275,23 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
             </colgroup>
             <thead><tr className={headerBg}><th className={`${borderThin} py-0.5 font-normal`}>行事予定</th><th className={`${borderThin} py-0.5 font-normal`}>月日</th><th className={`${borderThin} py-0.5 font-normal`}>役職</th><th className={`${borderThin} py-0.5 font-normal`}>氏名</th></tr></thead>
             <tbody>
-              <tr><td className={`${borderThin} text-center`}>安全訓練</td><td className={`${borderThin}`}><input type="date" className={inputBase} value={report.trainingDate} onChange={(e)=>updateReport({trainingDate: e.target.value})} /></td><td className={`${borderThin} text-center`}>統括安全衛生責任者</td><td className={`${borderThin}`}><select className={selectBase} value={report.trainingLeader} onChange={(e)=>updateReport({trainingLeader: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select></td></tr>
-              <tr><td className={`${borderThin} text-center`}>災害防止協議会</td><td className={`${borderThin}`}><input type="date" className={inputBase} value={report.councilDate} onChange={(e)=>updateReport({councilDate: e.target.value})} /></td><td className={`${borderThin} text-center`}>副統括安全衛生責任者</td><td className={`${borderThin}`}><select className={selectBase} value={report.councilLeader} onChange={(e)=>updateReport({councilLeader: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select></td></tr>
-              <tr><td className={`${borderThin} text-center`}>社内パトロール</td><td className={`${borderThin}`}><input type="date" className={inputBase} value={report.patrolDate} onChange={(e)=>updateReport({patrolDate: e.target.value})} /></td><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td></tr>
+              <tr>
+                <td className={`${borderThin} text-center`}>安全訓練</td>
+                <td className={`${borderThin} text-center`}>{isPreview ? (report.trainingDate ? report.trainingDate.replace(/-/g, '/') : '') : <input type="date" className={inputBase} value={report.trainingDate} onChange={(e)=>updateReport({trainingDate: e.target.value})} />}</td>
+                <td className={`${borderThin} text-center`}>統括安全衛生責任者</td>
+                <td className={`${borderThin} text-center`}>{isPreview ? report.trainingLeader : <select className={selectBase} value={report.trainingLeader} onChange={(e)=>updateReport({trainingLeader: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select>}</td>
+              </tr>
+              <tr>
+                <td className={`${borderThin} text-center`}>災害防止協議会</td>
+                <td className={`${borderThin} text-center`}>{isPreview ? (report.councilDate ? report.councilDate.replace(/-/g, '/') : '') : <input type="date" className={inputBase} value={report.councilDate} onChange={(e)=>updateReport({councilDate: e.target.value})} />}</td>
+                <td className={`${borderThin} text-center`}>副統括安全衛生責任者</td>
+                <td className={`${borderThin} text-center`}>{isPreview ? report.councilLeader : <select className={selectBase} value={report.councilLeader} onChange={(e)=>updateReport({councilLeader: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select>}</td>
+              </tr>
+              <tr>
+                <td className={`${borderThin} text-center`}>社内パトロール</td>
+                <td className={`${borderThin} text-center`}>{isPreview ? (report.patrolDate ? report.patrolDate.replace(/-/g, '/') : '') : <input type="date" className={inputBase} value={report.patrolDate} onChange={(e)=>updateReport({patrolDate: e.target.value})} />}</td>
+                <td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td>
+              </tr>
               <tr><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td></tr>
             </tbody>
           </table>
@@ -290,17 +310,21 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
               {report.processRows.map((row) => (
                 <tr key={row.id} className="h-[6mm]">
                   <td className={`${borderThin} px-0 align-middle`}>
-                    <select
-                      className="w-full h-full bg-transparent text-[9px] outline-none appearance-none font-bold text-left pl-1 cursor-pointer"
-                      value={row.name}
-                      onChange={(e) => {
-                        const newRows = report.processRows.map(r => r.id === row.id ? { ...r, name: e.target.value } : r);
-                        updateReport({ processRows: newRows });
-                      }}
-                    >
-                      <option value=""></option>
-                      {masterData.jobTypes.map(job => <option key={job} value={job}>{job}</option>)}
-                    </select>
+                    {isPreview ? (
+                      <span className="w-full h-full flex items-center pl-1 font-bold text-[9px] truncate">{row.name}</span>
+                    ) : (
+                      <select
+                        className="w-full h-full bg-transparent text-[9px] outline-none appearance-none font-bold text-left pl-1 cursor-pointer"
+                        value={row.name}
+                        onChange={(e) => {
+                          const newRows = report.processRows.map(r => r.id === row.id ? { ...r, name: e.target.value } : r);
+                          updateReport({ processRows: newRows });
+                        }}
+                      >
+                        <option value=""></option>
+                        {masterData.jobTypes.map(job => <option key={job} value={job}>{job}</option>)}
+                      </select>
+                    )}
                   </td>
                   {daysInMonth.map(d => { const active = isCellActive(row.id, d.date); const isDraft = isCellInDraft(row.id, d.date); return (<td key={d.date} className={`${borderThin} p-0 relative cursor-pointer hover:bg-yellow-50 ${d.bgClass}`} onClick={() => !isPreview && handleCellClick(row.id, d.date)}>{active && <div className="absolute inset-y-[30%] left-0 right-0 bg-blue-600"></div>}{isDraft && <div className="absolute inset-y-[30%] left-0 right-0 bg-blue-300 opacity-50"></div>}</td>); })}
                   <td className={`${borderThin}`}></td>
@@ -308,11 +332,48 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
               ))}
            </tbody>
            <tfoot>
-              <tr className="h-[10mm]"><td className={`${borderThin} ${headerBg} text-center font-normal`}>予想される災害</td>{bottomColSpans.map((span, i) => (<td key={i} colSpan={span} className={`${borderThin} align-top p-0`}><select className="w-full h-full bg-transparent text-[9px] outline-none px-1 appearance-none" value={report.predictions[i] || ''} onChange={(e) => { const n = [...report.predictions]; n[i] = e.target.value; updateReport({predictions: n}); }}><option value="">-</option><option value="重機との接触事故">重機との接触事故</option><option value="ダンプトラックとの接触事故">ダンプトラックとの接触事故</option><option value="第三者との接触事故">第三者との接触事故</option><option value="墜落・転落">墜落・転落</option><option value="土砂崩壊">土砂崩壊</option></select></td>))}<td className={`${borderThin}`}></td></tr>
-              <tr className="h-[15mm]"><td className={`${borderThin} ${headerBg} text-center font-normal leading-tight`}>予想される災害<br/>への防止対策</td>{bottomColSpans.map((span, i) => (<td key={i} colSpan={span} className={`${borderThin} align-top p-0`}><textarea className="w-full h-full bg-transparent text-[9px] outline-none resize-none p-1 leading-tight" value={report.countermeasures[i] || ''} onChange={(e) => { const n = [...report.countermeasures]; n[i] = e.target.value; updateReport({countermeasures: n}); }} /></td>))}<td className={`${borderThin}`}></td></tr>
-              <tr className="h-[10mm]"><td className={`${borderThin} ${headerBg} text-center font-normal leading-tight`}>重点点検項目</td>{bottomColSpans.map((span, i) => (<td key={i} colSpan={span} className={`${borderThin} align-top p-0`}><input className="w-full h-full bg-transparent text-[9px] outline-none px-1" value={report.inspectionItems[i] || ''} onChange={(e) => { const n = [...report.inspectionItems]; n[i] = e.target.value; updateReport({inspectionItems: n}); }} /></td>))}<td className={`${borderThin}`}></td></tr>
-              <tr className="h-[6mm]"><td className={`${borderThin} ${headerBg} text-center font-normal`}>安全当番</td>{daysInMonth.map(d => (<td key={d.date} className={`${borderThin} p-0 text-center`}><input className="w-full h-full text-[8px] text-center bg-transparent outline-none p-0" value={report.safetyDuty[d.date] || ''} onChange={(e) => updateReport({ safetyDuty: { ...report.safetyDuty, [d.date]: e.target.value }})} /></td>))}<td className={`${borderThin}`}></td></tr>
-              <tr className="h-[10mm]"><td className={`${borderThin} ${headerBg} text-center font-normal`}>前月の反省</td><td colSpan={daysInMonth.length + 1} className={`${borderThin} p-0`}><textarea className="w-full h-full p-1 text-[10px] bg-transparent outline-none resize-none leading-tight" value={report.lastMonthReflection} onChange={(e) => updateReport({ lastMonthReflection: e.target.value })} /></td></tr>
+              <tr className="h-[10mm]">
+                <td className={`${borderThin} ${headerBg} text-center font-normal`}>予想される災害</td>
+                {bottomColSpans.map((span, i) => (
+                  <td key={i} colSpan={span} className={`${borderThin} align-top p-0`}>
+                    {isPreview ? <div className="w-full h-full p-1 text-[9px] leading-tight">{report.predictions[i]}</div> : <select className="w-full h-full bg-transparent text-[9px] outline-none px-1 appearance-none" value={report.predictions[i] || ''} onChange={(e) => { const n = [...report.predictions]; n[i] = e.target.value; updateReport({predictions: n}); }}><option value="">-</option><option value="重機との接触事故">重機との接触事故</option><option value="ダンプトラックとの接触事故">ダンプトラックとの接触事故</option><option value="第三者との接触事故">第三者との接触事故</option><option value="墜落・転落">墜落・転落</option><option value="土砂崩壊">土砂崩壊</option></select>}
+                  </td>
+                ))}
+                <td className={`${borderThin}`}></td>
+              </tr>
+              <tr className="h-[15mm]">
+                <td className={`${borderThin} ${headerBg} text-center font-normal leading-tight`}>予想される災害<br/>への防止対策</td>
+                {bottomColSpans.map((span, i) => (
+                  <td key={i} colSpan={span} className={`${borderThin} align-top p-0`}>
+                    {isPreview ? <div className="w-full h-full p-1 text-[9px] leading-tight whitespace-pre-wrap">{report.countermeasures[i]}</div> : <textarea className="w-full h-full bg-transparent text-[9px] outline-none resize-none p-1 leading-tight" value={report.countermeasures[i] || ''} onChange={(e) => { const n = [...report.countermeasures]; n[i] = e.target.value; updateReport({countermeasures: n}); }} />}
+                  </td>
+                ))}
+                <td className={`${borderThin}`}></td>
+              </tr>
+              <tr className="h-[10mm]">
+                <td className={`${borderThin} ${headerBg} text-center font-normal leading-tight`}>重点点検項目</td>
+                {bottomColSpans.map((span, i) => (
+                  <td key={i} colSpan={span} className={`${borderThin} align-top p-0`}>
+                    {isPreview ? <div className="w-full h-full p-1 text-[9px] leading-tight">{report.inspectionItems[i]}</div> : <input className="w-full h-full bg-transparent text-[9px] outline-none px-1" value={report.inspectionItems[i] || ''} onChange={(e) => { const n = [...report.inspectionItems]; n[i] = e.target.value; updateReport({inspectionItems: n}); }} />}
+                  </td>
+                ))}
+                <td className={`${borderThin}`}></td>
+              </tr>
+              <tr className="h-[6mm]">
+                <td className={`${borderThin} ${headerBg} text-center font-normal`}>安全当番</td>
+                {daysInMonth.map(d => (
+                  <td key={d.date} className={`${borderThin} p-0 text-center`}>
+                    {isPreview ? <div className="w-full h-full text-[8px] flex items-center justify-center">{report.safetyDuty[d.date]}</div> : <input className="w-full h-full text-[8px] text-center bg-transparent outline-none p-0" value={report.safetyDuty[d.date] || ''} onChange={(e) => updateReport({ safetyDuty: { ...report.safetyDuty, [d.date]: e.target.value }})} />}
+                  </td>
+                ))}
+                <td className={`${borderThin}`}></td>
+              </tr>
+              <tr className="h-[10mm]">
+                <td className={`${borderThin} ${headerBg} text-center font-normal`}>前月の反省</td>
+                <td colSpan={daysInMonth.length + 1} className={`${borderThin} p-0`}>
+                  {isPreview ? <div className="w-full h-full p-1 text-[10px] leading-tight whitespace-pre-wrap">{report.lastMonthReflection}</div> : <textarea className="w-full h-full p-1 text-[10px] bg-transparent outline-none resize-none leading-tight" value={report.lastMonthReflection} onChange={(e) => updateReport({ lastMonthReflection: e.target.value })} />}
+                </td>
+              </tr>
            </tfoot>
          </table>
       </div>
