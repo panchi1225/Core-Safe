@@ -136,7 +136,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
           bars: []
         });
       }
-      // ここでは setReport を使用して状態を更新（updateReportだと無限ループの恐れがあるため）
       setReport(prev => ({ ...prev, processRows: newRows }));
     }
   }, [report.processRows.length]);
@@ -272,19 +271,19 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
              <tr className="h-[5mm]"><th className={`${borderThin} bg-gray-50 font-normal`}>工 程</th>{daysInMonth.map(d => (<th key={d.date} className={`${borderThin} font-normal text-center ${d.colorClass} ${d.bgClass}`}>{d.dayOfWeek}</th>))}</tr>
            </thead>
            <tbody>
-              {/* ★修正箇所: processRowsをループして、常に12行表示されるため、ここで全ての行を描画 */}
               {report.processRows.map((row) => (
                 <tr key={row.id} className="h-[6mm]">
+                  {/* ★修正箇所: 左寄せ(text-left)と左余白(pl-1)を適用し、(選択)を削除 */}
                   <td className={`${borderThin} px-0 align-middle`}>
                     <select
-                      className="w-full h-full bg-transparent text-[9px] outline-none appearance-none font-bold text-center cursor-pointer"
+                      className="w-full h-full bg-transparent text-[9px] outline-none appearance-none font-bold text-left pl-1 cursor-pointer"
                       value={row.name}
                       onChange={(e) => {
                         const newRows = report.processRows.map(r => r.id === row.id ? { ...r, name: e.target.value } : r);
                         updateReport({ processRows: newRows });
                       }}
                     >
-                      <option value="">(選択)</option>
+                      <option value=""></option>
                       {masterData.jobTypes.map(job => <option key={job} value={job}>{job}</option>)}
                     </select>
                   </td>
@@ -292,7 +291,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                   <td className={`${borderThin}`}></td>
                 </tr>
               ))}
-              {/* 空白行の埋め合わせコードは不要になったため削除 */}
+              {Array.from({length: Math.max(0, 12 - report.processRows.length)}).map((_, i) => (<tr key={`fill-${i}`} className="h-[6mm]"><td className={`${borderThin}`}></td>{daysInMonth.map(d => <td key={d.date} className={`${borderThin} ${d.bgClass}`}></td>)}<td className={`${borderThin}`}></td></tr>))}
            </tbody>
            <tfoot>
               <tr className="h-[10mm]"><td className={`${borderThin} ${headerBg} text-center font-normal`}>予想される災害</td>{bottomColSpans.map((span, i) => (<td key={i} colSpan={span} className={`${borderThin} align-top p-0`}><select className="w-full h-full bg-transparent text-[9px] outline-none px-1 appearance-none" value={report.predictions[i] || ''} onChange={(e) => { const n = [...report.predictions]; n[i] = e.target.value; updateReport({predictions: n}); }}><option value="">-</option><option value="重機との接触事故">重機との接触事故</option><option value="ダンプトラックとの接触事故">ダンプトラックとの接触事故</option><option value="第三者との接触事故">第三者との接触事故</option><option value="墜落・転落">墜落・転落</option><option value="土砂崩壊">土砂崩壊</option></select></td>))}<td className={`${borderThin}`}></td></tr>
