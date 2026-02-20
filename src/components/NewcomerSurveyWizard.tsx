@@ -10,6 +10,9 @@ interface Props {
   onBackToMenu: () => void;
 }
 
+// --- Helper ---
+const range = (start: number, end: number) => Array.from({ length: end - start + 1 }, (_, i) => start + i);
+
 // --- 安全装置 ---
 const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
   let base = INITIAL_NEWCOMER_SURVEY_REPORT;
@@ -155,7 +158,6 @@ const LABEL_MAP: Record<string, string> = {
 };
 
 const MASTER_GROUPS = { 
-  // 修正箇所1: 'subcontractors' (協力会社名) を削除
   BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
   TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
 };
@@ -419,9 +421,39 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             <label className="label font-bold text-gray-700">生年月日・性別</label>
             <div className="flex gap-2 mb-2 items-center">
               <select className="p-2 border rounded bg-white" value={report.birthEra} onChange={(e)=>updateReport({birthEra: e.target.value as any})}><option value="Showa">昭和</option><option value="Heisei">平成</option></select>
-              <input type="number" className={`w-14 p-2 border rounded text-center ${getErrorClass('birthYear')}`} value={report.birthYear} onChange={(e)=>updateReport({birthYear: e.target.value === '' ? '' : parseInt(e.target.value)})} placeholder="年" /><span>年</span>
-              <input type="number" className={`w-12 p-2 border rounded text-center ${getErrorClass('birthMonth')}`} value={report.birthMonth} onChange={(e)=>updateReport({birthMonth: e.target.value === '' ? '' : parseInt(e.target.value)})} placeholder="月" /><span>月</span>
-              <input type="number" className={`w-12 p-2 border rounded text-center ${getErrorClass('birthDay')}`} value={report.birthDay} onChange={(e)=>updateReport({birthDay: e.target.value === '' ? '' : parseInt(e.target.value)})} placeholder="日" /><span>日</span>
+              
+              {/* 修正箇所: 年をセレクトボックス化 */}
+              <select 
+                className={`w-16 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('birthYear')}`} 
+                value={report.birthYear} 
+                onChange={(e)=>updateReport({birthYear: e.target.value === '' ? '' : parseInt(e.target.value)})}
+              >
+                <option value="">-</option>
+                {range(1, report.birthEra === 'Showa' ? 64 : 31).map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <span>年</span>
+              
+              {/* 修正箇所: 月をセレクトボックス化 */}
+              <select 
+                className={`w-14 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('birthMonth')}`} 
+                value={report.birthMonth} 
+                onChange={(e)=>updateReport({birthMonth: e.target.value === '' ? '' : parseInt(e.target.value)})}
+              >
+                <option value="">-</option>
+                {range(1, 12).map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <span>月</span>
+              
+              {/* 修正箇所: 日をセレクトボックス化 */}
+              <select 
+                className={`w-14 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('birthDay')}`} 
+                value={report.birthDay} 
+                onChange={(e)=>updateReport({birthDay: e.target.value === '' ? '' : parseInt(e.target.value)})}
+              >
+                <option value="">-</option>
+                {range(1, 31).map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <span>日</span>
             </div>
             <div className="flex gap-4 items-center">
               <div className="flex gap-2 border p-1 rounded bg-white">
@@ -436,7 +468,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label font-bold text-gray-700">所属会社名 (マスタ選択)</label>
-            {/* 修正箇所2: subcontractors ではなく contractors を参照するように変更 */}
             <select 
               className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} 
               value={report.company} 
@@ -451,8 +482,26 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="form-control">
             <label className="label font-bold text-gray-700">経験年数</label>
             <div className="flex items-center gap-2 mt-2">
-              <input type="number" className={`w-16 p-2 border rounded text-center ${getErrorClass('experienceYears')}`} value={report.experienceYears ?? ''} onChange={(e)=>updateReport({experienceYears: e.target.value === '' ? null : parseInt(e.target.value)})} /><span>年</span>
-              <input type="number" className="w-16 p-2 border rounded text-center bg-white" value={report.experienceMonths ?? ''} onChange={(e)=>updateReport({experienceMonths: e.target.value === '' ? null : parseInt(e.target.value)})} /><span>ヶ月</span>
+              {/* 修正箇所: 経験年数をセレクトボックス化 */}
+              <select 
+                className={`w-16 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('experienceYears')}`} 
+                value={report.experienceYears ?? ''} 
+                onChange={(e)=>updateReport({experienceYears: e.target.value === '' ? null : parseInt(e.target.value)})}
+              >
+                 <option value="">-</option>
+                 {range(0, 60).map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <span>年</span>
+              {/* 修正箇所: 経験月数をセレクトボックス化 */}
+              <select 
+                className="w-16 p-2 border rounded text-center bg-white appearance-none" 
+                value={report.experienceMonths ?? ''} 
+                onChange={(e)=>updateReport({experienceMonths: e.target.value === '' ? null : parseInt(e.target.value)})}
+              >
+                 <option value="">-</option>
+                 {range(0, 11).map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <span>ヶ月</span>
             </div>
           </div>
         </div>
@@ -534,9 +583,36 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="form-control">
             <label className="label font-bold text-gray-700">健康診断受診日 (令和)</label>
             <div className="flex gap-1 items-center">
-              <input type="number" className={`w-14 p-2 border rounded text-center ${getErrorClass('healthCheckYear')}`} value={report.healthCheckYear ?? ''} onChange={(e)=>updateReport({healthCheckYear: e.target.value === '' ? null : parseInt(e.target.value)})} /><span>年</span>
-              <input type="number" className={`w-12 p-2 border rounded text-center ${getErrorClass('healthCheckMonth')}`} value={report.healthCheckMonth ?? ''} onChange={(e)=>updateReport({healthCheckMonth: e.target.value === '' ? null : parseInt(e.target.value)})} /><span>月</span>
-              <input type="number" className="w-12 p-2 border rounded text-center bg-white" value={report.healthCheckDay ?? ''} onChange={(e)=>updateReport({healthCheckDay: e.target.value === '' ? null : parseInt(e.target.value)})} /><span>日</span>
+              {/* 修正箇所: 年をセレクトボックス化 */}
+              <select 
+                className={`w-16 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('healthCheckYear')}`} 
+                value={report.healthCheckYear ?? ''} 
+                onChange={(e)=>updateReport({healthCheckYear: e.target.value === '' ? null : parseInt(e.target.value)})}
+              >
+                <option value="">-</option>
+                {range(1, 30).map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <span>年</span>
+              {/* 修正箇所: 月をセレクトボックス化 */}
+              <select 
+                className={`w-14 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('healthCheckMonth')}`} 
+                value={report.healthCheckMonth ?? ''} 
+                onChange={(e)=>updateReport({healthCheckMonth: e.target.value === '' ? null : parseInt(e.target.value)})}
+              >
+                <option value="">-</option>
+                {range(1, 12).map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <span>月</span>
+              {/* 修正箇所: 日をセレクトボックス化 */}
+              <select 
+                className="w-14 p-2 border rounded text-center bg-white appearance-none" 
+                value={report.healthCheckDay ?? ''} 
+                onChange={(e)=>updateReport({healthCheckDay: e.target.value === '' ? null : parseInt(e.target.value)})}
+              >
+                <option value="">-</option>
+                {range(1, 31).map(d => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <span>日</span>
             </div>
           </div>
         </div>
@@ -609,11 +685,35 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {/* 誓約日のレイアウト調整 (iPhoneでの折り返し防止) */}
       <div className="mb-4 flex flex-row items-center justify-center gap-1 flex-nowrap">
         <label className="font-bold whitespace-nowrap text-sm md:text-base">誓約日(令和)</label>
-        <input type="number" className="w-10 md:w-12 p-2 border rounded text-center text-sm md:text-base" value={report.pledgeDateYear ?? ''} onChange={(e)=>updateReport({pledgeDateYear: e.target.value === '' ? null : parseInt(e.target.value)})} />
+        {/* 修正箇所: 年をセレクトボックス化 */}
+        <select 
+          className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" 
+          value={report.pledgeDateYear ?? ''} 
+          onChange={(e)=>updateReport({pledgeDateYear: e.target.value === '' ? null : parseInt(e.target.value)})}
+        >
+           <option value="">-</option>
+           {range(1, 30).map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
         <span className="text-sm md:text-base">年</span>
-        <input type="number" className="w-10 md:w-12 p-2 border rounded text-center text-sm md:text-base" value={report.pledgeDateMonth ?? ''} onChange={(e)=>updateReport({pledgeDateMonth: e.target.value === '' ? null : parseInt(e.target.value)})} />
+        {/* 修正箇所: 月をセレクトボックス化 */}
+        <select 
+          className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" 
+          value={report.pledgeDateMonth ?? ''} 
+          onChange={(e)=>updateReport({pledgeDateMonth: e.target.value === '' ? null : parseInt(e.target.value)})}
+        >
+           <option value="">-</option>
+           {range(1, 12).map(m => <option key={m} value={m}>{m}</option>)}
+        </select>
         <span className="text-sm md:text-base">月</span>
-        <input type="number" className="w-10 md:w-12 p-2 border rounded text-center text-sm md:text-base" value={report.pledgeDateDay ?? ''} onChange={(e)=>updateReport({pledgeDateDay: e.target.value === '' ? null : parseInt(e.target.value)})} />
+        {/* 修正箇所: 日をセレクトボックス化 */}
+        <select 
+          className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" 
+          value={report.pledgeDateDay ?? ''} 
+          onChange={(e)=>updateReport({pledgeDateDay: e.target.value === '' ? null : parseInt(e.target.value)})}
+        >
+           <option value="">-</option>
+           {range(1, 31).map(d => <option key={d} value={d}>{d}</option>)}
+        </select>
         <span className="text-sm md:text-base">日</span>
       </div>
       
