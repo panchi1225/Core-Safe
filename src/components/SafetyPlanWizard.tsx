@@ -129,7 +129,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const updateReport = (updates: Partial<SafetyPlanReportData>) => { setReport(prev => ({ ...prev, ...updates })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   const handleSave = async () => { setSaveStatus('saving'); try { const newId = await saveDraft(draftId, 'SAFETY_PLAN', report); setDraftId(newId); setSaveStatus('saved'); setHasUnsavedChanges(false); setTimeout(() => setSaveStatus('idle'), 2000); } catch (e) { console.error(e); alert("保存に失敗しました"); setSaveStatus('idle'); } };
   
-  // 修正箇所2: 出力ファイル名を変更
   const handlePrint = async () => { 
     setSaveStatus('saving'); 
     try { 
@@ -211,17 +210,27 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   );
 
   const renderReportSheet = (isPreview: boolean = false) => (
-    // 修正箇所1: 上部パディングを増やし(pt-[10mm])、全体を下へ。justify-center -> justify-startに変更。
     <div className="p-[5mm] pt-[10mm] w-full h-full flex flex-col font-serif justify-start">
       <div className="flex justify-between items-start mb-1 h-[32mm]">
         <div className="flex-1 flex flex-col justify-center pb-2 h-full">
            <div className="flex items-end mb-4 pl-4"><span className="text-xl">令和</span><select className="w-12 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.year - 2018} onChange={(e)=>updateReport({year: 2018 + parseInt(e.target.value||'0')})}>{Array.from({length: 30}, (_, i) => i + 1).map(y => (<option key={y} value={y}>{y}</option>))}</select><span className="text-xl mr-4">年</span><select className="w-10 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.month} onChange={(e)=>updateReport({month: parseInt(e.target.value||'0')})}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}</option>))}</select><span className="text-xl mr-2">月度</span><h1 className="text-3xl font-bold border-b-2 border-black ml-4 px-2 tracking-widest">工事施工安全管理計画表</h1></div>
-           <div className="flex flex-col gap-1 pl-4 text-sm"><div className="flex items-center"><span className="font-bold mr-2 w-16 text-right">工事名 :</span><select className="border-b border-black outline-none bg-transparent min-w-[300px] max-w-[500px]" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div><div className="flex items-center"><span className="font-bold mr-2 w-16 text-right">作業所 :</span><select className="border-b border-black outline-none bg-transparent min-w-[200px]" value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>{masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}</select></div></div>
+           <div className="flex flex-col gap-1 pl-4 text-sm">
+             <div className="flex items-center">
+               <span className="font-bold mr-2 w-16 text-right">工事名 :</span>
+               {/* 修正箇所1: 下線削除 (border-b border-black を削除) */}
+               <select className="outline-none bg-transparent min-w-[300px] max-w-[500px]" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select>
+             </div>
+             <div className="flex items-center">
+               <span className="font-bold mr-2 w-16 text-right">作業所 :</span>
+               {/* 修正箇所1: 下線削除 (border-b border-black を削除) */}
+               <select className="outline-none bg-transparent min-w-[200px]" value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>{masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}</select>
+             </div>
+           </div>
         </div>
         <div className="w-[100mm] h-full flex flex-col justify-end">
-          {/* 修正箇所3: 作成者を右上に移動 */}
           <div className="flex justify-end items-center mb-0.5 text-[10px]">
-            <span>（作成日：<input type="date" className="bg-transparent text-[10px] w-24 text-right font-serif" value={report.createdDate} onChange={(e)=>updateReport({createdDate: e.target.value})} /></span>
+            {/* 修正箇所2: 作成日のスペース削除 (text-right -> text-left, w-24 -> w-auto) */}
+            <span>（作成日：<input type="date" className="bg-transparent text-[10px] w-auto text-left font-serif" value={report.createdDate} onChange={(e)=>updateReport({createdDate: e.target.value})} /></span>
             <span className="ml-2">作成者：</span>
             <select className="border-b border-black outline-none bg-transparent w-20 text-[10px]" value={report.author} onChange={(e)=>updateReport({author: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select>
             <span>）</span>
@@ -233,7 +242,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
               <tr><td className={`${borderThin} text-center`}>安全訓練</td><td className={`${borderThin}`}><input type="date" className={inputBase} value={report.trainingDate} onChange={(e)=>updateReport({trainingDate: e.target.value})} /></td><td className={`${borderThin} text-center`}>統括安全衛生責任者</td><td className={`${borderThin}`}><select className={selectBase} value={report.trainingLeader} onChange={(e)=>updateReport({trainingLeader: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select></td></tr>
               <tr><td className={`${borderThin} text-center`}>災害防止協議会</td><td className={`${borderThin}`}><input type="date" className={inputBase} value={report.councilDate} onChange={(e)=>updateReport({councilDate: e.target.value})} /></td><td className={`${borderThin} text-center`}>副統括安全衛生責任者</td><td className={`${borderThin}`}><select className={selectBase} value={report.councilLeader} onChange={(e)=>updateReport({councilLeader: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select></td></tr>
               <tr><td className={`${borderThin} text-center`}>社内パトロール</td><td className={`${borderThin}`}><input type="date" className={inputBase} value={report.patrolDate} onChange={(e)=>updateReport({patrolDate: e.target.value})} /></td><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td></tr>
-              {/* 修正箇所3: 下の行は空欄に */}
               <tr><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td></tr>
             </tbody>
           </table>
