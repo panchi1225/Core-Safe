@@ -217,12 +217,10 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
            <div className="flex flex-col gap-1 pl-4 text-sm">
              <div className="flex items-center">
                <span className="font-bold mr-2 w-16 text-right">工事名 :</span>
-               {/* 修正箇所: appearance-none を追加して▼を削除 */}
                <select className="outline-none bg-transparent appearance-none min-w-[300px] max-w-[500px]" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select>
              </div>
              <div className="flex items-center">
                <span className="font-bold mr-2 w-16 text-right">作業所 :</span>
-               {/* 修正箇所: appearance-none を追加して▼を削除 */}
                <select className="outline-none bg-transparent appearance-none min-w-[200px]" value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>{masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}</select>
              </div>
            </div>
@@ -251,8 +249,9 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
            <colgroup><col className="w-[35mm]" />{daysInMonth.map(d => <col key={d.date} />)}<col className="w-[10mm]" /></colgroup>
            <thead>
              <tr className="h-[8mm]"><th className={`${borderThin} ${headerBg} font-normal`}>今月の安全衛生目標</th><th className={`${borderThin} ${headerBg}`} colSpan={daysInMonth.length}><div className="flex justify-around text-xs font-bold"><span>重機災害防止</span><span>重機転倒災害防止</span><span>第三者災害防止</span></div></th><th className={`${borderThin} ${headerBg} font-normal`} rowSpan={4}>備　考</th></tr>
-             <tr className="h-[5mm]"><th className={`${borderThin} bg-gray-50 font-normal`}>月</th><th className={`${borderThin} font-normal text-center`} colSpan={daysInMonth.length}>{report.month}月</th></tr>
-             <tr className="h-[5mm]"><th className={`${borderThin} bg-gray-50 font-normal`}>日</th>{daysInMonth.map(d => (<th key={d.date} className={`${borderThin} font-normal text-center ${d.colorClass} ${d.bgClass}`}>{d.date}</th>))}</tr>
+             {/* 修正箇所: 左端のセルをrowSpan=2にして結合し、下の行のセルを削除 */}
+             <tr className="h-[5mm]"><th className={`${borderThin} bg-gray-50 font-normal`} rowSpan={2}>月日</th><th className={`${borderThin} font-normal text-center`} colSpan={daysInMonth.length}>{report.month}月</th></tr>
+             <tr className="h-[5mm]">{daysInMonth.map(d => (<th key={d.date} className={`${borderThin} font-normal text-center ${d.colorClass} ${d.bgClass}`}>{d.date}</th>))}</tr>
              <tr className="h-[5mm]"><th className={`${borderThin} bg-gray-50 font-normal`}>工 程</th>{daysInMonth.map(d => (<th key={d.date} className={`${borderThin} font-normal text-center ${d.colorClass} ${d.bgClass}`}>{d.dayOfWeek}</th>))}</tr>
            </thead>
            <tbody>
