@@ -123,6 +123,24 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
   useEffect(() => { const handleResize = () => { const A4_WIDTH_MM = 297; const MM_TO_PX = 3.78; const A4_WIDTH_PX = A4_WIDTH_MM * MM_TO_PX; const MARGIN = 40; const availableWidth = window.innerWidth - MARGIN; let scale = availableWidth / A4_WIDTH_PX; if (scale > 1.2) scale = 1.2; setPreviewScale(scale); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, []);
 
+  // ★修正箇所: 行数が12行未満の場合、自動的に空行を追加して12行にする
+  useEffect(() => {
+    if (report.processRows.length < 12) {
+      const currentLength = report.processRows.length;
+      const newRows = [...report.processRows];
+      for (let i = 0; i < 12 - currentLength; i++) {
+        newRows.push({
+          id: `row-${Date.now()}-${i}`, // ユニークIDを生成
+          category: '',
+          name: '',
+          bars: []
+        });
+      }
+      // ここでは setReport を使用して状態を更新（updateReportだと無限ループの恐れがあるため）
+      setReport(prev => ({ ...prev, processRows: newRows }));
+    }
+  }, [report.processRows.length]);
+
   const daysInMonth = useMemo(() => { const date = new Date(report.year, report.month - 1, 1); const totalDays = getDaysInMonth(date); const days = []; for (let i = 1; i <= totalDays; i++) { const current = new Date(report.year, report.month - 1, i); const isSun = getDay(current) === 0; const isSat = getDay(current) === 6; const isHol = isJapaneseHoliday(current); let colorClass = ""; let bgClass = ""; if (isSun || isHol) { colorClass = "text-red-600"; bgClass = "bg-red-50"; } else if (isSat) { colorClass = "text-blue-600"; bgClass = "bg-blue-50"; } days.push({ date: i, dayOfWeek: WEEKDAYS[getDay(current)], colorClass, bgClass }); } return days; }, [report.year, report.month]);
   const bottomColSpans = useMemo(() => { const totalDays = daysInMonth.length; const baseSpan = Math.floor(totalDays / 5); const remainder = totalDays % 5; return Array.from({length: 5}).map((_, i) => baseSpan + (i < remainder ? 1 : 0)); }, [daysInMonth.length]);
 
@@ -254,9 +272,9 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
              <tr className="h-[5mm]"><th className={`${borderThin} bg-gray-50 font-normal`}>工 程</th>{daysInMonth.map(d => (<th key={d.date} className={`${borderThin} font-normal text-center ${d.colorClass} ${d.bgClass}`}>{d.dayOfWeek}</th>))}</tr>
            </thead>
            <tbody>
+              {/* ★修正箇所: processRowsをループして、常に12行表示されるため、ここで全ての行を描画 */}
               {report.processRows.map((row) => (
                 <tr key={row.id} className="h-[6mm]">
-                  {/* ★修正箇所: ここを確実に <select> に変更し、jobTypesを参照 */}
                   <td className={`${borderThin} px-0 align-middle`}>
                     <select
                       className="w-full h-full bg-transparent text-[9px] outline-none appearance-none font-bold text-center cursor-pointer"
@@ -274,7 +292,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                   <td className={`${borderThin}`}></td>
                 </tr>
               ))}
-              {Array.from({length: Math.max(0, 12 - report.processRows.length)}).map((_, i) => (<tr key={`fill-${i}`} className="h-[6mm]"><td className={`${borderThin}`}></td>{daysInMonth.map(d => <td key={d.date} className={`${borderThin} ${d.bgClass}`}></td>)}<td className={`${borderThin}`}></td></tr>))}
+              {/* 空白行の埋め合わせコードは不要になったため削除 */}
            </tbody>
            <tfoot>
               <tr className="h-[10mm]"><td className={`${borderThin} ${headerBg} text-center font-normal`}>予想される災害</td>{bottomColSpans.map((span, i) => (<td key={i} colSpan={span} className={`${borderThin} align-top p-0`}><select className="w-full h-full bg-transparent text-[9px] outline-none px-1 appearance-none" value={report.predictions[i] || ''} onChange={(e) => { const n = [...report.predictions]; n[i] = e.target.value; updateReport({predictions: n}); }}><option value="">-</option><option value="重機との接触事故">重機との接触事故</option><option value="ダンプトラックとの接触事故">ダンプトラックとの接触事故</option><option value="第三者との接触事故">第三者との接触事故</option><option value="墜落・転落">墜落・転落</option><option value="土砂崩壊">土砂崩壊</option></select></td>))}<td className={`${borderThin}`}></td></tr>
