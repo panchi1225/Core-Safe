@@ -217,19 +217,18 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
            <div className="flex flex-col gap-1 pl-4 text-sm">
              <div className="flex items-center">
                <span className="font-bold mr-2 w-16 text-right">工事名 :</span>
-               {/* 修正箇所1: 下線削除 (border-b border-black を削除) */}
-               <select className="outline-none bg-transparent min-w-[300px] max-w-[500px]" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select>
+               {/* 修正箇所: appearance-none を追加して▼を削除 */}
+               <select className="outline-none bg-transparent appearance-none min-w-[300px] max-w-[500px]" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select>
              </div>
              <div className="flex items-center">
                <span className="font-bold mr-2 w-16 text-right">作業所 :</span>
-               {/* 修正箇所1: 下線削除 (border-b border-black を削除) */}
-               <select className="outline-none bg-transparent min-w-[200px]" value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>{masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}</select>
+               {/* 修正箇所: appearance-none を追加して▼を削除 */}
+               <select className="outline-none bg-transparent appearance-none min-w-[200px]" value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>{masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}</select>
              </div>
            </div>
         </div>
         <div className="w-[100mm] h-full flex flex-col justify-end">
           <div className="flex justify-end items-center mb-0.5 text-[10px]">
-            {/* 修正箇所2: 作成日のスペース削除 (text-right -> text-left, w-24 -> w-auto) */}
             <span>（作成日：<input type="date" className="bg-transparent text-[10px] w-auto text-left font-serif" value={report.createdDate} onChange={(e)=>updateReport({createdDate: e.target.value})} /></span>
             <span className="ml-2">作成者：</span>
             <select className="border-b border-black outline-none bg-transparent w-20 text-[10px]" value={report.author} onChange={(e)=>updateReport({author: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select>
