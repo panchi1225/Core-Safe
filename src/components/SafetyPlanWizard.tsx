@@ -123,7 +123,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
   useEffect(() => { const handleResize = () => { const A4_WIDTH_MM = 297; const MM_TO_PX = 3.78; const A4_WIDTH_PX = A4_WIDTH_MM * MM_TO_PX; const MARGIN = 40; const availableWidth = window.innerWidth - MARGIN; let scale = availableWidth / A4_WIDTH_PX; if (scale > 1.2) scale = 1.2; setPreviewScale(scale); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, []);
 
-  // ★修正箇所: 行数が12行未満の場合、自動的に空行を追加して12行にする
+  // 行数が12行未満の場合、自動的に空行を追加して12行にする
   useEffect(() => {
     if (report.processRows.length < 12) {
       const currentLength = report.processRows.length;
@@ -242,16 +242,25 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
              </div>
            </div>
         </div>
-        {/* 修正箇所1: 右上枠の幅を w-[100mm] -> w-[115mm] に拡張 */}
         <div className="w-[115mm] h-full flex flex-col justify-end">
           <div className="flex justify-end items-center mb-0.5 text-[10px]">
-            <span>（作成日：<input type="date" className="bg-transparent text-[10px] w-auto text-left font-serif" value={report.createdDate} onChange={(e)=>updateReport({createdDate: e.target.value})} /></span>
+            {/* 修正箇所: 作成日 - プレビュー時はテキスト表示 */}
+            <span>（作成日：</span>
+            {isPreview ? (
+              <span className="text-[10px] font-serif ml-1">{report.createdDate ? report.createdDate.replace(/-/g, '/') : ''}</span>
+            ) : (
+              <input type="date" className="bg-transparent text-[10px] w-auto text-left font-serif ml-1" value={report.createdDate} onChange={(e)=>updateReport({createdDate: e.target.value})} />
+            )}
             <span className="ml-2">作成者：</span>
-            <select className="border-b border-black outline-none bg-transparent w-20 text-[10px]" value={report.author} onChange={(e)=>updateReport({author: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select>
+            {/* 修正箇所: 作成者 - プレビュー時はテキスト表示 */}
+            {isPreview ? (
+              <span className="border-b border-black w-20 text-[10px] inline-block text-center">{report.author}</span>
+            ) : (
+              <select className="border-b border-black outline-none bg-transparent w-20 text-[10px]" value={report.author} onChange={(e)=>updateReport({author: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select>
+            )}
             <span>）</span>
           </div>
           <table className={`w-full ${borderOuter} text-[10px] border-collapse`}>
-            {/* 修正箇所2: カラム比率を調整して「行事予定」列を広げる */}
             <colgroup>
               <col className="w-[22%]" />
               <col className="w-[20%]" />
@@ -280,7 +289,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
            <tbody>
               {report.processRows.map((row) => (
                 <tr key={row.id} className="h-[6mm]">
-                  {/* 修正箇所: 初期値空欄＆左寄せ表示 */}
                   <td className={`${borderThin} px-0 align-middle`}>
                     <select
                       className="w-full h-full bg-transparent text-[9px] outline-none appearance-none font-bold text-left pl-1 cursor-pointer"
@@ -298,7 +306,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                   <td className={`${borderThin}`}></td>
                 </tr>
               ))}
-              {/* 空白行削除済み */}
            </tbody>
            <tfoot>
               <tr className="h-[10mm]"><td className={`${borderThin} ${headerBg} text-center font-normal`}>予想される災害</td>{bottomColSpans.map((span, i) => (<td key={i} colSpan={span} className={`${borderThin} align-top p-0`}><select className="w-full h-full bg-transparent text-[9px] outline-none px-1 appearance-none" value={report.predictions[i] || ''} onChange={(e) => { const n = [...report.predictions]; n[i] = e.target.value; updateReport({predictions: n}); }}><option value="">-</option><option value="重機との接触事故">重機との接触事故</option><option value="ダンプトラックとの接触事故">ダンプトラックとの接触事故</option><option value="第三者との接触事故">第三者との接触事故</option><option value="墜落・転落">墜落・転落</option><option value="土砂崩壊">土砂崩壊</option></select></td>))}<td className={`${borderThin}`}></td></tr>
