@@ -249,7 +249,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
            <colgroup><col className="w-[35mm]" />{daysInMonth.map(d => <col key={d.date} />)}<col className="w-[10mm]" /></colgroup>
            <thead>
              <tr className="h-[8mm]"><th className={`${borderThin} ${headerBg} font-normal`}>今月の安全衛生目標</th><th className={`${borderThin} ${headerBg}`} colSpan={daysInMonth.length}><div className="flex justify-around text-xs font-bold"><span>重機災害防止</span><span>重機転倒災害防止</span><span>第三者災害防止</span></div></th><th className={`${borderThin} ${headerBg} font-normal`} rowSpan={4}>備　考</th></tr>
-             {/* 修正箇所: 左端のセルをrowSpan=2にして結合し、下の行のセルを削除 */}
              <tr className="h-[5mm]"><th className={`${borderThin} bg-gray-50 font-normal`} rowSpan={2}>月日</th><th className={`${borderThin} font-normal text-center`} colSpan={daysInMonth.length}>{report.month}月</th></tr>
              <tr className="h-[5mm]">{daysInMonth.map(d => (<th key={d.date} className={`${borderThin} font-normal text-center ${d.colorClass} ${d.bgClass}`}>{d.date}</th>))}</tr>
              <tr className="h-[5mm]"><th className={`${borderThin} bg-gray-50 font-normal`}>工 程</th>{daysInMonth.map(d => (<th key={d.date} className={`${borderThin} font-normal text-center ${d.colorClass} ${d.bgClass}`}>{d.dayOfWeek}</th>))}</tr>
@@ -257,7 +256,20 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
            <tbody>
               {report.processRows.map((row) => (
                 <tr key={row.id} className="h-[6mm]">
-                  <td className={`${borderThin} px-1 align-middle leading-none`}><div className="flex items-center"><span className="text-[8px] transform -rotate-90 origin-center w-3 h-3 block whitespace-nowrap text-gray-500 mr-1">{row.category}</span><span className="font-bold text-[9px] truncate">{row.name}</span></div></td>
+                  {/* 修正箇所: 工種選択セルへの変更 */}
+                  <td className={`${borderThin} px-1 align-middle leading-none`}>
+                    <select
+                      className="w-full h-full bg-transparent text-[9px] outline-none appearance-none font-bold"
+                      value={row.name}
+                      onChange={(e) => {
+                        const newRows = report.processRows.map(r => r.id === row.id ? { ...r, name: e.target.value } : r);
+                        updateReport({ processRows: newRows });
+                      }}
+                    >
+                      <option value="">(選択)</option>
+                      {masterData.jobTypes.map(job => <option key={job} value={job}>{job}</option>)}
+                    </select>
+                  </td>
                   {daysInMonth.map(d => { const active = isCellActive(row.id, d.date); const isDraft = isCellInDraft(row.id, d.date); return (<td key={d.date} className={`${borderThin} p-0 relative cursor-pointer hover:bg-yellow-50 ${d.bgClass}`} onClick={() => !isPreview && handleCellClick(row.id, d.date)}>{active && <div className="absolute inset-y-[30%] left-0 right-0 bg-blue-600"></div>}{isDraft && <div className="absolute inset-y-[30%] left-0 right-0 bg-blue-300 opacity-50"></div>}</td>); })}
                   <td className={`${borderThin}`}></td>
                 </tr>
