@@ -256,7 +256,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
            <tbody>
               {report.processRows.map((row) => (
                 <tr key={row.id} className="h-[6mm]">
-                  {/* 修正箇所: ここを確実に <select> に変更 */}
+                  {/* ★修正箇所: ここを確実に <select> に変更し、jobTypesを参照 */}
                   <td className={`${borderThin} px-0 align-middle`}>
                     <select
                       className="w-full h-full bg-transparent text-[9px] outline-none appearance-none font-bold text-center cursor-pointer"
