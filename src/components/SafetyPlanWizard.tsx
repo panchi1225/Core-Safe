@@ -242,7 +242,8 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
              </div>
            </div>
         </div>
-        <div className="w-[100mm] h-full flex flex-col justify-end">
+        {/* 修正箇所1: 右上枠の幅を w-[100mm] -> w-[115mm] に拡張 */}
+        <div className="w-[115mm] h-full flex flex-col justify-end">
           <div className="flex justify-end items-center mb-0.5 text-[10px]">
             <span>（作成日：<input type="date" className="bg-transparent text-[10px] w-auto text-left font-serif" value={report.createdDate} onChange={(e)=>updateReport({createdDate: e.target.value})} /></span>
             <span className="ml-2">作成者：</span>
@@ -250,7 +251,13 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
             <span>）</span>
           </div>
           <table className={`w-full ${borderOuter} text-[10px] border-collapse`}>
-            <colgroup><col className="w-[15%]" /><col className="w-[25%]" /><col className="w-[35%]" /><col className="w-[25%]" /></colgroup>
+            {/* 修正箇所2: カラム比率を調整して「行事予定」列を広げる */}
+            <colgroup>
+              <col className="w-[22%]" />
+              <col className="w-[20%]" />
+              <col className="w-[33%]" />
+              <col className="w-[25%]" />
+            </colgroup>
             <thead><tr className={headerBg}><th className={`${borderThin} py-0.5 font-normal`}>行事予定</th><th className={`${borderThin} py-0.5 font-normal`}>月日</th><th className={`${borderThin} py-0.5 font-normal`}>役職</th><th className={`${borderThin} py-0.5 font-normal`}>氏名</th></tr></thead>
             <tbody>
               <tr><td className={`${borderThin} text-center`}>安全訓練</td><td className={`${borderThin}`}><input type="date" className={inputBase} value={report.trainingDate} onChange={(e)=>updateReport({trainingDate: e.target.value})} /></td><td className={`${borderThin} text-center`}>統括安全衛生責任者</td><td className={`${borderThin}`}><select className={selectBase} value={report.trainingLeader} onChange={(e)=>updateReport({trainingLeader: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select></td></tr>
@@ -273,7 +280,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
            <tbody>
               {report.processRows.map((row) => (
                 <tr key={row.id} className="h-[6mm]">
-                  {/* ★修正箇所: 左寄せ(text-left)と左余白(pl-1)を適用し、(選択)を削除 */}
+                  {/* 修正箇所: 初期値空欄＆左寄せ表示 */}
                   <td className={`${borderThin} px-0 align-middle`}>
                     <select
                       className="w-full h-full bg-transparent text-[9px] outline-none appearance-none font-bold text-left pl-1 cursor-pointer"
@@ -291,7 +298,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                   <td className={`${borderThin}`}></td>
                 </tr>
               ))}
-              {Array.from({length: Math.max(0, 12 - report.processRows.length)}).map((_, i) => (<tr key={`fill-${i}`} className="h-[6mm]"><td className={`${borderThin}`}></td>{daysInMonth.map(d => <td key={d.date} className={`${borderThin} ${d.bgClass}`}></td>)}<td className={`${borderThin}`}></td></tr>))}
+              {/* 空白行削除済み */}
            </tbody>
            <tfoot>
               <tr className="h-[10mm]"><td className={`${borderThin} ${headerBg} text-center font-normal`}>予想される災害</td>{bottomColSpans.map((span, i) => (<td key={i} colSpan={span} className={`${borderThin} align-top p-0`}><select className="w-full h-full bg-transparent text-[9px] outline-none px-1 appearance-none" value={report.predictions[i] || ''} onChange={(e) => { const n = [...report.predictions]; n[i] = e.target.value; updateReport({predictions: n}); }}><option value="">-</option><option value="重機との接触事故">重機との接触事故</option><option value="ダンプトラックとの接触事故">ダンプトラックとの接触事故</option><option value="第三者との接触事故">第三者との接触事故</option><option value="墜落・転落">墜落・転落</option><option value="土砂崩壊">土砂崩壊</option></select></td>))}<td className={`${borderThin}`}></td></tr>
