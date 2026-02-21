@@ -142,7 +142,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
 
-  // ★修正: 所属会社名の初期値設定
+  // 所属会社名の初期値設定
   useEffect(() => {
     if (masterData.contractors.length > 0 && !report.company) {
       updateReport({ company: masterData.contractors[0] });
@@ -393,7 +393,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             <div className="flex gap-2 mb-2 items-center">
               <select className="p-2 border rounded bg-white" value={report.birthEra} onChange={(e)=>updateReport({birthEra: e.target.value as any})}><option value="Showa">昭和</option><option value="Heisei">平成</option></select>
               
-              {/* 修正箇所: 年をセレクトボックス化 */}
               <select 
                 className={`w-16 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('birthYear')}`} 
                 value={report.birthYear} 
@@ -404,7 +403,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
               </select>
               <span>年</span>
               
-              {/* 修正箇所: 月をセレクトボックス化 */}
               <select 
                 className={`w-14 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('birthMonth')}`} 
                 value={report.birthMonth} 
@@ -415,7 +413,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
               </select>
               <span>月</span>
               
-              {/* 修正箇所: 日をセレクトボックス化 */}
               <select 
                 className={`w-14 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('birthDay')}`} 
                 value={report.birthDay} 
@@ -453,7 +450,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="form-control">
             <label className="label font-bold text-gray-700">経験年数</label>
             <div className="flex items-center gap-2 mt-2">
-              {/* 修正箇所: 経験年数をセレクトボックス化 */}
               <select 
                 className={`w-16 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('experienceYears')}`} 
                 value={report.experienceYears ?? ''} 
@@ -463,7 +459,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                  {range(0, 60).map(y => <option key={y} value={y}>{y}</option>)}
               </select>
               <span>年</span>
-              {/* 修正箇所: 経験月数をセレクトボックス化 */}
+              
               <select 
                 className="w-16 p-2 border rounded text-center bg-white appearance-none" 
                 value={report.experienceMonths ?? ''} 
@@ -554,7 +550,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="form-control">
             <label className="label font-bold text-gray-700">健康診断受診日 (令和)</label>
             <div className="flex gap-1 items-center">
-              {/* 修正箇所: 年をセレクトボックス化 */}
               <select 
                 className={`w-16 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('healthCheckYear')}`} 
                 value={report.healthCheckYear ?? ''} 
@@ -564,7 +559,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                 {range(1, 30).map(y => <option key={y} value={y}>{y}</option>)}
               </select>
               <span>年</span>
-              {/* 修正箇所: 月をセレクトボックス化 */}
+              
               <select 
                 className={`w-14 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('healthCheckMonth')}`} 
                 value={report.healthCheckMonth ?? ''} 
@@ -574,7 +569,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                 {range(1, 12).map(m => <option key={m} value={m}>{m}</option>)}
               </select>
               <span>月</span>
-              {/* 修正箇所: 日をセレクトボックス化 */}
+              
               <select 
                 className="w-14 p-2 border rounded text-center bg-white appearance-none" 
                 value={report.healthCheckDay ?? ''} 
@@ -656,7 +651,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {/* 誓約日のレイアウト調整 (iPhoneでの折り返し防止) */}
       <div className="mb-4 flex flex-row items-center justify-center gap-1 flex-nowrap">
         <label className="font-bold whitespace-nowrap text-sm md:text-base">誓約日(令和)</label>
-        {/* 修正箇所: 年をセレクトボックス化 */}
         <select 
           className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" 
           value={report.pledgeDateYear ?? ''} 
@@ -666,7 +660,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
            {range(1, 30).map(y => <option key={y} value={y}>{y}</option>)}
         </select>
         <span className="text-sm md:text-base">年</span>
-        {/* 修正箇所: 月をセレクトボックス化 */}
         <select 
           className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" 
           value={report.pledgeDateMonth ?? ''} 
@@ -676,7 +669,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
            {range(1, 12).map(m => <option key={m} value={m}>{m}</option>)}
         </select>
         <span className="text-sm md:text-base">月</span>
-        {/* 修正箇所: 日をセレクトボックス化 */}
         <select 
           className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" 
           value={report.pledgeDateDay ?? ''} 

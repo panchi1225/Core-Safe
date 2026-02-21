@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { MasterData, DisasterCouncilReportData, INITIAL_DISASTER_COUNCIL_REPORT, INITIAL_MASTER_DATA, SavedDraft, SafetyPlanReportData } from '../types';
-import { getMasterData, saveMasterData, saveDraft, deleteDraftsByProject, fetchSafetyPlansByProject } from '../services/firebaseService';
+import { getMasterData, saveDraft, fetchSafetyPlansByProject } from '../services/firebaseService';
 import SignatureCanvas from './SignatureCanvas';
 import DisasterCouncilPrintLayout from './DisasterCouncilPrintLayout';
 import SafetyPlanPrintLayout from './SafetyPlanPrintLayout';
@@ -57,48 +57,28 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [availablePlans, setAvailablePlans] = useState<SavedDraft[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<SafetyPlanReportData | null>(null);
 
-  useEffect(() => { 
-    const loadMaster = async () => { 
-      try { 
-        const data = await getMasterData(); 
-        setMasterData(data);
-        if (data.contractors.length > 0) setTempSubCompany(data.contractors[0]);
-        if (data.roles.length > 0) setTempSubRole(data.roles[0]);
-      } catch (e) { 
-        console.error("マスタ取得エラー", e); 
-      } 
-    }; 
-    loadMaster(); 
-  }, []);
-
+  useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); if (data.contractors.length > 0) setTempSubCompany(data.contractors[0]); if (data.roles.length > 0) setTempSubRole(data.roles[0]); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
 
-  // 元請会社名を「松浦建設株式会社」に強制固定
   useEffect(() => {
     if (report.contractor !== "松浦建設株式会社") {
       updateReport({ contractor: "松浦建設株式会社" });
     }
   }, [report.contractor]);
 
-  // ★修正: 元請出席者の上位4役職を強制固定
   useEffect(() => {
     let hasChanged = false;
     const nextAttendees = [...report.gcAttendees];
-    
-    // データ長が足りない場合は補充
     while(nextAttendees.length < 8) {
       nextAttendees.push({ role: "", name: "" });
       hasChanged = true;
     }
-
-    // 上位4つの役職名が一致しない場合は修正
     TOP_FIXED_ROLES.forEach((role, idx) => {
       if (nextAttendees[idx].role !== role) {
         nextAttendees[idx] = { ...nextAttendees[idx], role: role };
         hasChanged = true;
       }
     });
-
     if (hasChanged) {
       updateReport({ gcAttendees: nextAttendees });
     }
@@ -146,11 +126,12 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     if (hasUnsavedChanges) {
       setConfirmModal({
         isOpen: true,
-        message: "保存されていない変更があります。\n設定画面へ移動すると変更内容は失われる可能性があります。\n移動しますか？",
+        message: "保存されていない変更があります。\n設定画面へ移動すると変更内容は失われます。\n移動しますか？",
         onConfirm: () => {
           setConfirmModal(prev => ({ ...prev, isOpen: false }));
           onGoToSettings();
-        }
+        },
+        onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
       });
     } else {
       onGoToSettings();
@@ -257,10 +238,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="font-bold text-gray-700 mb-3 text-center">協力会社 出席者登録</h3>
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <div><label className="text-xs font-bold text-gray-500">会社名</label>
-          <select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>{masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-          <div><label className="text-xs font-bold text-gray-500">役職</label>
-          <select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>{masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
+          <div><label className="text-xs font-bold text-gray-500">会社名</label><select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>{masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+          <div><label className="text-xs font-bold text-gray-500">役職</label><select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>{masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
         </div>
         
         <div className="mb-3"><label className="text-xs font-bold text-gray-500 mb-1 block">署名</label><div className="border border-gray-300 rounded"><SignatureCanvas key={sigKey} onSave={(data) => addSubAttendee(data)} onClear={() => {}} lineWidth={4} keepOpenOnSave={true} /></div></div>

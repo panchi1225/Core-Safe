@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  MasterData, SafetyPlanReportData, INITIAL_SAFETY_PLAN_REPORT, INITIAL_MASTER_DATA 
+  MasterData, SafetyPlanReportData, INITIAL_SAFETY_PLAN_REPORT, INITIAL_MASTER_DATA, SavedDraft 
 } from '../types';
-import { getMasterData, saveDraft, fetchSafetyPlansByProject } from '../services/firebaseService';
+import { getMasterData, saveDraft, deleteDraftsByProject } from '../services/firebaseService';
 import { getDaysInMonth, getDay } from 'date-fns';
 
 interface Props {
@@ -30,7 +30,6 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onCon
   );
 };
 
-// RELEVANT_MASTER_KEYSなどは削除（マスタ管理機能削除のため）
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
 // --- Helpers for Holidays ---
@@ -111,11 +110,12 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     if (hasUnsavedChanges) {
       setConfirmModal({
         isOpen: true,
-        message: "保存されていない変更があります。\n設定画面へ移動すると変更内容は失われる可能性があります。\n移動しますか？",
+        message: "保存されていない変更があります。\n設定画面へ移動すると変更内容は失われます。\n移動しますか？",
         onConfirm: () => {
           setConfirmModal(prev => ({ ...prev, isOpen: false }));
           onGoToSettings();
-        }
+        },
+        onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
       });
     } else {
       onGoToSettings();
@@ -276,8 +276,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   return (
     <>
       <div className="no-print min-h-screen bg-gray-50 flex flex-col">
-        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-30 flex justify-between items-center shrink-0"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300 transition-colors"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-clipboard-list mr-2"></i>安全管理計画表</h1></div><button onClick={handleSettingsClick} className="text-xs bg-slate-700 px-3 py-2 rounded hover:bg-slate-600 transition-colors ml-2 shadow-sm"><i className="fa-solid fa-gear mr-1"></i>設定</button></header>
-        <div className="flex gap-2 p-4 justify-end no-print"><button onClick={handleSave} className="px-4 py-2 rounded font-bold border border-blue-400 text-white bg-blue-600 hover:bg-blue-500 flex items-center text-sm transition-colors shadow-sm"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button><button onClick={() => setShowPreview(true)} className="px-4 py-2 bg-cyan-600 text-white rounded font-bold hover:bg-cyan-500 flex items-center text-sm transition-colors shadow-sm"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button></div>
+        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-30 flex justify-between items-center shrink-0"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300 transition-colors"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-clipboard-list mr-2"></i>安全管理計画表</h1></div><div className="flex gap-2"><button onClick={handleSave} className="px-4 py-2 rounded font-bold border border-blue-400 text-white bg-blue-600 hover:bg-blue-500 flex items-center text-sm transition-colors shadow-sm"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button><button onClick={() => setShowPreview(true)} className="px-4 py-2 bg-cyan-600 text-white rounded font-bold hover:bg-cyan-500 flex items-center text-sm transition-colors shadow-sm"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button><button onClick={handleSettingsClick} className="text-xs bg-slate-700 px-3 py-2 rounded hover:bg-slate-600 transition-colors ml-2 shadow-sm"><i className="fa-solid fa-gear mr-1"></i>設定</button></div></header>
         <main className="flex-1 overflow-auto p-4 bg-gray-100 flex justify-center"><div className="bg-white shadow-xl origin-top" style={{ width: '297mm', minHeight: '210mm' }}>{renderReportSheet(false)}</div></main>
       </div>
       {showPreview && (<div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-95 flex flex-col no-print"><div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0"><h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i>印刷プレビュー</h2><div className="flex gap-4"><button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500 transition-colors">閉じる</button><button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center hover:bg-green-500 transition-colors"><i className="fa-solid fa-print mr-2"></i> 保存して印刷</button></div></div><div className="flex-1 overflow-y-auto p-8 flex justify-center items-start bg-gray-800"><div style={{ width: '297mm', transform: `scale(${previewScale})`, transformOrigin: 'top center', marginBottom: `${(previewScale - 1) * 100}%` }}><div className="bg-white shadow-2xl">{renderReportSheet(true)}</div></div></div></div>)}

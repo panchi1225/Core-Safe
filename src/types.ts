@@ -14,8 +14,7 @@ export interface MasterData {
   contractors: string[];    // 会社名 (元請/施工者)
   supervisors: string[];    // 現場責任者
   locations: string[];      // 場所
-  subcontractors: string[]; // 協力会社名
-
+  
   // --- 各種項目 ---
   roles: string[];          // 役職
   topics: string[];         // 安全訓練内容
@@ -24,7 +23,8 @@ export interface MasterData {
   predictions: string[];    // 予想災害
   countermeasures: string[];// 防止対策
   
-  // その他 (内部保持用)
+  // その他
+  subcontractors: string[]; // 協力会社名（設定画面からは削除するが、型定義としては残す）
   processes: string[];      // 作業工程
   cautions: string[];       // 注意事項
 }
@@ -51,7 +51,6 @@ export const INITIAL_MASTER_DATA: MasterData = {
     "テスト",
     "芝崎作業所"
   ],
-  subcontractors: [], // 今回のリストには含まれていなかったので空配列
   roles: [
     "テスト",
     "主任技術者",
@@ -137,6 +136,8 @@ export const INITIAL_MASTER_DATA: MasterData = {
     "重量物の複数人作業",
     "KY活動による危険共有"
   ],
+  // 以下の項目は指定がなかったため空または既存維持
+  subcontractors: [], 
   processes: [],
   cautions: [],
 };
@@ -305,82 +306,114 @@ export interface Qualifications {
 }
 
 export interface NewcomerSurveyReportData {
+  // Meta (表示用)
   name?: string; 
+
   project: string;
   director: string;
+  
+  // 氏名分割
   furiganaSei: string;
   furiganaMei: string;
   nameSei: string;
   nameMei: string;
+  
   birthEra: 'Showa' | 'Heisei';
   birthYear: number | '';
   birthMonth: number | '';
   birthDay: number | '';
   gender: 'Male' | 'Female';
   age: number;
+  
   company: string;
   subcontractorRank: string;
+  
   experienceYears: number | null;
   experienceMonths: number | null;
+  
   jobType: string;
   jobTypeOther: string;
+  
   address: string;
   phone: string;
+  
+  // 緊急連絡先分割
   emergencyContactSei: string;
   emergencyContactMei: string;
+  
   emergencyContactRelation: string;
   emergencyContactPhone: string;
+  
   bloodType: string;
   bloodTypeRh: 'Plus' | 'Minus' | 'Unknown';
+  
   healthCheckYear: number | null;
   healthCheckMonth: number | null;
   healthCheckDay: number | null;
+  
   kentaikyo: 'Joined' | 'NotJoined';
+  
   qualifications: Qualifications;
+  
   pledgeDateYear: number | null;
   pledgeDateMonth: number | null;
   pledgeDateDay: number | null;
+  
   signatureDataUrl: string | null;
 }
 
 export const INITIAL_NEWCOMER_SURVEY_REPORT: NewcomerSurveyReportData = {
   project: "",
   director: "",
+  
   furiganaSei: "",
   furiganaMei: "",
   nameSei: "",
   nameMei: "",
+  
   birthEra: 'Heisei',
   birthYear: '',
   birthMonth: '',
   birthDay: '',
   gender: 'Male',
   age: 0,
+  
   company: "", 
+  
   subcontractorRank: "", 
+  
   experienceYears: null,
   experienceMonths: null,
+  
   jobType: "土工",
   jobTypeOther: "",
+  
   address: "",
   phone: "",
+  
   emergencyContactSei: "",
   emergencyContactMei: "",
   emergencyContactRelation: "",
   emergencyContactPhone: "",
+  
   bloodType: "A",
   bloodTypeRh: "Unknown", 
+  
   healthCheckYear: null,
   healthCheckMonth: null,
   healthCheckDay: null,
+  
   kentaikyo: 'Joined',
+  
   qualifications: {
     vehicle_leveling: false, vehicle_demolition: false, mobile_crane: false, slinging: false, gas_welding: false, earth_retaining: false, excavation: false, scaffolding: false, formwork: false, oxygen_deficiency: false, rough_terrain: false, arc_welding: false, grinding_wheel: false, low_voltage: false, roller: false, asbestos: false, foreman: false, 
     license_regular: false, license_large: false, license_large_special: false, license_towing: false,
     otherText1: "", otherText2: "", otherText3: ""
   },
+  
   pledgeDateYear: null,
   pledgeDateMonth: null,
   pledgeDateDay: null,
+  
   signatureDataUrl: null
 };
