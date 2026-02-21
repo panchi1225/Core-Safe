@@ -63,7 +63,7 @@ const QRCodeModal: React.FC<{ isOpen: boolean; onClose: () => void; url: string 
   );
 };
 
-// SAFETY_DIARY を追加するために型を拡張（本来はtypes.tsで定義すべきですがUI維持のためここで対応）
+// SAFETY_DIARY を追加するために型を拡張
 type ViewState = 'HOME' | ReportTypeString | 'SETTINGS' | 'SAFETY_DIARY';
 
 const App: React.FC = () => {
@@ -131,6 +131,12 @@ const App: React.FC = () => {
 
   // Handlers
   const openSelectionModal = (type: ReportTypeString | 'SAFETY_DIARY') => {
+    // ★修正: 安全衛生日誌の場合はアラートを表示して終了
+    if (type === 'SAFETY_DIARY') {
+      alert("この機能は現在開発中です。\n今後のアップデートをお待ちください。");
+      return;
+    }
+
     setSelectedReportType(type);
     setIsModalOpen(true);
   };
@@ -381,7 +387,6 @@ const App: React.FC = () => {
       <header className="bg-slate-800 text-white p-6 shadow-md flex justify-center items-center relative">
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-wide">Core Safe</h1>
-          {/* ★修正: 文字サイズをtext-[10px]からtext-xs(12px相当)に拡大 */}
           <p className="text-xs text-gray-400 font-normal mt-1">-安全書類作成支援システム-</p>
         </div>
       </header>
@@ -392,7 +397,7 @@ const App: React.FC = () => {
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* ★追加: Card 0: Safety Health Diary (Pink, Top) */}
+          {/* Card 0: Safety Health Diary (Pink, Top) */}
           <button 
             onClick={() => openSelectionModal('SAFETY_DIARY')}
             className="flex flex-col items-center p-8 bg-white rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-t-4 border-pink-500 group"
@@ -414,7 +419,6 @@ const App: React.FC = () => {
             <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
               <i className="fa-solid fa-helmet-safety text-4xl text-blue-600"></i>
             </div>
-            {/* ★修正: 名称変更 */}
             <h3 className="text-lg font-bold text-gray-800 mb-2">安全訓練</h3>
             <p className="text-xs text-gray-500 text-center">
               安全訓練の実施報告書を作成します。電子署名対応。
@@ -458,7 +462,6 @@ const App: React.FC = () => {
               <i className="fa-solid fa-person-circle-question text-4xl text-purple-600"></i>
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">新規入場者アンケート</h3>
-            {/* ★修正: 説明文変更 */}
             <p className="text-xs text-gray-500 text-center">
               新規入場者書類を作成します。QRコードから作成可能。
             </p>
@@ -482,7 +485,6 @@ const App: React.FC = () => {
 
       <footer className="mt-12 text-center text-gray-400 text-sm pb-8">
         <div>&copy; 2026 Matsuura Construction App</div>
-        {/* ★修正: Ver.1.3.6へ変更 */}
         <div className="mt-1">Ver.1.3.6</div>
       </footer>
 
