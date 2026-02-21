@@ -57,8 +57,31 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [availablePlans, setAvailablePlans] = useState<SavedDraft[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<SafetyPlanReportData | null>(null);
 
-  useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); if (data.contractors.length > 0) setTempSubCompany(data.contractors[0]); if (data.roles.length > 0) setTempSubRole(data.roles[0]); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
-  useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
+  // ★修正: 自動選択ロジック(useEffectでのセット)を削除しました
+  useEffect(() => { 
+    const loadMaster = async () => { 
+      try { 
+        const data = await getMasterData(); 
+        setMasterData(data); 
+      } catch (e) { 
+        console.error("マスタ取得エラー", e); 
+      } 
+    }; 
+    loadMaster(); 
+  }, []);
+
+  useEffect(() => { 
+    if (!showPreview) return; 
+    const handleResize = () => { 
+      const A4_WIDTH_PX = 794; 
+      const PADDING_PX = 40; 
+      const availableWidth = window.innerWidth - PADDING_PX; 
+      setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); 
+    }; 
+    window.addEventListener('resize', handleResize); 
+    handleResize(); 
+    return () => window.removeEventListener('resize', handleResize); 
+  }, [showPreview]);
 
   useEffect(() => {
     if (report.contractor !== "松浦建設株式会社") {
@@ -125,12 +148,26 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 1: 基本情報</h2>
       <div className="grid grid-cols-2 gap-4">
-        <div className="form-control"><label className="label font-bold text-gray-700">工事名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.project} onChange={(e) => updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
+        <div className="form-control">
+          <label className="label font-bold text-gray-700">工事名</label>
+          <select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.project} onChange={(e) => updateReport({project: e.target.value})}>
+            {/* ★修正: プレースホルダー追加 */}
+            <option value="">(データを選択してください)</option>
+            {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
         <div className="form-control"><label className="label font-bold text-gray-700">開催回</label><div className="flex items-center"><span className="mr-2">第</span><input type="number" className="w-20 p-3 border border-gray-300 rounded-lg text-center" value={report.count} onChange={(e) => updateReport({count: parseInt(e.target.value)})} /><span className="ml-2">回</span></div></div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="form-control"><label className="label font-bold text-gray-700">開催日</label><input type="date" className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.date} onChange={(e) => updateReport({date: e.target.value})} /></div>
-        <div className="form-control"><label className="label font-bold text-gray-700">場所</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.location} onChange={(e) => updateReport({location: e.target.value})}>{masterData.locations.map(l => <option key={l} value={l}>{l}</option>)}</select></div>
+        <div className="form-control">
+          <label className="label font-bold text-gray-700">場所</label>
+          <select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.location} onChange={(e) => updateReport({location: e.target.value})}>
+            {/* ★修正: プレースホルダー追加 */}
+            <option value="">(データを選択してください)</option>
+            {masterData.locations.map(l => <option key={l} value={l}>{l}</option>)}
+          </select>
+        </div>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="form-control"><label className="label font-bold text-gray-700">開始時間</label><input type="time" className="w-full p-3 border border-gray-300 rounded-lg" value={report.startTime} onChange={(e) => updateReport({startTime: e.target.value})} /></div>
@@ -151,8 +188,9 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [tempSubCompany, setTempSubCompany] = useState("");
   const [sigKey, setSigKey] = useState(0); 
   
-  useEffect(() => { if (masterData.contractors.length > 0 && !tempSubCompany) setTempSubCompany(masterData.contractors[0]); }, [masterData.contractors, tempSubCompany]);
-  useEffect(() => { if (masterData.roles.length > 0 && !tempSubRole) setTempSubRole(masterData.roles[0]); }, [masterData.roles, tempSubRole]);
+  // ★修正: 自動選択ロジック(useEffectでのセット)を削除しました
+  // useEffect(() => { if (masterData.contractors.length > 0 && !tempSubCompany) setTempSubCompany(masterData.contractors[0]); }, [masterData.contractors, tempSubCompany]);
+  // useEffect(() => { if (masterData.roles.length > 0 && !tempSubRole) setTempSubRole(masterData.roles[0]); }, [masterData.roles, tempSubRole]);
 
   const addSubAttendee = (signatureDataUrl: string) => {
     if (!tempSubCompany || !tempSubRole) return;
@@ -177,8 +215,20 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         <div className="grid grid-cols-1 gap-3">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex items-center gap-2">
-              {i < 4 ? (<span className="w-40 h-10 flex items-center justify-center text-xs font-bold bg-gray-50 px-2 border rounded text-gray-700">{TOP_FIXED_ROLES[i]}</span>) : (<select className="w-40 h-10 text-xs font-bold bg-white px-2 border rounded text-center outline-none appearance-none" value={report.gcAttendees[i]?.role || ""} onChange={(e) => updateGCAttendee(i, 'role', e.target.value)}><option value="">(役職選択)</option>{masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}</select>)}
-              <select className="flex-1 h-10 p-2 border rounded text-sm bg-white text-black outline-none appearance-none" value={report.gcAttendees[i]?.name || ""} onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}><option value="">選択してください</option>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select>
+              {i < 4 ? (
+                <span className="w-40 h-10 flex items-center justify-center text-xs font-bold bg-gray-50 px-2 border rounded text-gray-700">{TOP_FIXED_ROLES[i]}</span>
+              ) : (
+                <select className="w-40 h-10 text-xs font-bold bg-white px-2 border rounded text-center outline-none appearance-none" value={report.gcAttendees[i]?.role || ""} onChange={(e) => updateGCAttendee(i, 'role', e.target.value)}>
+                  {/* ★修正: プレースホルダー追加 */}
+                  <option value="">(役職選択)</option>
+                  {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              )}
+              <select className="flex-1 h-10 p-2 border rounded text-sm bg-white text-black outline-none appearance-none" value={report.gcAttendees[i]?.name || ""} onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}>
+                {/* ★修正: プレースホルダー追加 */}
+                <option value="">選択してください</option>
+                {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
             </div>
           ))}
         </div>
@@ -188,8 +238,22 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="font-bold text-gray-700 mb-3 text-center">協力会社 出席者登録</h3>
         <div className="grid grid-cols-2 gap-3 mb-3">
-          <div><label className="text-xs font-bold text-gray-500">会社名</label><select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>{masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
-          <div><label className="text-xs font-bold text-gray-500">役職</label><select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>{masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
+          <div>
+            <label className="text-xs font-bold text-gray-500">会社名</label>
+            <select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>
+              {/* ★修正: プレースホルダー追加 */}
+              <option value="">(データを選択してください)</option>
+              {masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-bold text-gray-500">役職</label>
+            <select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>
+              {/* ★修正: プレースホルダー追加 */}
+              <option value="">(データを選択してください)</option>
+              {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
         </div>
         <div className="mb-3"><label className="text-xs font-bold text-gray-500 mb-1 block">署名</label><div className="border border-gray-300 rounded"><SignatureCanvas key={sigKey} onSave={(data) => addSubAttendee(data)} onClear={() => {}} lineWidth={4} keepOpenOnSave={true} /></div></div>
       </div>

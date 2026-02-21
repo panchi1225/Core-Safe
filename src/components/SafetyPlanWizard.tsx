@@ -56,7 +56,18 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const [previewScale, setPreviewScale] = useState(1);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
-  useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
+  useEffect(() => { 
+    const loadMaster = async () => { 
+      try { 
+        const data = await getMasterData(); 
+        setMasterData(data); 
+      } catch (e) { 
+        console.error("マスタ取得エラー", e); 
+      } 
+    }; 
+    loadMaster(); 
+  }, []);
+
   useEffect(() => { const handleResize = () => { const A4_WIDTH_MM = 297; const MM_TO_PX = 3.78; const A4_WIDTH_PX = A4_WIDTH_MM * MM_TO_PX; const MARGIN = 40; const availableWidth = window.innerWidth - MARGIN; let scale = availableWidth / A4_WIDTH_PX; if (scale > 1.2) scale = 1.2; setPreviewScale(scale); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, []);
 
   // 行数が12行未満の場合、自動的に空行を追加して12行にする
@@ -126,11 +137,27 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
            <div className="flex flex-col gap-1 pl-4 text-sm">
              <div className="flex items-center">
                <span className="font-bold mr-2 w-16 text-right">工事名 :</span>
-               {isPreview ? <span className="min-w-[300px] max-w-[500px] px-1">{report.project}</span> : <select className="outline-none bg-transparent appearance-none min-w-[300px] max-w-[500px]" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>{masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}</select>}
+               {isPreview ? (
+                 <span className="min-w-[300px] max-w-[500px] px-1">{report.project}</span>
+               ) : (
+                 <select className="outline-none bg-transparent appearance-none min-w-[300px] max-w-[500px]" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>
+                   {/* ★修正: プレースホルダー追加 */}
+                   <option value="">(データを選択してください)</option>
+                   {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
+                 </select>
+               )}
              </div>
              <div className="flex items-center">
                <span className="font-bold mr-2 w-16 text-right">作業所 :</span>
-               {isPreview ? <span className="min-w-[200px] px-1">{report.location}</span> : <select className="outline-none bg-transparent appearance-none min-w-[200px]" value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>{masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}</select>}
+               {isPreview ? (
+                 <span className="min-w-[200px] px-1">{report.location}</span>
+               ) : (
+                 <select className="outline-none bg-transparent appearance-none min-w-[200px]" value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>
+                   {/* ★修正: プレースホルダー追加 */}
+                   <option value="">(データを選択してください)</option>
+                   {masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}
+                 </select>
+               )}
              </div>
            </div>
         </div>
@@ -139,7 +166,15 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
             <span>（作成日：</span>
             {isPreview ? <span className="ml-1">{report.createdDate.replace(/-/g, '/')}</span> : <input type="date" className="bg-transparent text-[10px] w-auto text-left font-serif ml-1" value={report.createdDate} onChange={(e)=>updateReport({createdDate: e.target.value})} />}
             <span className="ml-2">作成者：</span>
-            {isPreview ? <span className="w-20 text-[10px] inline-block text-center">{report.author}</span> : <select className="border-b border-black outline-none bg-transparent w-20 text-[10px]" value={report.author} onChange={(e)=>updateReport({author: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select>}
+            {isPreview ? (
+              <span className="w-20 text-[10px] inline-block text-center">{report.author}</span>
+            ) : (
+              <select className="border-b border-black outline-none bg-transparent w-20 text-[10px]" value={report.author} onChange={(e)=>updateReport({author: e.target.value})}>
+                {/* ★修正: プレースホルダー追加 */}
+                <option value="">(選択)</option>
+                {masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}
+              </select>
+            )}
             <span>）</span>
           </div>
           <table className={`w-full ${borderOuter} text-[10px] border-collapse`}>
@@ -155,13 +190,29 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                 <td className={`${borderThin} text-center`}>安全訓練</td>
                 <td className={`${borderThin} text-center`}>{isPreview ? (report.trainingDate ? report.trainingDate.replace(/-/g, '/') : '') : <input type="date" className={inputBase} value={report.trainingDate} onChange={(e)=>updateReport({trainingDate: e.target.value})} />}</td>
                 <td className={`${borderThin} text-center`}>統括安全衛生責任者</td>
-                <td className={`${borderThin} text-center`}>{isPreview ? report.trainingLeader : <select className={selectBase} value={report.trainingLeader} onChange={(e)=>updateReport({trainingLeader: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select>}</td>
+                <td className={`${borderThin} text-center`}>
+                  {isPreview ? report.trainingLeader : (
+                    <select className={selectBase} value={report.trainingLeader} onChange={(e)=>updateReport({trainingLeader: e.target.value})}>
+                      {/* ★修正: プレースホルダー追加 */}
+                      <option value="">(選択)</option>
+                      {masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}
+                    </select>
+                  )}
+                </td>
               </tr>
               <tr>
                 <td className={`${borderThin} text-center`}>災害防止協議会</td>
                 <td className={`${borderThin} text-center`}>{isPreview ? (report.councilDate ? report.councilDate.replace(/-/g, '/') : '') : <input type="date" className={inputBase} value={report.councilDate} onChange={(e)=>updateReport({councilDate: e.target.value})} />}</td>
                 <td className={`${borderThin} text-center`}>副統括安全衛生責任者</td>
-                <td className={`${borderThin} text-center`}>{isPreview ? report.councilLeader : <select className={selectBase} value={report.councilLeader} onChange={(e)=>updateReport({councilLeader: e.target.value})}>{masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}</select>}</td>
+                <td className={`${borderThin} text-center`}>
+                  {isPreview ? report.councilLeader : (
+                    <select className={selectBase} value={report.councilLeader} onChange={(e)=>updateReport({councilLeader: e.target.value})}>
+                      {/* ★修正: プレースホルダー追加 */}
+                      <option value="">(選択)</option>
+                      {masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}
+                    </select>
+                  )}
+                </td>
               </tr>
               <tr>
                 <td className={`${borderThin} text-center`}>社内パトロール</td>
@@ -197,6 +248,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                           updateReport({ processRows: newRows });
                         }}
                       >
+                        {/* ★修正: プレースホルダー追加 (空文字) */}
                         <option value=""></option>
                         {masterData.jobTypes.map(job => <option key={job} value={job}>{job}</option>)}
                       </select>

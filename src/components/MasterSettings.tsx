@@ -42,6 +42,7 @@ const ProjectDeleteModal: React.FC<{ isOpen: boolean; projectName: string; onCon
   );
 };
 
+// 修正: onUpdateの型定義を修正
 const MasterSection: React.FC<{ title: string; items: string[]; onUpdate: (items: string[]) => void; onDeleteRequest: (index: number, item: string) => void; onBack: () => void }> = ({ title, items, onUpdate, onDeleteRequest, onBack }) => {
   const [newItem, setNewItem] = useState("");
   const safeItems = items || [];
@@ -54,11 +55,21 @@ const MasterSection: React.FC<{ title: string; items: string[]; onUpdate: (items
       </div>
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
         <ul className="space-y-2">
-          {safeItems.map((item, idx) => (<li key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded hover:bg-gray-100 transition-colors"><span className="text-sm text-gray-800 break-all mr-2">{item}</span><button onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }} className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50"><i className="fa-solid fa-trash"></i></button></li>))}
+          {safeItems.map((item, idx) => (
+            <li key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded hover:bg-gray-100 transition-colors">
+              <span className="text-sm text-gray-800 break-all mr-2">{item}</span>
+              <button onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }} className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50"><i className="fa-solid fa-trash"></i></button>
+            </li>
+          ))}
           {safeItems.length === 0 && <li className="text-gray-400 text-sm italic text-center py-8">データがありません</li>}
         </ul>
       </div>
-      <div className="p-4 border-t bg-gray-50"><div className="flex gap-2"><input type="text" className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="新規項目を追加..." value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} /><button onClick={handleAdd} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md"><i className="fa-solid fa-plus mr-1"></i>追加</button></div></div>
+      <div className="p-4 border-t bg-gray-50">
+        <div className="flex gap-2">
+          <input type="text" className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="新規項目を追加..." value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
+          <button onClick={handleAdd} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md"><i className="fa-solid fa-plus mr-1"></i>追加</button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -76,6 +87,7 @@ const MASTER_GROUPS = {
 
 const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
+  // 修正: masterTabの型定義を修正 (any削除)
   const [masterTab, setMasterTab] = useState<'BASIC' | 'TRAINING'>('BASIC');
   const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: () => {} });
@@ -89,33 +101,14 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
     await saveMasterData(newData);
   };
 
-  // ★新規追加: 強制リセット機能
-  const handleResetToDefault = () => {
-    setConfirmModal({
-      isOpen: true,
-      message: "現在のマスタデータを全て破棄し、システム初期値（最新のリスト）で上書きします。\n\n※手動で追加したデータは消えます。\nよろしいですか？",
-      onConfirm: async () => {
-        try {
-          await saveMasterData(INITIAL_MASTER_DATA);
-          setMasterData(INITIAL_MASTER_DATA);
-          alert("データを初期化しました。");
-        } catch (e) {
-          alert("エラーが発生しました。");
-        }
-        setConfirmModal(prev => ({ ...prev, isOpen: false }));
-      }
-    });
-  };
+  // ★「書記データに戻す」機能を削除しました
 
   return (
     <div className="bg-gray-100 min-h-screen flex flex-col no-print">
       <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
         <h1 className="text-lg font-bold"><i className="fa-solid fa-gear mr-2"></i>マスタ管理設定</h1>
         <div className="flex gap-2">
-          {/* ★新規追加: リセットボタン */}
-          <button onClick={handleResetToDefault} className="px-4 py-2 bg-red-600 rounded hover:bg-red-500 font-bold text-sm text-white mr-2">
-            <i className="fa-solid fa-rotate-left mr-1"></i>初期データに戻す
-          </button>
+          {/* ★リセットボタン削除済み */}
           <button onClick={onBackToMenu} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500 font-bold text-sm">メニューに戻る</button>
         </div>
       </header>
@@ -128,8 +121,20 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
               onBack={() => setSelectedMasterKey(null)}
               onUpdate={(items) => handleUpdate(selectedMasterKey, items)}
               onDeleteRequest={(index, item) => {
-                if (selectedMasterKey === 'projects') { setProjectDeleteTarget({ index, name: item }); } 
-                else { setConfirmModal({ isOpen: true, message: `「${item}」を削除しますか？`, onConfirm: async () => { const items = [...masterData[selectedMasterKey]]; items.splice(index, 1); handleUpdate(selectedMasterKey, items); setConfirmModal({ ...confirmModal, isOpen: false }); } }); }
+                if (selectedMasterKey === 'projects') { 
+                  setProjectDeleteTarget({ index, name: item }); 
+                } else { 
+                  setConfirmModal({ 
+                    isOpen: true, 
+                    message: `「${item}」を削除しますか？`, 
+                    onConfirm: async () => { 
+                      const items = [...masterData[selectedMasterKey]]; 
+                      items.splice(index, 1); 
+                      handleUpdate(selectedMasterKey, items); 
+                      setConfirmModal({ ...confirmModal, isOpen: false }); 
+                    } 
+                  }); 
+                }
               }} 
             />
           </div>
@@ -140,10 +145,10 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
               <button onClick={() => setMasterTab('TRAINING')} className={`flex-1 py-3 rounded-lg font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-gray-600 border'}`}><i className="fa-solid fa-list-check mr-2"></i>各種項目マスタ</button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
-              {MASTER_GROUPS[masterTab].map((key) => {
-                const list = masterData[key as keyof MasterData] || [];
+              {(MASTER_GROUPS[masterTab] as Array<keyof MasterData>).map((key) => {
+                const list = masterData[key] || [];
                 return (
-                  <button key={key} onClick={() => setSelectedMasterKey(key as keyof MasterData)} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group">
+                  <button key={key} onClick={() => setSelectedMasterKey(key)} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group">
                     <div><h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3><p className="text-xs text-gray-500">{list.length} 件の登録</p></div>
                     <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors"><i className="fa-solid fa-chevron-right"></i></div>
                   </button>

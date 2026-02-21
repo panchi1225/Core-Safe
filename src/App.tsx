@@ -378,9 +378,11 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-800">
       <header className="bg-slate-800 text-white p-6 shadow-md flex justify-center items-center relative">
-        <h1 className="text-xl font-bold tracking-wide text-center">
-          Core Safe -安全書類作成支援システム-
-        </h1>
+        <div className="text-center">
+          {/* ★修正: タイトルレイアウト */}
+          <h1 className="text-2xl font-bold tracking-wide">Core Safe</h1>
+          <p className="text-sm text-gray-400 font-normal mt-1">-安全書類作成支援システム-</p>
+        </div>
         {/* 設定ボタン */}
         <button 
           onClick={handleGoToSettings} 
@@ -456,7 +458,8 @@ const App: React.FC = () => {
 
       <footer className="mt-12 text-center text-gray-400 text-sm pb-8">
         <div>&copy; 2026 Matsuura Construction App</div>
-        <div className="mt-1">Ver.1.3.3</div>
+        {/* ★修正: バージョン表記 */}
+        <div className="mt-1">Ver.1.3.4</div>
       </footer>
 
       {renderSelectionModal()}
