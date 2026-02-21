@@ -181,7 +181,6 @@ const App: React.FC = () => {
   };
 
   // Routing Logic
-  // ★修正: onGoToSettings プロップスを削除
   if (currentView === 'SAFETY_TRAINING') {
     return (
       <SafetyTrainingWizard 
@@ -379,17 +378,10 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-gray-100 font-sans text-gray-800">
       <header className="bg-slate-800 text-white p-6 shadow-md flex justify-center items-center relative">
         <div className="text-center">
-          {/* ★修正: タイトルレイアウト */}
           <h1 className="text-2xl font-bold tracking-wide">Core Safe</h1>
           <p className="text-sm text-gray-400 font-normal mt-1">-安全書類作成支援システム-</p>
         </div>
-        {/* 設定ボタン */}
-        <button 
-          onClick={handleGoToSettings} 
-          className="bg-slate-700 px-4 py-2 rounded hover:bg-slate-600 transition-colors text-sm absolute right-6"
-        >
-          <i className="fa-solid fa-gear mr-2"></i>設定
-        </button>
+        {/* 設定ボタンをヘッダーから削除しました */}
       </header>
 
       <main className="max-w-4xl mx-auto p-6 mt-8">
@@ -453,13 +445,26 @@ const App: React.FC = () => {
               新規入場者アンケートを作成します。QRコードから作成可能。
             </p>
           </button>
+
+          {/* Card 5: Master Settings (Added) */}
+          <button 
+            onClick={handleGoToSettings}
+            className="flex flex-col items-center p-8 bg-white rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-t-4 border-gray-500 group"
+          >
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-gray-200 transition-colors">
+              <i className="fa-solid fa-gear text-4xl text-gray-600"></i>
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">マスタ管理設定</h3>
+            <p className="text-xs text-gray-500 text-center">
+              各種項目のデータ追加・削除できます。
+            </p>
+          </button>
         </div>
       </main>
 
       <footer className="mt-12 text-center text-gray-400 text-sm pb-8">
         <div>&copy; 2026 Matsuura Construction App</div>
-        {/* ★修正: バージョン表記 */}
-        <div className="mt-1">Ver.1.3.4</div>
+        <div className="mt-1">Ver.1.3.5</div>
       </footer>
 
       {renderSelectionModal()}
