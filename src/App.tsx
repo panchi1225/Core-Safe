@@ -384,13 +384,16 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-800">
-      <header className="bg-slate-800 text-white p-6 shadow-md text-center flex justify-between items-center">
-        <h1 className="text-2xl font-bold tracking-wide flex-1 text-center">
-          <i className="fa-solid fa-building-shield mr-2"></i>
-          安全書類作成支援システム
+      {/* ★修正: ヘッダー中央寄せと設定ボタン */}
+      <header className="bg-slate-800 text-white p-6 shadow-md flex justify-center items-center relative">
+        <h1 className="text-xl font-bold tracking-wide text-center">
+          Core Safe -安全書類作成支援システム-
         </h1>
-        {/* ★修正: ヘッダーに設定ボタンを追加 */}
-        <button onClick={handleGoToSettings} className="bg-slate-700 px-4 py-2 rounded hover:bg-slate-600 transition-colors text-sm">
+        {/* 設定ボタンを右端に絶対配置 */}
+        <button 
+          onClick={handleGoToSettings} 
+          className="bg-slate-700 px-4 py-2 rounded hover:bg-slate-600 transition-colors text-sm absolute right-6"
+        >
           <i className="fa-solid fa-gear mr-2"></i>設定
         </button>
       </header>
@@ -461,7 +464,7 @@ const App: React.FC = () => {
 
       <footer className="mt-12 text-center text-gray-400 text-sm pb-8">
         <div>&copy; 2026 Matsuura Construction App</div>
-        <div className="mt-1">Ver.1.2.1</div>
+        <div className="mt-1">Ver.1.2.2</div>
       </footer>
 
       {renderSelectionModal()}
