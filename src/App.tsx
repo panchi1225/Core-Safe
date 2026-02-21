@@ -4,7 +4,7 @@ import SafetyTrainingWizard from './components/SafetyTrainingWizard';
 import DisasterCouncilWizard from './components/DisasterCouncilWizard';
 import SafetyPlanWizard from './components/SafetyPlanWizard';
 import NewcomerSurveyWizard from './components/NewcomerSurveyWizard';
-import MasterSettings from './components/MasterSettings'; // ★新規追加
+import MasterSettings from './components/MasterSettings';
 
 // Firebase機能
 import { fetchDrafts, removeDraft } from './services/firebaseService'; 
@@ -63,7 +63,6 @@ const QRCodeModal: React.FC<{ isOpen: boolean; onClose: () => void; url: string 
   );
 };
 
-// ★修正: SETTINGS を追加
 type ViewState = 'HOME' | ReportTypeString | 'SETTINGS';
 
 const App: React.FC = () => {
@@ -177,20 +176,18 @@ const App: React.FC = () => {
     });
   };
 
-  // ★新規追加: 設定画面への遷移
   const handleGoToSettings = () => {
     setCurrentView('SETTINGS');
   };
 
   // Routing Logic
-  // ★修正: 各Wizardに onGoToSettings を渡す
+  // ★修正: onGoToSettings プロップスを削除
   if (currentView === 'SAFETY_TRAINING') {
     return (
       <SafetyTrainingWizard 
         initialData={wizardInitialData}
         initialDraftId={wizardDraftId}
         onBackToMenu={() => setCurrentView('HOME')} 
-        onGoToSettings={handleGoToSettings}
       />
     );
   }
@@ -201,7 +198,6 @@ const App: React.FC = () => {
         initialData={wizardInitialData}
         initialDraftId={wizardDraftId}
         onBackToMenu={() => setCurrentView('HOME')}
-        onGoToSettings={handleGoToSettings}
       />
     );
   }
@@ -212,7 +208,6 @@ const App: React.FC = () => {
          initialData={wizardInitialData}
          initialDraftId={wizardDraftId}
          onBackToMenu={() => setCurrentView('HOME')}
-         onGoToSettings={handleGoToSettings}
       />
     );
   }
@@ -223,12 +218,10 @@ const App: React.FC = () => {
         initialData={wizardInitialData}
         initialDraftId={wizardDraftId}
         onBackToMenu={() => setCurrentView('HOME')}
-        onGoToSettings={handleGoToSettings}
       />
     );
   }
 
-  // ★新規追加: 設定画面のルーティング
   if (currentView === 'SETTINGS') {
     return <MasterSettings onBackToMenu={() => setCurrentView('HOME')} />;
   }
@@ -384,12 +377,11 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-800">
-      {/* ★修正: ヘッダー中央寄せと設定ボタン */}
       <header className="bg-slate-800 text-white p-6 shadow-md flex justify-center items-center relative">
         <h1 className="text-xl font-bold tracking-wide text-center">
           Core Safe -安全書類作成支援システム-
         </h1>
-        {/* 設定ボタンを右端に絶対配置 */}
+        {/* 設定ボタン */}
         <button 
           onClick={handleGoToSettings} 
           className="bg-slate-700 px-4 py-2 rounded hover:bg-slate-600 transition-colors text-sm absolute right-6"
@@ -414,7 +406,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">安全訓練報告書</h3>
             <p className="text-xs text-gray-500 text-center">
-              日々の安全訓練・朝礼の実施記録を作成します。電子署名対応。
+              安全訓練の実施報告書を作成します。電子署名対応。
             </p>
           </button>
 
@@ -428,7 +420,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">災害防止協議会</h3>
             <p className="text-xs text-gray-500 text-center">
-              月次の災害防止協議会の議事録・報告書を作成します。
+              災害防止協議会の報告書を作成します。電子署名対応。
             </p>
           </button>
 
@@ -442,7 +434,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">安全管理計画表</h3>
             <p className="text-xs text-gray-500 text-center">
-              施工安全管理計画表および週間工程の管理を行います。
+              安全管理計画表を作成します。報告書に自動添付。
             </p>
           </button>
 
@@ -456,7 +448,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">新規入場者アンケート</h3>
             <p className="text-xs text-gray-500 text-center">
-              新規入場者の健康状態・経歴等を確認するアンケートを作成します。
+              新規入場者アンケートを作成します。QRコードから作成可能。
             </p>
           </button>
         </div>
@@ -464,7 +456,7 @@ const App: React.FC = () => {
 
       <footer className="mt-12 text-center text-gray-400 text-sm pb-8">
         <div>&copy; 2026 Matsuura Construction App</div>
-        <div className="mt-1">Ver.1.2.2</div>
+        <div className="mt-1">Ver.1.3.3</div>
       </footer>
 
       {renderSelectionModal()}

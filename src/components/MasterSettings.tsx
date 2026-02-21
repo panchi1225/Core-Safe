@@ -71,7 +71,7 @@ const LABEL_MAP: Record<string, string> = {
 
 const MASTER_GROUPS = { 
   BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
-  TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures', 'processes', 'cautions'] 
+  TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
 };
 
 const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
@@ -89,11 +89,35 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
     await saveMasterData(newData);
   };
 
+  // ★新規追加: 強制リセット機能
+  const handleResetToDefault = () => {
+    setConfirmModal({
+      isOpen: true,
+      message: "現在のマスタデータを全て破棄し、システム初期値（最新のリスト）で上書きします。\n\n※手動で追加したデータは消えます。\nよろしいですか？",
+      onConfirm: async () => {
+        try {
+          await saveMasterData(INITIAL_MASTER_DATA);
+          setMasterData(INITIAL_MASTER_DATA);
+          alert("データを初期化しました。");
+        } catch (e) {
+          alert("エラーが発生しました。");
+        }
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
+
   return (
     <div className="bg-gray-100 min-h-screen flex flex-col no-print">
       <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
         <h1 className="text-lg font-bold"><i className="fa-solid fa-gear mr-2"></i>マスタ管理設定</h1>
-        <button onClick={onBackToMenu} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500 font-bold text-sm">メニューに戻る</button>
+        <div className="flex gap-2">
+          {/* ★新規追加: リセットボタン */}
+          <button onClick={handleResetToDefault} className="px-4 py-2 bg-red-600 rounded hover:bg-red-500 font-bold text-sm text-white mr-2">
+            <i className="fa-solid fa-rotate-left mr-1"></i>初期データに戻す
+          </button>
+          <button onClick={onBackToMenu} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500 font-bold text-sm">メニューに戻る</button>
+        </div>
       </header>
       <div className="p-4 max-w-4xl mx-auto w-full flex-1 flex flex-col">
         {selectedMasterKey ? (

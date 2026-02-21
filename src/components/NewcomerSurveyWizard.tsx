@@ -8,7 +8,7 @@ interface Props {
   initialData?: any;
   initialDraftId?: string | null;
   onBackToMenu: () => void;
-  onGoToSettings: () => void; // Added
+  // onGoToSettings は削除
 }
 
 // --- Helper ---
@@ -103,7 +103,7 @@ const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen
   );
 };
 
-const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu, onGoToSettings }) => {
+const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
   const [step, setStep] = useState(1);
   const [report, setReport] = useState<NewcomerSurveyReportData>(sanitizeReportData(initialData));
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
@@ -307,27 +307,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     } else { 
       onBackToMenu(); 
     } 
-  };
-  
-  // Settings Button Handler
-  const handleSettingsClick = () => {
-    if (hasUnsavedChanges) {
-      setConfirmModal({
-        isOpen: true,
-        message: "データが保存されていません！\n設定画面へ移動すると編集内容は失われます。\n移動しますか？",
-        leftButtonLabel: "キャンセル",
-        leftButtonClass: "px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300",
-        onLeftButtonClick: () => setConfirmModal(prev => ({ ...prev, isOpen: false })),
-        rightButtonLabel: "移動する",
-        rightButtonClass: "px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700",
-        onRightButtonClick: () => {
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
-          onGoToSettings();
-        }
-      });
-    } else {
-      onGoToSettings();
-    }
   };
   
   const handleSignatureSave = (dataUrl: string) => { 
@@ -651,6 +630,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {/* 誓約日のレイアウト調整 (iPhoneでの折り返し防止) */}
       <div className="mb-4 flex flex-row items-center justify-center gap-1 flex-nowrap">
         <label className="font-bold whitespace-nowrap text-sm md:text-base">誓約日(令和)</label>
+        {/* 修正箇所: 年をセレクトボックス化 */}
         <select 
           className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" 
           value={report.pledgeDateYear ?? ''} 
@@ -660,6 +640,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
            {range(1, 30).map(y => <option key={y} value={y}>{y}</option>)}
         </select>
         <span className="text-sm md:text-base">年</span>
+        {/* 修正箇所: 月をセレクトボックス化 */}
         <select 
           className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" 
           value={report.pledgeDateMonth ?? ''} 
@@ -669,6 +650,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
            {range(1, 12).map(m => <option key={m} value={m}>{m}</option>)}
         </select>
         <span className="text-sm md:text-base">月</span>
+        {/* 修正箇所: 日をセレクトボックス化 */}
         <select 
           className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" 
           value={report.pledgeDateDay ?? ''} 
@@ -723,7 +705,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
         <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
-          <div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-person-circle-question mr-2"></i>新規入場者アンケート</h1></div><button onClick={handleSettingsClick} className="text-xs bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors"><i className="fa-solid fa-gear mr-1"></i>設定</button>
+          <div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-person-circle-question mr-2"></i>新規入場者アンケート</h1></div>
+          {/* 設定ボタン削除済み */}
         </header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-purple-600" : ""}>基本情報</span><span className={step >= 2 ? "text-purple-600" : ""}>資格</span><span className={step >= 3 ? "text-purple-600" : ""}>誓約・署名</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-purple-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg max-w-3xl min-h-[60vh]">
@@ -762,6 +745,23 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
          <NewcomerSurveyPrintLayout data={report} />
       </div>
     </>
+  );
+};
+
+// --- ProjectDeleteModal ---
+const ProjectDeleteModal: React.FC<{ isOpen: boolean; projectName: string; onConfirm: () => void; onCancel: () => void }> = ({ isOpen, projectName, onConfirm, onCancel }) => {
+  const [pass, setPass] = useState('');
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 border-2 border-red-500">
+        <h3 className="text-lg font-bold mb-4 text-red-600">⚠ 警告</h3>
+        <p className="mb-4 text-sm text-gray-700">工事名「{projectName}」を削除します。<br/>関連データも全削除されます。</p>
+        <p className="mb-2 text-sm font-bold">PASS (4043)</p>
+        <input type="password" className="w-full border p-2 rounded mb-4" value={pass} onChange={(e)=>setPass(e.target.value)} />
+        <div className="flex justify-end gap-3"><button onClick={onCancel} className="px-4 py-2 bg-gray-200 rounded">キャンセル</button><button onClick={()=>{ if(pass==='4043') onConfirm(); else alert('PASS不一致'); }} className="px-4 py-2 bg-red-600 text-white rounded font-bold">実行</button></div>
+      </div>
+    </div>
   );
 };
 

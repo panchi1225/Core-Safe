@@ -9,7 +9,7 @@ interface Props {
   initialData?: any;
   initialDraftId?: string | null;
   onBackToMenu: () => void;
-  onGoToSettings: () => void; // Added
+  // onGoToSettings は削除
 }
 
 // --- Custom Confirmation Modal ---
@@ -42,7 +42,7 @@ const TOP_FIXED_ROLES = [
   "安全委員"
 ];
 
-const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu, onGoToSettings }) => {
+const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
   const [step, setStep] = useState(1);
   const [report, setReport] = useState<DisasterCouncilReportData>(initialData || INITIAL_DISASTER_COUNCIL_REPORT);
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
@@ -121,23 +121,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   
   const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
 
-  // Settings Button Handler
-  const handleSettingsClick = () => {
-    if (hasUnsavedChanges) {
-      setConfirmModal({
-        isOpen: true,
-        message: "保存されていない変更があります。\n設定画面へ移動すると変更内容は失われます。\n移動しますか？",
-        onConfirm: () => {
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
-          onGoToSettings();
-        },
-        onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
-      });
-    } else {
-      onGoToSettings();
-    }
-  };
-
   const renderStep1 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 1: 基本情報</h2>
@@ -157,27 +140,19 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     </div>
   );
 
-  // Helper for step2
   const updateGCAttendee = (index: number, field: 'role' | 'name', value: string) => {
     const newAttendees = [...report.gcAttendees];
-    // 未定義なら初期化
     if (!newAttendees[index]) newAttendees[index] = { role: '', name: '' };
     newAttendees[index] = { ...newAttendees[index], [field]: value };
     updateReport({ gcAttendees: newAttendees });
   };
 
-  // Helper for adding/removing subcontractor attendee
   const [tempSubRole, setTempSubRole] = useState("");
   const [tempSubCompany, setTempSubCompany] = useState("");
   const [sigKey, setSigKey] = useState(0); 
   
-  useEffect(() => { 
-    if (masterData.contractors.length > 0 && !tempSubCompany) setTempSubCompany(masterData.contractors[0]); 
-  }, [masterData.contractors, tempSubCompany]);
-
-  useEffect(() => { 
-    if (masterData.roles.length > 0 && !tempSubRole) setTempSubRole(masterData.roles[0]); 
-  }, [masterData.roles, tempSubRole]);
+  useEffect(() => { if (masterData.contractors.length > 0 && !tempSubCompany) setTempSubCompany(masterData.contractors[0]); }, [masterData.contractors, tempSubCompany]);
+  useEffect(() => { if (masterData.roles.length > 0 && !tempSubRole) setTempSubRole(masterData.roles[0]); }, [masterData.roles, tempSubRole]);
 
   const addSubAttendee = (signatureDataUrl: string) => {
     if (!tempSubCompany || !tempSubRole) return;
@@ -200,35 +175,10 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
         <h3 className="font-bold text-gray-700 mb-3">元請 出席者</h3>
         <div className="grid grid-cols-1 gap-3">
-          {/* ★修正: 8行分ループし、上4つは固定、下4つは選択式に */}
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex items-center gap-2">
-              {i < 4 ? (
-                // 固定役職 (Top 4) - 高さ合わせ
-                <span className="w-40 h-10 flex items-center justify-center text-xs font-bold bg-gray-50 px-2 border rounded text-gray-700">
-                  {TOP_FIXED_ROLES[i]}
-                </span>
-              ) : (
-                // 選択式役職 (Bottom 4) - 高さ合わせ
-                <select 
-                  className="w-40 h-10 text-xs font-bold bg-white px-2 border rounded text-center outline-none appearance-none"
-                  value={report.gcAttendees[i]?.role || ""}
-                  onChange={(e) => updateGCAttendee(i, 'role', e.target.value)}
-                >
-                  <option value="">(役職選択)</option>
-                  {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-              )}
-              
-              {/* 名前選択 (共通) */}
-              <select 
-                className="flex-1 h-10 p-2 border rounded text-sm bg-white text-black outline-none appearance-none" 
-                value={report.gcAttendees[i]?.name || ""} 
-                onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}
-              >
-                <option value="">選択してください</option>
-                {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              {i < 4 ? (<span className="w-40 h-10 flex items-center justify-center text-xs font-bold bg-gray-50 px-2 border rounded text-gray-700">{TOP_FIXED_ROLES[i]}</span>) : (<select className="w-40 h-10 text-xs font-bold bg-white px-2 border rounded text-center outline-none appearance-none" value={report.gcAttendees[i]?.role || ""} onChange={(e) => updateGCAttendee(i, 'role', e.target.value)}><option value="">(役職選択)</option>{masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}</select>)}
+              <select className="flex-1 h-10 p-2 border rounded text-sm bg-white text-black outline-none appearance-none" value={report.gcAttendees[i]?.name || ""} onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}><option value="">選択してください</option>{masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}</select>
             </div>
           ))}
         </div>
@@ -241,7 +191,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           <div><label className="text-xs font-bold text-gray-500">会社名</label><select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>{masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
           <div><label className="text-xs font-bold text-gray-500">役職</label><select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>{masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}</select></div>
         </div>
-        
         <div className="mb-3"><label className="text-xs font-bold text-gray-500 mb-1 block">署名</label><div className="border border-gray-300 rounded"><SignatureCanvas key={sigKey} onSave={(data) => addSubAttendee(data)} onClear={() => {}} lineWidth={4} keepOpenOnSave={true} /></div></div>
       </div>
 
@@ -251,16 +200,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         <div className="space-y-2">
           {report.subcontractorAttendees.map((att) => (
             <div key={att.id} className="flex justify-between items-center p-3 bg-white border rounded shadow-sm">
-              <div>
-                <div className="font-bold text-sm">{att.company}</div>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{att.role}</span>
-                  {att.signatureDataUrl && (
-                    <img src={att.signatureDataUrl} alt="sig" className="h-6 object-contain border border-gray-200 bg-white" />
-                  )}
-                </div>
-              </div>
-              <button onClick={() => updateReport({ subcontractorAttendees: report.subcontractorAttendees.filter(a => a.id !== att.id) })} className="text-red-400 hover:text-red-600"><i className="fa-solid fa-trash"></i></button>
+              <div><div className="font-bold text-sm">{att.company}</div><div className="flex items-center gap-2 mt-1"><span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{att.role}</span>{att.signatureDataUrl && (<img src={att.signatureDataUrl} alt="sig" className="h-6 object-contain border border-gray-200 bg-white" />)}</div></div><button onClick={() => updateReport({ subcontractorAttendees: report.subcontractorAttendees.filter(a => a.id !== att.id) })} className="text-red-400 hover:text-red-600"><i className="fa-solid fa-trash"></i></button>
             </div>
           ))}
           {report.subcontractorAttendees.length === 0 && <div className="text-center text-gray-400 text-sm py-4">登録なし</div>}
@@ -313,7 +253,9 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   return (
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
-        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-people-group mr-2"></i>災害防止協議会</h1></div><button onClick={handleSettingsClick} className="text-xs bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors"><i className="fa-solid fa-gear mr-1"></i>設定</button></header>
+        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-people-group mr-2"></i>災害防止協議会</h1></div>
+        {/* 設定ボタン削除済み */}
+        </header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-green-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-green-600" : ""}>STEP 2</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-green-600 h-full transition-all duration-300" style={{ width: `${step * 50}%` }}></div></div></div>
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">{step === 1 && renderStep1()}{step === 2 && renderStep2()}</main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">

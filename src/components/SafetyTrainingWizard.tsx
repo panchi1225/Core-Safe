@@ -9,9 +9,10 @@ interface Props {
   initialData?: ReportData;
   initialDraftId?: string | null;
   onBackToMenu: () => void;
-  onGoToSettings: () => void; // Added
+  // onGoToSettings は削除
 }
 
+// --- Custom Confirmation Modal ---
 interface ConfirmModalProps {
   isOpen: boolean;
   message: string;
@@ -34,7 +35,7 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onCon
   );
 };
 
-const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu, onGoToSettings }) => {
+const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
   const [step, setStep] = useState(1);
   const [report, setReport] = useState<ReportData>(initialData || INITIAL_REPORT);
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
@@ -101,23 +102,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const handlePrint = () => { const prevTitle = document.title; document.title = `安全訓練_${report.project}_${report.month}月度`; window.print(); document.title = prevTitle; };
   
   const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
-  
-  // Settings Button Handler
-  const handleSettingsClick = () => {
-    if (hasUnsavedChanges) {
-      setConfirmModal({
-        isOpen: true,
-        message: "保存されていない変更があります。\n設定画面へ移動すると変更内容は失われます。\n移動しますか？",
-        onConfirm: () => {
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
-          onGoToSettings();
-        },
-        onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
-      });
-    } else {
-      onGoToSettings();
-    }
-  };
 
   const renderStep1 = () => (
     <div className="space-y-6">
@@ -164,7 +148,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="mb-4"><label className="block text-sm font-bold text-gray-700 mb-1">会社名</label><select className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-lg text-black outline-none appearance-none" value={tempCompany} onChange={(e) => setTempCompany(e.target.value)}>{masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
         <div className="mb-2"><label className="block text-sm font-bold text-gray-700 mb-2 text-center">氏名 (手書き)</label><div className="w-full"><SignatureCanvas key={sigKey} onSave={(dataUrl) => { addSignature(tempCompany, dataUrl); }} onClear={() => {}} lineWidth={6} keepOpenOnSave={true} /></div></div>
       </div>
-      <div className="mt-6"><h3 className="font-bold text-gray-700 mb-2">署名済みリスト ({report.signatures.length}名)</h3><div className="bg-white border rounded divide-y max-h-60 overflow-y-auto">{report.signatures.length === 0 && <div className="p-4 text-center text-gray-400">署名はまだありません</div>}{report.signatures.map((sig, idx) => (<div key={sig.id} className="p-3 flex items-center justify-between"><div className="flex items-center gap-3 flex-1 min-w-0"><span className="w-6 h-6 shrink-0 rounded-full bg-gray-200 text-xs flex items-center justify-center text-gray-700">{idx + 1}</span><div className="flex items-center gap-4 flex-1 min-w-0"><div className="text-sm font-bold text-gray-700 truncate flex-1">{sig.company}</div><div className="h-10 border border-gray-200 bg-gray-50 rounded cursor-pointer hover:border-blue-400 transition-colors flex items-center justify-center px-2 shrink-0" onClick={() => setPreviewSigUrl(sig.signatureDataUrl)} title="タップして拡大"><img src={sig.signatureDataUrl} alt="sig" className="h-full object-contain" /></div></div></div><button onClick={() => { setConfirmModal({ isOpen: true, message: `著名リスト${idx + 1}を削除しますか？`, onConfirm: () => { setReport(prev => ({...prev, signatures: prev.signatures.filter(s => s.id !== sig.id)})); setConfirmModal(prev => ({ ...prev, isOpen: false })); setHasUnsavedChanges(true); }, onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false })) }); }} className="ml-3 text-red-400 hover:text-red-600 p-2 shrink-0"><i className="fa-solid fa-trash"></i></button></div>))}</div></div>
+      <div className="mt-6"><h3 className="font-bold text-gray-700 mb-2">署名済みリスト ({report.signatures.length}名)</h3><div className="bg-white border rounded divide-y max-h-60 overflow-y-auto">{report.signatures.length === 0 && <div className="p-4 text-center text-gray-400">署名はまだありません</div>}{report.signatures.map((sig, idx) => (<div key={sig.id} className="p-3 flex items-center justify-between"><div className="flex items-center gap-3 flex-1 min-w-0"><span className="w-6 h-6 shrink-0 rounded-full bg-gray-200 text-xs flex items-center justify-center text-gray-700">{idx + 1}</span><div className="flex items-center gap-4 flex-1 min-w-0"><div className="text-sm font-bold text-gray-700 truncate flex-1">{sig.company}</div><div className="h-10 border border-gray-200 bg-gray-50 rounded cursor-pointer hover:border-blue-400 transition-colors flex items-center justify-center px-2 shrink-0" onClick={() => setPreviewSigUrl(sig.signatureDataUrl)} title="タップして拡大"><img src={sig.signatureDataUrl} alt="sig" className="h-full object-contain" /></div></div></div><button onClick={() => { setConfirmModal({ isOpen: true, message: `著名リスト${idx + 1}を削除しますか？`, onConfirm: () => { setReport(prev => ({...prev, signatures: prev.signatures.filter(s => s.id !== sig.id)})); setConfirmModal(prev => ({ ...prev, isOpen: false })); setHasUnsavedChanges(true); } }); }} className="ml-3 text-red-400 hover:text-red-600 p-2 shrink-0"><i className="fa-solid fa-trash"></i></button></div>))}</div></div>
     </div>
   );
 
@@ -210,8 +194,8 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
         <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-helmet-safety mr-2"></i>安全訓練報告</h1></div>
-        {/* 設定ボタン修正 */}
-        <button onClick={handleSettingsClick} className="text-xs bg-slate-700 px-2 py-1 rounded hover:bg-slate-600 transition-colors"><i className="fa-solid fa-gear mr-1"></i>設定</button></header>
+        {/* 設定ボタン削除済み */}
+        </header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-blue-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-blue-600" : ""}>STEP 2</span><span className={step >= 3 ? "text-blue-600" : ""}>STEP 3</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">{step === 1 && renderStep1()}{step === 2 && renderStep2()}{step === 3 && renderStep3()}</main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
