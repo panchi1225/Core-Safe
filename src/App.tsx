@@ -63,14 +63,15 @@ const QRCodeModal: React.FC<{ isOpen: boolean; onClose: () => void; url: string 
   );
 };
 
-type ViewState = 'HOME' | ReportTypeString | 'SETTINGS';
+// SAFETY_DIARY を追加するために型を拡張（本来はtypes.tsで定義すべきですがUI維持のためここで対応）
+type ViewState = 'HOME' | ReportTypeString | 'SETTINGS' | 'SAFETY_DIARY';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('HOME');
   
   // Selection Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedReportType, setSelectedReportType] = useState<ReportTypeString | null>(null);
+  const [selectedReportType, setSelectedReportType] = useState<ReportTypeString | 'SAFETY_DIARY' | null>(null);
   const [drafts, setDrafts] = useState<SavedDraft[]>([]);
   const [selectedDraftProject, setSelectedDraftProject] = useState<string | null>(null);
   
@@ -129,7 +130,7 @@ const App: React.FC = () => {
   }, [isModalOpen]);
 
   // Handlers
-  const openSelectionModal = (type: ReportTypeString) => {
+  const openSelectionModal = (type: ReportTypeString | 'SAFETY_DIARY') => {
     setSelectedReportType(type);
     setIsModalOpen(true);
   };
@@ -138,14 +139,14 @@ const App: React.FC = () => {
     if (!selectedReportType) return;
     setWizardInitialData(undefined);
     setWizardDraftId(null);
-    setCurrentView(selectedReportType);
+    setCurrentView(selectedReportType as ViewState);
     setIsModalOpen(false);
   };
 
   const handleResumeDraft = (draft: SavedDraft) => {
     setWizardInitialData(draft.data);
     setWizardDraftId(draft.id);
-    setCurrentView(draft.type);
+    setCurrentView(draft.type as ViewState);
     setIsModalOpen(false);
   };
 
@@ -229,7 +230,8 @@ const App: React.FC = () => {
   const renderSelectionModal = () => {
     if (!isModalOpen || !selectedReportType) return null;
 
-    const currentDrafts = drafts.filter(d => d.type === selectedReportType);
+    // 型不一致を防ぐためフィルタリング時にキャスト
+    const currentDrafts = drafts.filter(d => d.type === (selectedReportType as string));
     
     // Group drafts by project
     const draftsByProject = currentDrafts.reduce((acc, draft) => {
@@ -379,9 +381,9 @@ const App: React.FC = () => {
       <header className="bg-slate-800 text-white p-6 shadow-md flex justify-center items-center relative">
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-wide">Core Safe</h1>
-          <p className="text-sm text-gray-400 font-normal mt-1">-安全書類作成支援システム-</p>
+          {/* ★修正: 文字サイズをtext-[10px]からtext-xs(12px相当)に拡大 */}
+          <p className="text-xs text-gray-400 font-normal mt-1">-安全書類作成支援システム-</p>
         </div>
-        {/* 設定ボタンをヘッダーから削除しました */}
       </header>
 
       <main className="max-w-4xl mx-auto p-6 mt-8">
@@ -390,6 +392,20 @@ const App: React.FC = () => {
         </h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* ★追加: Card 0: Safety Health Diary (Pink, Top) */}
+          <button 
+            onClick={() => openSelectionModal('SAFETY_DIARY')}
+            className="flex flex-col items-center p-8 bg-white rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-t-4 border-pink-500 group"
+          >
+            <div className="w-20 h-20 bg-pink-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-pink-100 transition-colors">
+              <i className="fa-solid fa-book-medical text-4xl text-pink-500"></i>
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">安全衛生日誌</h3>
+            <p className="text-xs text-gray-500 text-center">
+              日々の安全衛生日誌を作成します。
+            </p>
+          </button>
+
           {/* Card 1: Safety Training */}
           <button 
             onClick={() => openSelectionModal('SAFETY_TRAINING')}
@@ -398,7 +414,8 @@ const App: React.FC = () => {
             <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-100 transition-colors">
               <i className="fa-solid fa-helmet-safety text-4xl text-blue-600"></i>
             </div>
-            <h3 className="text-lg font-bold text-gray-800 mb-2">安全訓練報告書</h3>
+            {/* ★修正: 名称変更 */}
+            <h3 className="text-lg font-bold text-gray-800 mb-2">安全訓練</h3>
             <p className="text-xs text-gray-500 text-center">
               安全訓練の実施報告書を作成します。電子署名対応。
             </p>
@@ -441,12 +458,13 @@ const App: React.FC = () => {
               <i className="fa-solid fa-person-circle-question text-4xl text-purple-600"></i>
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">新規入場者アンケート</h3>
+            {/* ★修正: 説明文変更 */}
             <p className="text-xs text-gray-500 text-center">
-              新規入場者アンケートを作成します。QRコードから作成可能。
+              新規入場者書類を作成します。QRコードから作成可能。
             </p>
           </button>
 
-          {/* Card 5: Master Settings (Added) */}
+          {/* Card 5: Master Settings */}
           <button 
             onClick={handleGoToSettings}
             className="flex flex-col items-center p-8 bg-white rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-t-4 border-gray-500 group"
@@ -464,7 +482,8 @@ const App: React.FC = () => {
 
       <footer className="mt-12 text-center text-gray-400 text-sm pb-8">
         <div>&copy; 2026 Matsuura Construction App</div>
-        <div className="mt-1">Ver.1.3.5</div>
+        {/* ★修正: Ver.1.3.6へ変更 */}
+        <div className="mt-1">Ver.1.3.6</div>
       </footer>
 
       {renderSelectionModal()}
