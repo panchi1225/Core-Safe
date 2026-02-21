@@ -30,20 +30,115 @@ export interface MasterData {
 }
 
 export const INITIAL_MASTER_DATA: MasterData = {
-  projects: ["公共運動公園周辺地区整備工事"],
-  workplaces: ["現場事務所"],
-  contractors: ["松浦建設株式会社"],
-  subcontractors: ["（株）田中土木"],
-  supervisors: ["大須賀 久敬"],
-  locations: ["本社会議室"],
-  goals: ["重機災害の防止"],
-  processes: ["準備工"],
-  topics: ["新規入場者教育の実施について"],
-  cautions: ["現場内整理整頓"],
-  roles: ["職長"],
-  jobTypes: ["土工", "鳶", "大工", "オペ"],
-  predictions: ["重機との接触"],
-  countermeasures: ["作業範囲の立入禁止"],
+  projects: [
+    "テスト",
+    "公共運動公園周辺地区整備工事（Ｒ７芝崎地区粗造成その２）"
+  ],
+  contractors: [
+    "テスト",
+    "松浦建設株式会社"
+  ],
+  supervisors: [
+    "テスト",
+    "大須賀 久敬"
+  ],
+  locations: [
+    "テスト",
+    "本社会議室",
+    "現場事務所"
+  ],
+  workplaces: [
+    "テスト",
+    "芝崎作業所"
+  ],
+  subcontractors: [], // 今回のリストには含まれていなかったので空配列
+  roles: [
+    "テスト",
+    "主任技術者",
+    "現場担当者"
+  ],
+  topics: [
+    "テスト"
+  ],
+  jobTypes: [
+    "テスト",
+    "盛土工",
+    "掘削工",
+    "植生工",
+    "矢板工",
+    "土砂改良工",
+    "構造物撤去工",
+    "工事用道路工",
+    "交通管理工"
+  ],
+  goals: [
+    "テスト",
+    "重機接触災害防止",
+    "重機転倒災害防止",
+    "重機巻き込まれ災害防止",
+    "作業半径内立入災害防止",
+    "ダンプトラック接触災害防止",
+    "ダンプ後退時災害防止",
+    "吊荷落下災害防止",
+    "玉掛け作業災害防止",
+    "熱中症災害防止",
+    "第三者災害防止",
+    "法面滑落災害防止",
+    "墜落・転落災害防止",
+    "掘削面崩壊災害防止",
+    "土砂崩落災害防止",
+    "仮設構造物倒壊災害防止",
+    "河川増水・急激水位上昇災害防止",
+    "溺水災害防止",
+    "感電災害防止",
+    "飛来・落下物災害防止",
+    "敷鉄板転倒・ずれ災害防止"
+  ],
+  predictions: [
+    "重機災害",
+    "第三者災害",
+    "ダンプトラックとの接触事故",
+    "重機同士の接触事故",
+    "第三者との接触事故",
+    "重機と人の激突事故",
+    "重機との接触事故",
+    "重機による挟まれ事故",
+    "旋回時挟まれ事故",
+    "手足の挟まれ事故",
+    "法面からの転倒事故",
+    "熱中症による人身事故",
+    "足場崩壊による転落事故",
+    "足場崩壊による転倒事故",
+    "土砂崩落事故",
+    "開口部の墜落事故",
+    "敷鉄板による人身事故",
+    "重量物取扱いによる腰痛事故",
+    "飛来・落下物事故"
+  ],
+  countermeasures: [
+    "重機作業区域の立入禁止徹底",
+    "誘導員配置による接触防止",
+    "ダンプ後退時の合図確認徹底",
+    "人と車両の動線分離",
+    "重機同士の作業間隔確保",
+    "作業半径内立入禁止",
+    "旋回範囲への進入防止",
+    "挟まれ防止の合図徹底",
+    "安全位置確保と退避徹底",
+    "玉掛け合図の統一",
+    "熱中症予防管理の徹底",
+    "敷鉄板の固定・段差解消",
+    "法面作業時の滑落防止",
+    "掘削面の点検実施",
+    "足場組立基準の遵守",
+    "手すり・作業床の確実設置",
+    "開口部養生の徹底",
+    "飛来落下防止措置",
+    "重量物の複数人作業",
+    "KY活動による危険共有"
+  ],
+  processes: [],
+  cautions: [],
 };
 
 // --- Safety Training Report ---
@@ -72,18 +167,18 @@ export interface ReportData {
 }
 
 export const INITIAL_REPORT: ReportData = {
-  project: INITIAL_MASTER_DATA.projects[0],
+  project: '',
   month: new Date().getMonth() + 1,
-  contractor: INITIAL_MASTER_DATA.contractors[0],
+  contractor: '',
   date: new Date().toISOString().split('T')[0],
-  location: INITIAL_MASTER_DATA.locations[0],
+  location: '',
   startTime: "08:00",
   endTime: "08:30",
-  instructor: INITIAL_MASTER_DATA.supervisors[0],
-  topic: INITIAL_MASTER_DATA.topics[0],
-  goal: INITIAL_MASTER_DATA.goals[0],
-  process: INITIAL_MASTER_DATA.processes[0],
-  caution: INITIAL_MASTER_DATA.cautions[0],
+  instructor: '',
+  topic: '',
+  goal: '',
+  process: '',
+  caution: '',
   photoUrl: null,
   signatures: []
 };
@@ -116,12 +211,12 @@ export interface DisasterCouncilReportData {
 
 export const INITIAL_DISASTER_COUNCIL_REPORT: DisasterCouncilReportData = {
   count: 1,
-  project: INITIAL_MASTER_DATA.projects[0],
+  project: '',
   date: new Date().toISOString().split('T')[0],
-  contractor: INITIAL_MASTER_DATA.contractors[0],
+  contractor: '',
   startTime: "13:00",
   endTime: "14:00",
-  location: INITIAL_MASTER_DATA.locations[0],
+  location: '',
   gcAttendees: Array(8).fill({ role: "", name: "" }),
   subcontractorAttendees: []
 };
@@ -163,11 +258,11 @@ export const INITIAL_SAFETY_PLAN_REPORT: SafetyPlanReportData = {
   year: new Date().getFullYear(),
   month: new Date().getMonth() + 1,
   createdDate: new Date().toISOString().split('T')[0],
-  project: INITIAL_MASTER_DATA.projects[0],
-  location: INITIAL_MASTER_DATA.locations[0],
-  author: INITIAL_MASTER_DATA.supervisors[0],
+  project: '',
+  location: '',
+  author: '',
   trainingDate: "",
-  trainingLeader: INITIAL_MASTER_DATA.supervisors[0],
+  trainingLeader: '',
   councilDate: "",
   councilLeader: "",
   patrolDate: "",
@@ -210,121 +305,82 @@ export interface Qualifications {
 }
 
 export interface NewcomerSurveyReportData {
-  // Meta (表示用)
   name?: string; 
-
   project: string;
   director: string;
-  
-  // 氏名分割
   furiganaSei: string;
   furiganaMei: string;
   nameSei: string;
   nameMei: string;
-  
   birthEra: 'Showa' | 'Heisei';
   birthYear: number | '';
   birthMonth: number | '';
   birthDay: number | '';
   gender: 'Male' | 'Female';
   age: number;
-  
   company: string;
   subcontractorRank: string;
-  
-  // ★修正: null許容に変更
   experienceYears: number | null;
   experienceMonths: number | null;
-  
   jobType: string;
   jobTypeOther: string;
-  
   address: string;
   phone: string;
-  
-  // 緊急連絡先分割
   emergencyContactSei: string;
   emergencyContactMei: string;
-  
   emergencyContactRelation: string;
   emergencyContactPhone: string;
-  
   bloodType: string;
   bloodTypeRh: 'Plus' | 'Minus' | 'Unknown';
-  
-  // ★修正: null許容に変更
   healthCheckYear: number | null;
   healthCheckMonth: number | null;
   healthCheckDay: number | null;
-  
   kentaikyo: 'Joined' | 'NotJoined';
-  
   qualifications: Qualifications;
-  
-  // ★修正: null許容に変更
   pledgeDateYear: number | null;
   pledgeDateMonth: number | null;
   pledgeDateDay: number | null;
-  
   signatureDataUrl: string | null;
 }
 
 export const INITIAL_NEWCOMER_SURVEY_REPORT: NewcomerSurveyReportData = {
   project: "",
   director: "",
-  
   furiganaSei: "",
   furiganaMei: "",
   nameSei: "",
   nameMei: "",
-  
   birthEra: 'Heisei',
   birthYear: '',
   birthMonth: '',
   birthDay: '',
   gender: 'Male',
   age: 0,
-  
-  // ★修正: ここが田中土木の原因でした。空文字にします。
   company: "", 
-  
   subcontractorRank: "", 
-  
-  // ★修正: 初期値をnull(空欄)にする
   experienceYears: null,
   experienceMonths: null,
-  
   jobType: "土工",
   jobTypeOther: "",
-  
   address: "",
   phone: "",
-  
   emergencyContactSei: "",
   emergencyContactMei: "",
   emergencyContactRelation: "",
   emergencyContactPhone: "",
-  
   bloodType: "A",
   bloodTypeRh: "Unknown", 
-  
-  // ★修正: 初期値をnull(空欄)にする
   healthCheckYear: null,
   healthCheckMonth: null,
   healthCheckDay: null,
-  
   kentaikyo: 'Joined',
-  
   qualifications: {
     vehicle_leveling: false, vehicle_demolition: false, mobile_crane: false, slinging: false, gas_welding: false, earth_retaining: false, excavation: false, scaffolding: false, formwork: false, oxygen_deficiency: false, rough_terrain: false, arc_welding: false, grinding_wheel: false, low_voltage: false, roller: false, asbestos: false, foreman: false, 
     license_regular: false, license_large: false, license_large_special: false, license_towing: false,
     otherText1: "", otherText2: "", otherText3: ""
   },
-  
-  // ★修正: 誓約日も初期はnull (Wizard側で当日をセットするロジックがあればそちらが優先される)
   pledgeDateYear: null,
   pledgeDateMonth: null,
   pledgeDateDay: null,
-  
   signatureDataUrl: null
 };

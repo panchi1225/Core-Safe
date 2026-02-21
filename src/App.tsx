@@ -4,6 +4,7 @@ import SafetyTrainingWizard from './components/SafetyTrainingWizard';
 import DisasterCouncilWizard from './components/DisasterCouncilWizard';
 import SafetyPlanWizard from './components/SafetyPlanWizard';
 import NewcomerSurveyWizard from './components/NewcomerSurveyWizard';
+import MasterSettings from './components/MasterSettings'; // ★新規追加
 
 // Firebase機能
 import { fetchDrafts, removeDraft } from './services/firebaseService'; 
@@ -62,7 +63,8 @@ const QRCodeModal: React.FC<{ isOpen: boolean; onClose: () => void; url: string 
   );
 };
 
-type ViewState = 'HOME' | ReportTypeString;
+// ★修正: SETTINGS を追加
+type ViewState = 'HOME' | ReportTypeString | 'SETTINGS';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('HOME');
@@ -175,13 +177,20 @@ const App: React.FC = () => {
     });
   };
 
+  // ★新規追加: 設定画面への遷移
+  const handleGoToSettings = () => {
+    setCurrentView('SETTINGS');
+  };
+
   // Routing Logic
+  // ★修正: 各Wizardに onGoToSettings を渡す
   if (currentView === 'SAFETY_TRAINING') {
     return (
       <SafetyTrainingWizard 
         initialData={wizardInitialData}
         initialDraftId={wizardDraftId}
         onBackToMenu={() => setCurrentView('HOME')} 
+        onGoToSettings={handleGoToSettings}
       />
     );
   }
@@ -192,6 +201,7 @@ const App: React.FC = () => {
         initialData={wizardInitialData}
         initialDraftId={wizardDraftId}
         onBackToMenu={() => setCurrentView('HOME')}
+        onGoToSettings={handleGoToSettings}
       />
     );
   }
@@ -202,6 +212,7 @@ const App: React.FC = () => {
          initialData={wizardInitialData}
          initialDraftId={wizardDraftId}
          onBackToMenu={() => setCurrentView('HOME')}
+         onGoToSettings={handleGoToSettings}
       />
     );
   }
@@ -212,8 +223,14 @@ const App: React.FC = () => {
         initialData={wizardInitialData}
         initialDraftId={wizardDraftId}
         onBackToMenu={() => setCurrentView('HOME')}
+        onGoToSettings={handleGoToSettings}
       />
     );
+  }
+
+  // ★新規追加: 設定画面のルーティング
+  if (currentView === 'SETTINGS') {
+    return <MasterSettings onBackToMenu={() => setCurrentView('HOME')} />;
   }
 
   // --- Modal Component ---
@@ -367,12 +384,15 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-800">
-      <header className="bg-slate-800 text-white p-6 shadow-md text-center">
-        <h1 className="text-2xl font-bold tracking-wide">
+      <header className="bg-slate-800 text-white p-6 shadow-md text-center flex justify-between items-center">
+        <h1 className="text-2xl font-bold tracking-wide flex-1 text-center">
           <i className="fa-solid fa-building-shield mr-2"></i>
           安全書類作成支援システム
         </h1>
-        <p className="text-slate-400 text-sm mt-2">各種安全書類の作成業務をサポートします</p>
+        {/* ★修正: ヘッダーに設定ボタンを追加 */}
+        <button onClick={handleGoToSettings} className="bg-slate-700 px-4 py-2 rounded hover:bg-slate-600 transition-colors text-sm">
+          <i className="fa-solid fa-gear mr-2"></i>設定
+        </button>
       </header>
 
       <main className="max-w-4xl mx-auto p-6 mt-8">
