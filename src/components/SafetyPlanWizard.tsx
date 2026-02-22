@@ -4,6 +4,7 @@ import {
 } from '../types';
 import { getMasterData, saveDraft, deleteDraftsByProject } from '../services/firebaseService';
 import { getDaysInMonth, getDay } from 'date-fns';
+import SafetyPlanPrintLayout from './SafetyPlanPrintLayout'; // Import needed for preview
 
 interface Props {
   initialData?: any;
