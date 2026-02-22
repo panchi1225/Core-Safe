@@ -88,7 +88,23 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     setHasUnsavedChanges(true); 
   };
   
-  const handleNext = () => setStep(prev => Math.min(prev + 1, 3));
+  // ★修正: バリデーション付きの次へボタン処理
+  const handleNext = () => {
+    if (step === 1) {
+      if (!report.project || !report.location || !report.instructor || !report.date) {
+        alert("未入力の項目があります。\n全ての項目を選択・入力してください。");
+        return;
+      }
+    }
+    if (step === 2) {
+      if (!report.topic || !report.caution) {
+        alert("訓練内容および注意事項を選択してください。");
+        return;
+      }
+    }
+    setStep(prev => Math.min(prev + 1, 3));
+  };
+
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => { 
     if (e.target.files && e.target.files[0]) { 
@@ -120,6 +136,9 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   };
   
   const handlePreviewClick = async () => {
+    // プレビュー前にも簡易チェック
+    if (!report.project) { alert("工事名が選択されていません"); return; }
+
     setSaveStatus('saving');
     try {
       const newId = await saveDraft(draftId, 'SAFETY_TRAINING', report); 
@@ -174,8 +193,8 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 1: 表紙情報</h2>
       <div className="form-control">
-        <label className="label font-bold text-gray-700">工事名</label>
-        <select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.project} onChange={(e) => updateReport('project', e.target.value)}>
+        <label className="label font-bold text-gray-700">工事名 <span className="text-red-500 text-xs">*必須</span></label>
+        <select className={`w-full p-3 border rounded-lg bg-white text-black outline-none appearance-none ${!report.project ? 'border-red-300' : 'border-gray-300'}`} value={report.project} onChange={(e) => updateReport('project', e.target.value)}>
           <option value="">(データを選択してください)</option>
           {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
@@ -194,10 +213,10 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 2: 実施内容</h2>
       <div className="grid grid-cols-2 gap-4">
-        <div><label className="label text-sm font-bold text-gray-700">実施日</label><input type="date" className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.date} onChange={(e) => updateReport('date', e.target.value)} /></div>
+        <div><label className="label text-sm font-bold text-gray-700">実施日 <span className="text-red-500">*</span></label><input type="date" className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.date} onChange={(e) => updateReport('date', e.target.value)} /></div>
         <div>
-          <label className="label text-sm font-bold text-gray-700">場所</label>
-          <select className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.location} onChange={(e) => updateReport('location', e.target.value)}>
+          <label className="label text-sm font-bold text-gray-700">場所 <span className="text-red-500">*</span></label>
+          <select className={`w-full h-11 p-2 border rounded bg-white text-black outline-none appearance-none ${!report.location ? 'border-red-300' : 'border-gray-300'}`} value={report.location} onChange={(e) => updateReport('location', e.target.value)}>
             <option value="">(データを選択してください)</option>
             {masterData.locations.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -208,8 +227,8 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div><label className="label text-sm font-bold text-gray-700">終了時間</label><input type="time" className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.endTime} onChange={(e) => updateReport('endTime', e.target.value)} /></div>
       </div>
       <div>
-        <label className="label text-sm font-bold text-gray-700">実施者</label>
-        <select className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.instructor} onChange={(e) => updateReport('instructor', e.target.value)}>
+        <label className="label text-sm font-bold text-gray-700">実施者 <span className="text-red-500">*</span></label>
+        <select className={`w-full h-11 p-2 border rounded bg-white text-black outline-none appearance-none ${!report.instructor ? 'border-red-300' : 'border-gray-300'}`} value={report.instructor} onChange={(e) => updateReport('instructor', e.target.value)}>
           <option value="">(データを選択してください)</option>
           {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
@@ -220,14 +239,14 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="space-y-3">
            <div className="flex items-center gap-2">
              <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(3)</span>
-             <select className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm appearance-none" value={report.topic} onChange={(e) => updateReport('topic', e.target.value)}>
+             <select className={`flex-1 p-2 border rounded bg-white text-black outline-none text-sm appearance-none ${!report.topic ? 'border-red-300' : 'border-gray-300'}`} value={report.topic} onChange={(e) => updateReport('topic', e.target.value)}>
                <option value="">(データを選択してください)</option>
                {masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}
              </select>
            </div>
            <div className="flex items-center gap-2">
              <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(4)</span>
-             <select className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm appearance-none" value={report.caution} onChange={(e) => updateReport('caution', e.target.value)}>
+             <select className={`flex-1 p-2 border rounded bg-white text-black outline-none text-sm appearance-none ${!report.caution ? 'border-red-300' : 'border-gray-300'}`} value={report.caution} onChange={(e) => updateReport('caution', e.target.value)}>
                <option value="">(データを選択してください)</option>
                {masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}
              </select>
@@ -248,13 +267,24 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <div className="bg-white p-6 shadow rounded-lg border border-gray-200">
         <h3 className="font-bold text-lg mb-4 text-center">新規署名</h3>
         <div className="mb-4">
-          <label className="block text-sm font-bold text-gray-700 mb-1">会社名</label>
-          <select className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-lg text-black outline-none appearance-none" value={tempCompany} onChange={(e) => setTempCompany(e.target.value)}>
+          <label className="block text-sm font-bold text-gray-700 mb-1">会社名 <span className="text-red-500">*必須</span></label>
+          <select className={`w-full p-3 border rounded-lg bg-gray-50 text-lg text-black outline-none appearance-none ${!tempCompany ? 'border-red-300 ring-2 ring-red-100' : 'border-gray-300'}`} value={tempCompany} onChange={(e) => setTempCompany(e.target.value)}>
             <option value="">(データを選択してください)</option>
             {masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
-        <div className="mb-2"><label className="block text-sm font-bold text-gray-700 mb-2 text-center">氏名 (手書き)</label><div className="w-full"><SignatureCanvas key={sigKey} onSave={(dataUrl) => { addSignature(tempCompany, dataUrl); }} onClear={() => {}} lineWidth={6} keepOpenOnSave={true} /></div></div>
+        <div className="mb-2">
+          <label className="block text-sm font-bold text-gray-700 mb-2 text-center">氏名 (手書き)</label>
+          {/* ★修正: 会社名未選択時は署名できないように制御 (UIを半透明&クリック無効化) */}
+          <div className={`w-full relative ${!tempCompany ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+            <SignatureCanvas key={sigKey} onSave={(dataUrl) => { addSignature(tempCompany, dataUrl); }} onClear={() => {}} lineWidth={6} keepOpenOnSave={true} />
+            {!tempCompany && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="bg-red-100 text-red-600 px-4 py-2 rounded font-bold border border-red-300 shadow-sm">会社名を選択してください</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
       <div className="mt-6"><h3 className="font-bold text-gray-700 mb-2">署名済みリスト ({report.signatures.length}名)</h3><div className="bg-white border rounded divide-y max-h-60 overflow-y-auto">{report.signatures.length === 0 && <div className="p-4 text-center text-gray-400">署名はまだありません</div>}{report.signatures.map((sig, idx) => (<div key={sig.id} className="p-3 flex items-center justify-between"><div className="flex items-center gap-3 flex-1 min-w-0"><span className="w-6 h-6 shrink-0 rounded-full bg-gray-200 text-xs flex items-center justify-center text-gray-700">{idx + 1}</span><div className="flex items-center gap-4 flex-1 min-w-0"><div className="text-sm font-bold text-gray-700 truncate flex-1">{sig.company}</div><div className="h-10 border border-gray-200 bg-gray-50 rounded cursor-pointer hover:border-blue-400 transition-colors flex items-center justify-center px-2 shrink-0" onClick={() => setPreviewSigUrl(sig.signatureDataUrl)} title="タップして拡大"><img src={sig.signatureDataUrl} alt="sig" className="h-full object-contain" /></div></div></div><button onClick={() => { setConfirmModal({ isOpen: true, message: `著名リスト${idx + 1}を削除しますか？`, onConfirm: () => { setReport(prev => ({...prev, signatures: prev.signatures.filter(s => s.id !== sig.id)})); setConfirmModal(prev => ({ ...prev, isOpen: false })); setHasUnsavedChanges(true); }, onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false })) }); }} className="ml-3 text-red-400 hover:text-red-600 p-2 shrink-0"><i className="fa-solid fa-trash"></i></button></div>))}</div></div>
     </div>
@@ -308,8 +338,9 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-blue-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-blue-600" : ""}>STEP 2</span><span className={step >= 3 ? "text-blue-600" : ""}>STEP 3</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">{step === 1 && renderStep1()}{step === 2 && renderStep2()}{step === 3 && renderStep3()}</main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
-          <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
-          {step < 3 ? (<button onClick={() => setStep(prev => Math.min(prev + 1, 3))} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
+          <div className="flex items-center gap-2"><button onClick={handleBack} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
+          {/* ★修正: handleNextを使用 */}
+          {step < 3 ? (<button onClick={handleNext} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
         </footer>
       </div>
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}

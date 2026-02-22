@@ -9,7 +9,6 @@ interface Props {
   initialData?: any;
   initialDraftId?: string | null;
   onBackToMenu: () => void;
-  // onGoToSettings は削除
 }
 
 // --- Custom Confirmation Modal ---
@@ -57,7 +56,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [availablePlans, setAvailablePlans] = useState<SavedDraft[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<SafetyPlanReportData | null>(null);
 
-  // ★修正: 自動選択ロジック(useEffectでのセット)を削除しました
   useEffect(() => { 
     const loadMaster = async () => { 
       try { 
@@ -109,6 +107,19 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
 
   const updateReport = (updates: Partial<DisasterCouncilReportData>) => { setReport(prev => ({ ...prev, ...updates })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
+  // ★修正: バリデーション付きの次へボタン処理
+  const handleNext = () => {
+    if (step === 1) {
+      if (!report.project || !report.date || !report.location) {
+        alert("未入力の項目があります。\n全ての項目を選択・入力してください。");
+        return;
+      }
+    }
+    setStep(prev => Math.min(prev + 1, 2));
+  };
+
+  const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
+
   const handleTempSave = async () => { 
     setSaveStatus('saving'); 
     try { 
@@ -149,9 +160,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 1: 基本情報</h2>
       <div className="grid grid-cols-2 gap-4">
         <div className="form-control">
-          <label className="label font-bold text-gray-700">工事名</label>
-          <select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.project} onChange={(e) => updateReport({project: e.target.value})}>
-            {/* ★修正: プレースホルダー追加 */}
+          <label className="label font-bold text-gray-700">工事名 <span className="text-red-500">*</span></label>
+          <select className={`w-full p-3 border rounded-lg bg-white text-black outline-none appearance-none ${!report.project ? 'border-red-300' : 'border-gray-300'}`} value={report.project} onChange={(e) => updateReport({project: e.target.value})}>
             <option value="">(データを選択してください)</option>
             {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
@@ -159,11 +169,10 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         <div className="form-control"><label className="label font-bold text-gray-700">開催回</label><div className="flex items-center"><span className="mr-2">第</span><input type="number" className="w-20 p-3 border border-gray-300 rounded-lg text-center" value={report.count} onChange={(e) => updateReport({count: parseInt(e.target.value)})} /><span className="ml-2">回</span></div></div>
       </div>
       <div className="grid grid-cols-2 gap-4">
-        <div className="form-control"><label className="label font-bold text-gray-700">開催日</label><input type="date" className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.date} onChange={(e) => updateReport({date: e.target.value})} /></div>
+        <div className="form-control"><label className="label font-bold text-gray-700">開催日 <span className="text-red-500">*</span></label><input type="date" className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.date} onChange={(e) => updateReport({date: e.target.value})} /></div>
         <div className="form-control">
-          <label className="label font-bold text-gray-700">場所</label>
-          <select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.location} onChange={(e) => updateReport({location: e.target.value})}>
-            {/* ★修正: プレースホルダー追加 */}
+          <label className="label font-bold text-gray-700">場所 <span className="text-red-500">*</span></label>
+          <select className={`w-full p-3 border rounded-lg bg-white text-black outline-none appearance-none ${!report.location ? 'border-red-300' : 'border-gray-300'}`} value={report.location} onChange={(e) => updateReport({location: e.target.value})}>
             <option value="">(データを選択してください)</option>
             {masterData.locations.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
@@ -188,10 +197,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [tempSubCompany, setTempSubCompany] = useState("");
   const [sigKey, setSigKey] = useState(0); 
   
-  // ★修正: 自動選択ロジック(useEffectでのセット)を削除しました
-  // useEffect(() => { if (masterData.contractors.length > 0 && !tempSubCompany) setTempSubCompany(masterData.contractors[0]); }, [masterData.contractors, tempSubCompany]);
-  // useEffect(() => { if (masterData.roles.length > 0 && !tempSubRole) setTempSubRole(masterData.roles[0]); }, [masterData.roles, tempSubRole]);
-
   const addSubAttendee = (signatureDataUrl: string) => {
     if (!tempSubCompany || !tempSubRole) return;
     const newAttendee = {
@@ -219,13 +224,11 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
                 <span className="w-40 h-10 flex items-center justify-center text-xs font-bold bg-gray-50 px-2 border rounded text-gray-700">{TOP_FIXED_ROLES[i]}</span>
               ) : (
                 <select className="w-40 h-10 text-xs font-bold bg-white px-2 border rounded text-center outline-none appearance-none" value={report.gcAttendees[i]?.role || ""} onChange={(e) => updateGCAttendee(i, 'role', e.target.value)}>
-                  {/* ★修正: プレースホルダー追加 */}
                   <option value="">(役職選択)</option>
                   {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               )}
               <select className="flex-1 h-10 p-2 border rounded text-sm bg-white text-black outline-none appearance-none" value={report.gcAttendees[i]?.name || ""} onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}>
-                {/* ★修正: プレースホルダー追加 */}
                 <option value="">選択してください</option>
                 {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -239,9 +242,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         <h3 className="font-bold text-gray-700 mb-3 text-center">協力会社 出席者登録</h3>
         <div className="grid grid-cols-2 gap-3 mb-3">
           <div>
-            <label className="text-xs font-bold text-gray-500">会社名</label>
-            <select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>
-              {/* ★修正: プレースホルダー追加 */}
+            <label className="text-xs font-bold text-gray-500">会社名 <span className="text-red-500">*</span></label>
+            <select className={`w-full p-2 border rounded bg-white text-black outline-none appearance-none ${!tempSubCompany ? 'border-red-300' : 'border-gray-300'}`} value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>
               <option value="">(データを選択してください)</option>
               {masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
@@ -249,13 +251,23 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           <div>
             <label className="text-xs font-bold text-gray-500">役職</label>
             <select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>
-              {/* ★修正: プレースホルダー追加 */}
               <option value="">(データを選択してください)</option>
               {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
         </div>
-        <div className="mb-3"><label className="text-xs font-bold text-gray-500 mb-1 block">署名</label><div className="border border-gray-300 rounded"><SignatureCanvas key={sigKey} onSave={(data) => addSubAttendee(data)} onClear={() => {}} lineWidth={4} keepOpenOnSave={true} /></div></div>
+        <div className="mb-3">
+          <label className="text-xs font-bold text-gray-500 mb-1 block">署名</label>
+          {/* ★修正: 会社名未選択時は署名できないように制御 */}
+          <div className={`border rounded border-gray-300 relative ${!tempSubCompany ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+            <SignatureCanvas key={sigKey} onSave={(data) => addSubAttendee(data)} onClear={() => {}} lineWidth={4} keepOpenOnSave={true} />
+            {!tempSubCompany && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="bg-red-100 text-red-600 px-3 py-1 rounded text-xs font-bold border border-red-300">会社名を選択してください</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* List */}
@@ -318,13 +330,13 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
         <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-people-group mr-2"></i>災害防止協議会</h1></div>
-        {/* 設定ボタン削除済み */}
         </header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-green-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-green-600" : ""}>STEP 2</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-green-600 h-full transition-all duration-300" style={{ width: `${step * 50}%` }}></div></div></div>
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">{step === 1 && renderStep1()}{step === 2 && renderStep2()}</main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
-          <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className="px-4 py-3 rounded-lg font-bold border border-green-200 text-green-600 bg-green-50 hover:bg-green-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
-          {step < 2 ? (<button onClick={() => setStep(2)} className="px-8 py-3 bg-green-600 text-white rounded-lg font-bold shadow hover:bg-green-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
+          <div className="flex items-center gap-2"><button onClick={handleBack} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className="px-4 py-3 rounded-lg font-bold border border-green-200 text-green-600 bg-green-50 hover:bg-green-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
+          {/* ★修正: handleNextを使用 */}
+          {step < 2 ? (<button onClick={handleNext} className="px-8 py-3 bg-green-600 text-white rounded-lg font-bold shadow hover:bg-green-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
         </footer>
       </div>
       {showPreview && renderPreviewModal()}
