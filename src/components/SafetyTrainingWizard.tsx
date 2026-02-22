@@ -46,6 +46,8 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [previewScale, setPreviewScale] = useState(1);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: () => {} });
 
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+
   const [planSelectionModal, setPlanSelectionModal] = useState(false);
   const [availablePlans, setAvailablePlans] = useState<SavedDraft[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<SafetyPlanReportData | null>(null);
@@ -75,7 +77,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     return () => window.removeEventListener('resize', handleResize); 
   }, [showPreview]);
 
-  // 元請会社名を「松浦建設株式会社」に強制固定
   useEffect(() => {
     if (report.contractor !== "松浦建設株式会社") {
       updateReport('contractor', "松浦建設株式会社");
@@ -85,23 +86,45 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const updateReport = (field: keyof ReportData, value: any) => { 
     setReport(prev => ({ ...prev, [field]: value })); 
     setSaveStatus('idle'); 
-    setHasUnsavedChanges(true); 
+    setHasUnsavedChanges(true);
+    if (value) {
+      setErrors(prev => ({ ...prev, [field]: false }));
+    }
   };
   
-  // ★修正: バリデーション付きの次へボタン処理
+  // ★修正: バリデーションロジックをステップごとに正しく分離
   const handleNext = () => {
+    const newErrors: Record<string, boolean> = {};
+    let hasError = false;
+
+    // STEP 1 のチェック
     if (step === 1) {
-      if (!report.project || !report.location || !report.instructor || !report.date) {
-        alert("未入力の項目があります。\n全ての項目を選択・入力してください。");
+      if (!report.project) { newErrors.project = true; hasError = true; }
+      // STEP 1ではこれだけチェック
+      
+      if (hasError) {
+        setErrors(newErrors);
+        alert("工事名を選択してください。");
         return;
       }
     }
+    
+    // STEP 2 のチェック
     if (step === 2) {
-      if (!report.topic || !report.caution) {
-        alert("訓練内容および注意事項を選択してください。");
+      if (!report.date) { newErrors.date = true; hasError = true; }
+      if (!report.location) { newErrors.location = true; hasError = true; }
+      if (!report.instructor) { newErrors.instructor = true; hasError = true; }
+      if (!report.topic) { newErrors.topic = true; hasError = true; }
+      if (!report.caution) { newErrors.caution = true; hasError = true; }
+
+      if (hasError) {
+        setErrors(newErrors);
+        alert("未入力の必須項目があります。\n赤枠の項目を確認してください。");
         return;
       }
     }
+    
+    setErrors({});
     setStep(prev => Math.min(prev + 1, 3));
   };
 
@@ -136,7 +159,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   };
   
   const handlePreviewClick = async () => {
-    // プレビュー前にも簡易チェック
     if (!report.project) { alert("工事名が選択されていません"); return; }
 
     setSaveStatus('saving');
@@ -189,12 +211,14 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     } 
   };
 
+  const getErrorClass = (field: string) => errors[field] ? 'border-red-500 bg-red-50' : 'border-gray-300';
+
   const renderStep1 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 1: 表紙情報</h2>
       <div className="form-control">
         <label className="label font-bold text-gray-700">工事名 <span className="text-red-500 text-xs">*必須</span></label>
-        <select className={`w-full p-3 border rounded-lg bg-white text-black outline-none appearance-none ${!report.project ? 'border-red-300' : 'border-gray-300'}`} value={report.project} onChange={(e) => updateReport('project', e.target.value)}>
+        <select className={`w-full p-3 border rounded-lg bg-white text-black outline-none appearance-none ${getErrorClass('project')}`} value={report.project} onChange={(e) => updateReport('project', e.target.value)}>
           <option value="">(データを選択してください)</option>
           {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
@@ -213,10 +237,13 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-blue-600 pl-3">STEP 2: 実施内容</h2>
       <div className="grid grid-cols-2 gap-4">
-        <div><label className="label text-sm font-bold text-gray-700">実施日 <span className="text-red-500">*</span></label><input type="date" className="w-full h-11 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none" value={report.date} onChange={(e) => updateReport('date', e.target.value)} /></div>
+        <div>
+          <label className="label text-sm font-bold text-gray-700">実施日 <span className="text-red-500">*</span></label>
+          <input type="date" className={`w-full h-11 p-2 border rounded bg-white text-black outline-none appearance-none ${getErrorClass('date')}`} value={report.date} onChange={(e) => updateReport('date', e.target.value)} />
+        </div>
         <div>
           <label className="label text-sm font-bold text-gray-700">場所 <span className="text-red-500">*</span></label>
-          <select className={`w-full h-11 p-2 border rounded bg-white text-black outline-none appearance-none ${!report.location ? 'border-red-300' : 'border-gray-300'}`} value={report.location} onChange={(e) => updateReport('location', e.target.value)}>
+          <select className={`w-full h-11 p-2 border rounded bg-white text-black outline-none appearance-none ${getErrorClass('location')}`} value={report.location} onChange={(e) => updateReport('location', e.target.value)}>
             <option value="">(データを選択してください)</option>
             {masterData.locations.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
@@ -228,7 +255,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       </div>
       <div>
         <label className="label text-sm font-bold text-gray-700">実施者 <span className="text-red-500">*</span></label>
-        <select className={`w-full h-11 p-2 border rounded bg-white text-black outline-none appearance-none ${!report.instructor ? 'border-red-300' : 'border-gray-300'}`} value={report.instructor} onChange={(e) => updateReport('instructor', e.target.value)}>
+        <select className={`w-full h-11 p-2 border rounded bg-white text-black outline-none appearance-none ${getErrorClass('instructor')}`} value={report.instructor} onChange={(e) => updateReport('instructor', e.target.value)}>
           <option value="">(データを選択してください)</option>
           {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
@@ -239,14 +266,14 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="space-y-3">
            <div className="flex items-center gap-2">
              <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(3)</span>
-             <select className={`flex-1 p-2 border rounded bg-white text-black outline-none text-sm appearance-none ${!report.topic ? 'border-red-300' : 'border-gray-300'}`} value={report.topic} onChange={(e) => updateReport('topic', e.target.value)}>
+             <select className={`flex-1 p-2 border rounded bg-white text-black outline-none text-sm appearance-none ${getErrorClass('topic')}`} value={report.topic} onChange={(e) => updateReport('topic', e.target.value)}>
                <option value="">(データを選択してください)</option>
                {masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}
              </select>
            </div>
            <div className="flex items-center gap-2">
              <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(4)</span>
-             <select className={`flex-1 p-2 border rounded bg-white text-black outline-none text-sm appearance-none ${!report.caution ? 'border-red-300' : 'border-gray-300'}`} value={report.caution} onChange={(e) => updateReport('caution', e.target.value)}>
+             <select className={`flex-1 p-2 border rounded bg-white text-black outline-none text-sm appearance-none ${getErrorClass('caution')}`} value={report.caution} onChange={(e) => updateReport('caution', e.target.value)}>
                <option value="">(データを選択してください)</option>
                {masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}
              </select>
@@ -275,7 +302,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         </div>
         <div className="mb-2">
           <label className="block text-sm font-bold text-gray-700 mb-2 text-center">氏名 (手書き)</label>
-          {/* ★修正: 会社名未選択時は署名できないように制御 (UIを半透明&クリック無効化) */}
           <div className={`w-full relative ${!tempCompany ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
             <SignatureCanvas key={sigKey} onSave={(dataUrl) => { addSignature(tempCompany, dataUrl); }} onClear={() => {}} lineWidth={6} keepOpenOnSave={true} />
             {!tempCompany && (
