@@ -641,7 +641,7 @@ const App: React.FC = () => {
 
       <footer className="mt-12 text-center text-gray-400 text-sm pb-8 no-print">
         <div>&copy; 2026 Matsuura Construction App</div>
-        <div className="mt-1">Ver.1.4.2</div>
+        <div className="mt-1">Ver.1.5.3</div>
       </footer>
 
       {renderSelectionModal()}

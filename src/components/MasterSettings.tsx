@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MasterData, INITIAL_MASTER_DATA, EmployeeData, Qualifications, INITIAL_NEWCOMER_SURVEY_REPORT } from '../types';
 import { 
   getMasterData, saveMasterData, deleteDraftsByProject,
-  fetchEmployees, saveEmployee, deleteEmployee // ★追加
+  fetchEmployees, saveEmployee, deleteEmployee 
 } from '../services/firebaseService';
 
 interface Props {
@@ -76,7 +76,7 @@ const MasterSection: React.FC<{ title: string; items: string[]; onUpdate: (items
   );
 };
 
-// ★追加: 社員編集フォーム
+// 社員編集フォーム
 const EmployeeEditForm: React.FC<{ 
   employee: EmployeeData; 
   onSave: (data: EmployeeData) => void; 
@@ -256,6 +256,12 @@ const EmployeeEditForm: React.FC<{
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.roller} onChange={(e)=>handleQualChange('roller', e.target.checked)} />ローラー運転</label>
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.asbestos} onChange={(e)=>handleQualChange('asbestos', e.target.checked)} />石綿取り扱い</label>
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.foreman} onChange={(e)=>handleQualChange('foreman', e.target.checked)} />職長教育</label>
+              
+              {/* ★追加: 免許系のチェックボックス */}
+              <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.license_regular} onChange={(e)=>handleQualChange('license_regular', e.target.checked)} />普通自動車免許</label>
+              <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.license_large} onChange={(e)=>handleQualChange('license_large', e.target.checked)} />大型自動車免許</label>
+              <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.license_large_special} onChange={(e)=>handleQualChange('license_large_special', e.target.checked)} />大型特殊自動車免許</label>
+              <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.license_towing} onChange={(e)=>handleQualChange('license_towing', e.target.checked)} />牽引自動車免許</label>
             </div>
           </section>
 
@@ -280,7 +286,7 @@ const MASTER_GROUPS = {
   TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
 };
 
-// ★修正: タブ型定義を追加
+// タブ型定義
 type TabType = 'BASIC' | 'TRAINING' | 'EMPLOYEES';
 
 const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
@@ -338,13 +344,12 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
 
   // 社員保存
   const handleSaveEmployee = async (data: EmployeeData) => {
-    // 必須チェック（氏名のみ）
     if (!data.nameSei || !data.nameMei) {
       alert("氏名は必須です");
       return;
     }
     
-    // 入力時のタイムスタンプを保存（経験年数計算用）
+    // 入力時のタイムスタンプを保存
     const dataToSave = { ...data, lastUpdatedExperience: Date.now() };
     
     await saveEmployee(dataToSave);
@@ -460,7 +465,6 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
                 {(MASTER_GROUPS[masterTab as 'BASIC' | 'TRAINING']).map((key) => {
                   const list = masterData[key as keyof MasterData] || [];
-                  // 配列かどうかチェック（型安全のため）
                   const count = Array.isArray(list) ? list.length : 0;
                   return (
                     <button key={key} onClick={() => setSelectedMasterKey(key as keyof MasterData)} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group">

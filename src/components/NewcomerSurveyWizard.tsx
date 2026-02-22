@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA, EMPLOYEE_MASTER_DATA } from '../types';
-import { getMasterData, saveDraft, deleteDraftsByProject } from '../services/firebaseService';
+import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA, EmployeeData } from '../types';
+import { getMasterData, saveDraft, deleteDraftsByProject, fetchEmployees } from '../services/firebaseService'; // fetchEmployeesを追加
 import SignatureCanvas from './SignatureCanvas';
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
 
@@ -110,8 +110,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previewScale, setPreviewScale] = useState(1);
   
-  // 社員自動入力用ステート
-  const [selectedEmployee, setSelectedEmployee] = useState("");
+  // ★修正: 社員データリスト用ステート
+  const [employees, setEmployees] = useState<EmployeeData[]>([]);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -140,7 +141,19 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     window.scrollTo(0, 0);
   }, [step]);
 
-  useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
+  // ★修正: マスタデータと社員データを取得
+  useEffect(() => { 
+    const loadData = async () => { 
+      try { 
+        const mData = await getMasterData(); 
+        setMasterData(mData); 
+        const eData = await fetchEmployees();
+        setEmployees(eData);
+      } catch (e) { console.error("データ取得エラー", e); } 
+    }; 
+    loadData(); 
+  }, []);
+
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
 
   useEffect(() => {
@@ -175,24 +188,34 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const updateQual = (key: keyof Qualifications, value: any) => { setReport(prev => ({ ...prev, qualifications: { ...prev.qualifications, [key]: value } })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
-  // ★修正: 社員選択時の処理 (経験年数反映)
-  const handleEmployeeSelect = (name: string) => {
-    setSelectedEmployee(name);
-    if (!name || !EMPLOYEE_MASTER_DATA[name]) return;
+  // ★修正: 社員選択時の処理（Firebaseデータを使用）
+  const handleEmployeeSelect = (empId: string) => {
+    setSelectedEmployeeId(empId);
+    if (!empId) return;
     
-    const emp = EMPLOYEE_MASTER_DATA[name];
+    const emp = employees.find(e => e.id === empId);
+    if (!emp) return;
     
-    // 資格のマッチングロジック
-    const newQuals = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications };
-    const empQuals = emp.qualifications || [];
+    // 経験年数の再計算
+    let currentExpYears = emp.experienceYears;
+    let currentExpMonths = emp.experienceMonths;
     
-    if (empQuals.some(q => q.includes("車両系建設機械(整地"))) newQuals.vehicle_leveling = true;
-    if (empQuals.some(q => q.includes("車両系建設機械(解体"))) newQuals.vehicle_demolition = true;
-    if (empQuals.some(q => q.includes("小型移動"))) newQuals.mobile_crane = true;
-    if (empQuals.some(q => q.includes("玉掛"))) newQuals.slinging = true;
-    if (empQuals.some(q => q.includes("ガス溶接"))) newQuals.gas_welding = true;
-    if (empQuals.some(q => q.includes("職長"))) newQuals.foreman = true;
-    // ...必要に応じて追加
+    if (emp.lastUpdatedExperience) {
+      const lastUpdate = new Date(emp.lastUpdatedExperience);
+      const now = new Date();
+      // 経過月数を計算
+      let monthsDiff = (now.getFullYear() - lastUpdate.getFullYear()) * 12 + (now.getMonth() - lastUpdate.getMonth());
+      // 日付がまだ来ていなければ1ヶ月引く（簡易計算）
+      if (now.getDate() < lastUpdate.getDate()) {
+        monthsDiff--;
+      }
+      
+      if (monthsDiff > 0) {
+        const totalMonths = currentExpYears * 12 + currentExpMonths + monthsDiff;
+        currentExpYears = Math.floor(totalMonths / 12);
+        currentExpMonths = totalMonths % 12;
+      }
+    }
 
     updateReport({
       company: "松浦建設株式会社",
@@ -205,6 +228,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       birthMonth: emp.birthMonth,
       birthDay: emp.birthDay,
       bloodType: emp.bloodType,
+      bloodTypeRh: emp.bloodTypeRh, // RHも反映
+      gender: emp.gender,           // 性別も反映
       address: emp.address,
       phone: emp.phone,
       emergencyContactSei: emp.emergencyContactSei,
@@ -214,10 +239,10 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       healthCheckYear: emp.healthCheckYear,
       healthCheckMonth: emp.healthCheckMonth,
       healthCheckDay: emp.healthCheckDay,
-      // ★追加: 経験年数
-      experienceYears: emp.experienceYears,
-      experienceMonths: emp.experienceMonths,
-      qualifications: newQuals
+      experienceYears: currentExpYears,
+      experienceMonths: currentExpMonths,
+      jobType: emp.jobType, // 職種も反映
+      qualifications: { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...emp.qualifications } // 資格をマージ
     });
   };
 
@@ -354,7 +379,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
   const getErrorClass = (key: string) => errors[key] ? "border-red-500 bg-red-50 ring-1 ring-red-500" : "border-gray-300 bg-white";
 
-  // 健康診断期限切れチェック
   const isHealthCheckExpired = () => {
     if (!report.healthCheckYear || !report.healthCheckMonth || !report.healthCheckDay) return false;
     const yearAD = 2018 + report.healthCheckYear; // 令和
@@ -374,7 +398,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 1: 基本情報</h2>
         <p className="text-sm text-red-500 font-bold"><i className="fa-solid fa-circle-exclamation mr-1"></i>全ての項目が必須です</p>
         
-        {/* 現場・作業所選択（紫枠） */}
+        {/* 現場・作業所選択 */}
         <div className="bg-purple-50 p-4 rounded border border-purple-100 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
            <div className="col-span-1 md:col-span-2 text-sm text-purple-700 font-bold mb-1"><i className="fa-solid fa-circle-info mr-1"></i>はじめに現場を選択してください</div>
            
@@ -385,7 +409,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                value={report.project} 
                onChange={(e)=>updateReport({project: e.target.value})}
              >
-               {/* 修正: 空の選択肢を追加 */}
                <option value="">選択してください</option>
                {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
              </select>
@@ -405,7 +428,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
            </div>
         </div>
 
-        {/* 元請社員自動入力（緑枠） */}
+        {/* ★修正: 元請社員自動入力（Firebaseデータを使用） */}
         <div className="bg-green-50 p-4 rounded border border-green-200 w-full">
            <div className="text-sm text-green-700 font-bold mb-2">
              <i className="fa-solid fa-circle-info mr-1"></i>「松浦建設株式会社」の社員はこちらから名前を選択してください。
@@ -413,12 +436,12 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
            <div className="w-full overflow-hidden">
              <select 
                className="w-full p-2 border border-gray-300 rounded bg-white"
-               value={selectedEmployee}
+               value={selectedEmployeeId}
                onChange={(e) => handleEmployeeSelect(e.target.value)}
              >
                <option value="">選択してください</option>
-               {Object.keys(EMPLOYEE_MASTER_DATA).map(name => (
-                 <option key={name} value={name}>{name}</option>
+               {employees.map(emp => (
+                 <option key={emp.id} value={emp.id}>{emp.nameSei} {emp.nameMei}</option>
                ))}
              </select>
            </div>
