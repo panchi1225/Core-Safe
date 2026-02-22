@@ -4,7 +4,6 @@ import {
 } from '../types';
 import { getMasterData, saveDraft, deleteDraftsByProject } from '../services/firebaseService';
 import { getDaysInMonth, getDay } from 'date-fns';
-import SafetyPlanPrintLayout from './SafetyPlanPrintLayout'; // Preview Import
 
 interface Props {
   initialData?: any;
@@ -30,7 +29,7 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onCon
   );
 };
 
-// ★追加: 保存完了モーダル
+// --- Complete Modal ---
 const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen, onOk }) => {
   if (!isOpen) return null;
   return (
@@ -78,7 +77,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const [previewScale, setPreviewScale] = useState(1);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
-  // ★追加: 完了モーダルの状態管理
+  // 完了モーダルの状態
   const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   useEffect(() => { 
@@ -93,7 +92,18 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     loadMaster(); 
   }, []);
 
-  useEffect(() => { const handleResize = () => { const A4_WIDTH_MM = 297; const MM_TO_PX = 3.78; const A4_WIDTH_PX = A4_WIDTH_MM * MM_TO_PX; const MARGIN = 40; const availableWidth = window.innerWidth - MARGIN; let scale = availableWidth / A4_WIDTH_PX; if (scale > 1.2) scale = 1.2; setPreviewScale(scale); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, []);
+  useEffect(() => { 
+    const handleResize = () => { 
+      const A4_WIDTH_MM = 297; const MM_TO_PX = 3.78; const A4_WIDTH_PX = A4_WIDTH_MM * MM_TO_PX; const MARGIN = 40; 
+      const availableWidth = window.innerWidth - MARGIN; 
+      let scale = availableWidth / A4_WIDTH_PX; 
+      if (scale > 1.2) scale = 1.2; 
+      setPreviewScale(scale); 
+    }; 
+    window.addEventListener('resize', handleResize); 
+    handleResize(); 
+    return () => window.removeEventListener('resize', handleResize); 
+  }, []);
 
   useEffect(() => {
     if (report.processRows.length < 12) {
@@ -116,7 +126,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
 
   const updateReport = (updates: Partial<SafetyPlanReportData>) => { setReport(prev => ({ ...prev, ...updates })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
-  // ★修正: 「保存」ボタンの処理
+  // 保存ボタンの処理
   const handleSave = async () => {
     if (!report.project || !report.location) {
       alert("工事名と作業所を選択してください。");
@@ -129,7 +139,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
       
-      // ★修正: 完了モーダルを表示
+      // 完了モーダルを表示
       setShowCompleteModal(true);
 
     } catch (e) { 
@@ -237,7 +247,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                 <td className={`${borderThin} text-center`}>
                   {isPreview ? report.trainingLeader : (
                     <select className={selectBase} value={report.trainingLeader} onChange={(e)=>updateReport({trainingLeader: e.target.value})}>
-                      {/* ★修正: プレースホルダー追加 */}
                       <option value="">(選択)</option>
                       {masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}
                     </select>
@@ -251,7 +260,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                 <td className={`${borderThin} text-center`}>
                   {isPreview ? report.councilLeader : (
                     <select className={selectBase} value={report.councilLeader} onChange={(e)=>updateReport({councilLeader: e.target.value})}>
-                      {/* ★修正: プレースホルダー追加 */}
                       <option value="">(選択)</option>
                       {masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}
                     </select>
@@ -292,7 +300,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                           updateReport({ processRows: newRows });
                         }}
                       >
-                        {/* ★修正: プレースホルダー追加 (空文字) */}
                         <option value=""></option>
                         {masterData.jobTypes.map(job => <option key={job} value={job}>{job}</option>)}
                       </select>
@@ -350,7 +357,24 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
          </table>
       </div>
       
-      {/* ★追加: 完了モーダル */}
+      {/* --- Modals & Hidden Print Area --- */}
+      {showPreview && (
+        <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-95 flex flex-col no-print">
+          <div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0">
+            <h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i>印刷プレビュー</h2>
+            <div className="flex gap-4">
+              <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
+              <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center hover:bg-green-500"><i className="fa-solid fa-print mr-2"></i> 保存して印刷</button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-8 flex justify-center items-start bg-gray-800">
+            <div className="bg-white shadow-2xl" style={{ width: '297mm', transform: `scale(${previewScale})`, transformOrigin: 'top center', marginBottom: `${(previewScale - 1) * 100}%` }}>
+              {renderReportSheet(true)}
+            </div>
+          </div>
+        </div>
+      )}
+
       <CompleteModal 
         isOpen={showCompleteModal} 
         onOk={() => { 
@@ -364,7 +388,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
       <div className="hidden print:block">
          <style>{`@media print { @page { size: landscape; } }`}</style>
          <div className="print-page-landscape">
-           <SafetyPlanPrintLayout data={report} />
+           {renderReportSheet(true)}
          </div>
       </div>
     </>
