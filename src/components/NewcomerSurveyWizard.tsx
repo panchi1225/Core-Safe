@@ -175,7 +175,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const updateQual = (key: keyof Qualifications, value: any) => { setReport(prev => ({ ...prev, qualifications: { ...prev.qualifications, [key]: value } })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
-  // ★社員選択時の処理 (実装)
+  // 社員選択時の処理
   const handleEmployeeSelect = (name: string) => {
     setSelectedEmployee(name);
     if (!name || !EMPLOYEE_MASTER_DATA[name]) return;
@@ -214,6 +214,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       healthCheckYear: emp.healthCheckYear,
       healthCheckMonth: emp.healthCheckMonth,
       healthCheckDay: emp.healthCheckDay,
+      experienceYears: emp.experienceYears,
+      experienceMonths: emp.experienceMonths,
       qualifications: newQuals
     });
   };
@@ -351,7 +353,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
   const getErrorClass = (key: string) => errors[key] ? "border-red-500 bg-red-50 ring-1 ring-red-500" : "border-gray-300 bg-white";
 
-  // ★追加: 健康診断期限切れチェック
+  // 健康診断期限切れチェック
   const isHealthCheckExpired = () => {
     if (!report.healthCheckYear || !report.healthCheckMonth || !report.healthCheckDay) return false;
     const yearAD = 2018 + report.healthCheckYear; // 令和

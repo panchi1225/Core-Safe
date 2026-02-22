@@ -1,6 +1,5 @@
 // src/types.ts
 
-// --- Saved Draft Interface ---
 export interface SavedDraft {
   id: string;
   type: ReportTypeString;
@@ -12,7 +11,7 @@ export interface SavedDraft {
 
 export type ReportTypeString = 'SAFETY_TRAINING' | 'DISASTER_COUNCIL' | 'SAFETY_PLAN' | 'NEWCOMER_SURVEY';
 
-// ★追加: 元請社員データの型定義
+// 元請社員データの型定義
 export interface EmployeeData {
   nameSei: string;
   nameMei: string;
@@ -33,9 +32,11 @@ export interface EmployeeData {
   healthCheckMonth: number;
   healthCheckDay: number;
   qualifications: string[]; // CSVの文字列そのまま
+  experienceYears: number;
+  experienceMonths: number;
 }
 
-// ★追加: テスト用社員データ（頂いたCSVを元に作成）
+// テスト用社員データ
 export const EMPLOYEE_MASTER_DATA: Record<string, EmployeeData> = {
   "山田 太郎": {
     nameSei: "山田",
@@ -56,6 +57,8 @@ export const EMPLOYEE_MASTER_DATA: Record<string, EmployeeData> = {
     healthCheckYear: 6, // 令和6年
     healthCheckMonth: 5,
     healthCheckDay: 1,
+    experienceYears: 8,
+    experienceMonths: 10,
     qualifications: [
       "車両系建設機械(整地・運搬・積込・掘削)", 
       "車両系建設機械(解体用)", 
@@ -223,7 +226,6 @@ export interface ReportData {
   caution: string;
   photoUrl: string | null;
   signatures: WorkerSignature[];
-  // 追加項目
   year: number;
   scenePhoto: string;
   situationPhoto: string;
@@ -309,7 +311,7 @@ export interface SafetyPlanReportData extends ReportData {
   predictions: string[];
   countermeasures: string[];
   inspectionItems: string[];
-  safetyDuty: Record<number, string>; // キーをstringからnumberに変更(整合性のため)
+  safetyDuty: Record<number, string>;
   lastMonthReflection: string;
 }
 
