@@ -9,15 +9,14 @@ interface Props {
   onBackToMenu: () => void;
 }
 
-// --- 一般的な職種リスト（固定） ---
-const COMMON_OCCUPATIONS = [
-  "現場代理人", "主任技術者", "監理技術者", "職長",
-  "鳶工", "土工", "大工", "型枠大工", "鉄筋工",
-  "コンクリート工", "左官", "塗装工", "防水工", "内装工",
-  "電気工事士", "配管工", "ダクト工", "保温工", "設備工",
-  "解体工", "はつり工", "サッシ工", "ガラス工", "建具工",
-  "重機オペレーター", "クレーン運転士", "運転手",
-  "警備員", "事務", "その他"
+// --- 指定の職種リスト（固定） ---
+const PRESET_JOB_TYPES = [
+  "土工",
+  "鳶",
+  "大工",
+  "オペ",
+  "鉄筋工",
+  "交通整理人"
 ];
 
 // --- Components ---
@@ -113,6 +112,9 @@ const EmployeeEditForm: React.FC<{
     }));
   };
 
+  // 職種が固定リストにあるか、または空か判定（それ以外は「その他」扱い）
+  const isCustomJob = data.jobType !== "" && !PRESET_JOB_TYPES.includes(data.jobType);
+
   return (
     <div className="bg-white rounded-lg shadow-sm h-full flex flex-col animate-fade-in">
       <div className="p-4 border-b flex items-center justify-between bg-gray-50">
@@ -197,17 +199,37 @@ const EmployeeEditForm: React.FC<{
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1">職種</label>
-                {/* ★修正: マスタデータではなく固定リストを使用 */}
+                {/* ★修正: 指定リスト + 「その他」選択時は入力欄表示 */}
                 <select 
                   className="w-full p-2 border rounded bg-white" 
-                  value={data.jobType} 
-                  onChange={e => handleChange('jobType', e.target.value)}
+                  value={isCustomJob ? "その他" : data.jobType} 
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val === "その他") {
+                      handleChange('jobType', 'その他'); // 一旦「その他」という文字列を入れる（入力欄を表示するため）
+                    } else {
+                      handleChange('jobType', val);
+                    }
+                  }}
                 >
-                  <option value="">選択してください</option>
-                  {COMMON_OCCUPATIONS.map(job => (
+                  <option value="">(選択してください)</option>
+                  {PRESET_JOB_TYPES.map(job => (
                     <option key={job} value={job}>{job}</option>
                   ))}
+                  <option value="その他">その他</option>
                 </select>
+                
+                {/* 「その他」が選択されている、またはリスト外の値が入っている場合に入力欄を表示 */}
+                {(isCustomJob || data.jobType === "その他") && (
+                  <input 
+                    type="text"
+                    className="mt-2 w-full p-2 border rounded bg-white border-blue-400"
+                    placeholder="職種を入力してください"
+                    value={data.jobType === "その他" ? "" : data.jobType}
+                    onChange={e => handleChange('jobType', e.target.value)}
+                    autoFocus
+                  />
+                )}
               </div>
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1">経験年数 (入力時点)</label>
