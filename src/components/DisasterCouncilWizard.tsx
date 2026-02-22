@@ -165,6 +165,32 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   };
   
   const handlePreviewClick = async () => {
+    // 既存チェック: STEP1必須項目
+    if (!report.project || !report.date || !report.location) { 
+      alert("STEP 1 の必須項目（工事名、開催日、場所）が未入力です。"); 
+      return; 
+    }
+
+    // ★追加: 元請出席者の名前チェック
+    // index 1 (副統括安全衛生責任者) は除外、それ以外で role があるのに name がないものをチェック
+    // ※今回は上位4名は role 固定なので、0, 2, 3 は名前必須。1 は任意。
+    const missingGCName = report.gcAttendees.some((att, idx) => {
+      if (idx === 1) return false; // 副統括はスキップ
+      if (idx > 3 && !att.role) return false; // 下位4名で役職未選択なら名前も不要
+      return !att.name; // 名前が空ならエラー
+    });
+
+    if (missingGCName) {
+      alert("元請出席者の名前が選択されていません。\n（副統括安全衛生責任者以外は必須です）");
+      return;
+    }
+
+    // ★追加: 署名有無チェック
+    if (report.subcontractorAttendees.length === 0) {
+      alert("協力会社の署名がありません。\n少なくとも1名の署名が必要です。");
+      return;
+    }
+
     setSaveStatus('saving');
     try {
       const newId = await saveDraft(draftId, 'DISASTER_COUNCIL', report); 
@@ -184,7 +210,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   
   const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
 
-  // ★共通スタイル定義: 高さ(h-12), 白背景(bg-white), 外枠(appearance-none) を統一
+  // ★共通スタイル定義
   const inputClass = "w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none";
 
   const renderStep1 = () => (
@@ -194,24 +220,20 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="form-control">
           <label className="label font-bold text-gray-700">工事名 <span className="text-red-500">*</span></label>
-          {/* 修正: 共通クラス適用 */}
           <select className={inputClass} value={report.project} onChange={(e) => updateReport({project: e.target.value})}>
             <option value="">(データを選択してください)</option>
             {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
         <div className="form-control"><label className="label font-bold text-gray-700">開催回</label><div className="flex items-center"><span className="mr-2">第</span>
-          {/* 修正: 共通クラスに近いスタイル適用（幅指定があるため） */}
           <input type="number" className="w-20 h-12 p-3 border border-gray-300 rounded-lg text-center bg-white text-black outline-none appearance-none" value={report.count} onChange={(e) => updateReport({count: parseInt(e.target.value)})} />
         <span className="ml-2">回</span></div></div>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* 修正: 共通クラス適用 */}
         <div className="form-control"><label className="label font-bold text-gray-700">開催日 <span className="text-red-500">*</span></label><input type="date" className={inputClass} value={report.date} onChange={(e) => updateReport({date: e.target.value})} /></div>
         <div className="form-control">
           <label className="label font-bold text-gray-700">場所 <span className="text-red-500">*</span></label>
-          {/* 修正: 共通クラス適用 */}
           <select className={inputClass} value={report.location} onChange={(e) => updateReport({location: e.target.value})}>
             <option value="">(データを選択してください)</option>
             {masterData.locations.map(l => <option key={l} value={l}>{l}</option>)}
@@ -219,29 +241,17 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         </div>
       </div>
       
-      {/* 修正: gapをgap-4で確保し、時間入力欄にも共通クラス(bg-white等)を適用 */}
       <div className="grid grid-cols-2 gap-4">
         <div className="form-control">
           <label className="label font-bold text-gray-700 text-xs sm:text-sm">開始時間</label>
-          <input 
-            type="time" 
-            className={inputClass}
-            value={report.startTime} 
-            onChange={(e) => updateReport({startTime: e.target.value})} 
-          />
+          <input type="time" className={inputClass} value={report.startTime} onChange={(e) => updateReport({startTime: e.target.value})} />
         </div>
         <div className="form-control">
           <label className="label font-bold text-gray-700 text-xs sm:text-sm">終了時間</label>
-          <input 
-            type="time" 
-            className={inputClass}
-            value={report.endTime} 
-            onChange={(e) => updateReport({endTime: e.target.value})} 
-          />
+          <input type="time" className={inputClass} value={report.endTime} onChange={(e) => updateReport({endTime: e.target.value})} />
         </div>
       </div>
       
-      {/* 修正: 共通クラス適用 */}
       <div className="form-control"><label className="label font-bold text-gray-700">元請会社名</label><input type="text" className={`${inputClass} bg-gray-100 cursor-not-allowed`} value="松浦建設株式会社" readOnly /></div>
     </div>
   );
@@ -267,6 +277,10 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       signatureDataUrl
     };
     updateReport({ subcontractorAttendees: [...report.subcontractorAttendees, newAttendee] });
+    
+    // ★修正: 署名完了後、選択状態をリセットし、キャンバスを再描画（キー更新）
+    setTempSubCompany("");
+    setTempSubRole("");
     setSigKey(prev => prev + 1);
   };
 
@@ -303,14 +317,14 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
           <div>
             <label className="text-xs font-bold text-gray-500">会社名 <span className="text-red-500">*</span></label>
-            <select className={`w-full p-2 border rounded bg-white text-black outline-none appearance-none ${!tempSubCompany ? 'border-red-300' : 'border-gray-300'}`} value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>
+            <select className={`w-full p-2 border rounded bg-white text-black outline-none appearance-none ${!tempSubCompany ? 'border-red-300 ring-2 ring-red-100' : 'border-gray-300'}`} value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>
               <option value="">(データを選択してください)</option>
               {masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>
-            <label className="text-xs font-bold text-gray-500">役職</label>
-            <select className="w-full p-2 border rounded bg-white text-black outline-none appearance-none" value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>
+            <label className="text-xs font-bold text-gray-500">役職 <span className="text-red-500">*</span></label>
+            <select className={`w-full p-2 border rounded bg-white text-black outline-none appearance-none ${!tempSubRole ? 'border-red-300 ring-2 ring-red-100' : 'border-gray-300'}`} value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>
               <option value="">(データを選択してください)</option>
               {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
@@ -318,11 +332,12 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         </div>
         <div className="mb-3">
           <label className="text-xs font-bold text-gray-500 mb-1 block">署名</label>
-          <div className={`border rounded border-gray-300 relative ${!tempSubCompany ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+          {/* ★修正: 会社名か役職のどちらか一方でも未選択なら署名不可 */}
+          <div className={`border rounded border-gray-300 relative ${(!tempSubCompany || !tempSubRole) ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
             <SignatureCanvas key={sigKey} onSave={(data) => addSubAttendee(data)} onClear={() => {}} lineWidth={4} keepOpenOnSave={true} />
-            {!tempSubCompany && (
+            {(!tempSubCompany || !tempSubRole) && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="bg-red-100 text-red-600 px-3 py-1 rounded text-xs font-bold border border-red-300">会社名を選択してください</span>
+                <span className="bg-red-100 text-red-600 px-3 py-1 rounded text-xs font-bold border border-red-300">会社名と役職を選択してください</span>
               </div>
             )}
           </div>
