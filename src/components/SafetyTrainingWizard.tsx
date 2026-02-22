@@ -11,7 +11,7 @@ interface Props {
   onBackToMenu: () => void;
 }
 
-// --- Custom Confirmation Modal (拡張版) ---
+// --- Custom Confirmation Modal ---
 interface ConfirmModalProps {
   isOpen: boolean;
   message: string;
@@ -79,7 +79,8 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
   const [previewScale, setPreviewScale] = useState(1);
   
-  // ★修正: モーダルステートの型を拡張版に合わせる
+  // モーダル設定
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     message: string;
@@ -96,8 +97,8 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     leftButtonClass: '', rightButtonClass: ''
   });
 
-  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
+
   const [planSelectionModal, setPlanSelectionModal] = useState(false);
   const [availablePlans, setAvailablePlans] = useState<SavedDraft[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<SafetyPlanReportData | null>(null);
@@ -182,7 +183,8 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     } 
   };
   
-  const handleTempSave = async () => { 
+  // ★修正: 関数名を handleTempSave から handleSave に変更
+  const handleSave = async () => { 
     if (!report.project) {
       alert("保存するには「工事名」の選択が必須です。");
       return;
@@ -253,7 +255,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     document.title = prevTitle; 
   };
   
-  // ★修正: ホームへ戻る際の確認モーダル設定
+  // ホームへ戻る際のモーダル
   const handleHomeClick = () => { 
     if (hasUnsavedChanges) { 
       setConfirmModal({ 
@@ -389,7 +391,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i> 印刷プレビュー</h2>
           <div className="flex gap-4">
             <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
-            <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center hover:bg-green-500"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
+            <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
@@ -429,13 +431,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-blue-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-blue-600" : ""}>STEP 2</span><span className={step >= 3 ? "text-blue-600" : ""}>STEP 3</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">{step === 1 && renderStep1()}{step === 2 && renderStep2()}{step === 3 && renderStep3()}</main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
-          <div className="flex items-center gap-2">
-            <button onClick={handleBack} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button>
-            <button onClick={handleSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center">
-              <i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>
-              {saveStatus === 'saved' ? '保存完了' : '保存'}
-            </button>
-          </div>
+          <div className="flex items-center gap-2"><button onClick={handleBack} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '保存'}</button></div>
           {step < 3 ? (<button onClick={handleNext} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
         </footer>
       </div>
