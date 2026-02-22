@@ -79,7 +79,7 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({
   );
 };
 
-// ★修正: 共通デザインの保存完了モーダル
+// --- Complete Modal ---
 const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen, onOk }) => {
   if (!isOpen) return null;
   return (
@@ -140,12 +140,12 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
 
-  // 所属会社名の初期値設定
-  useEffect(() => {
-    if (masterData.contractors.length > 0 && !report.company) {
-      updateReport({ company: masterData.contractors[0] });
-    }
-  }, [masterData.contractors, report.company]);
+  // ★修正: 所属会社名の自動選択ロジックを削除しました
+  // useEffect(() => {
+  //   if (masterData.contractors.length > 0 && !report.company) {
+  //     updateReport({ company: masterData.contractors[0] });
+  //   }
+  // }, [masterData.contractors, report.company]);
 
   useEffect(() => {
     const calculateAge = () => {
@@ -243,7 +243,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
       
-      // ★修正: 完了モーダルを表示
       setShowCompleteModal(true);
       
     } catch (e) { 
@@ -714,7 +713,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
              <button onClick={handleNext} className="px-8 py-3 bg-purple-600 text-white rounded-lg font-bold shadow hover:bg-purple-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>
           ) : (
              <div className="flex gap-4">
-               {/* ★修正: 「保存」ボタン（handleSave呼び出し） */}
                <button onClick={handleSave} className="px-8 py-3 bg-red-600 text-white rounded-lg font-bold shadow hover:bg-red-700 flex items-center"><i className="fa-solid fa-save mr-2"></i> 保存</button>
                <button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>
              </div>
