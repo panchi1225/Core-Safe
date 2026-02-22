@@ -188,8 +188,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 1: 基本情報</h2>
       
-      {/* ★修正: 完全に1列表示に変更 (lg:grid-cols-2 でPCのみ2列) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* 工事名・開催回は PCで横並び、スマホで縦並び (md:grid-cols-2) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="form-control">
           <label className="label font-bold text-gray-700">工事名 <span className="text-red-500">*</span></label>
           <select className={`w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none ${!report.project ? 'border-red-300' : 'border-gray-300'}`} value={report.project} onChange={(e) => updateReport({project: e.target.value})}>
@@ -200,8 +200,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         <div className="form-control"><label className="label font-bold text-gray-700">開催回</label><div className="flex items-center"><span className="mr-2">第</span><input type="number" className="w-20 p-3 border border-gray-300 rounded-lg text-center" value={report.count} onChange={(e) => updateReport({count: parseInt(e.target.value)})} /><span className="ml-2">回</span></div></div>
       </div>
       
-      {/* ★修正: 完全に1列表示に変更 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* 開催日・場所も PCで横並び、スマホで縦並び */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="form-control"><label className="label font-bold text-gray-700">開催日 <span className="text-red-500">*</span></label><input type="date" className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.date} onChange={(e) => updateReport({date: e.target.value})} /></div>
         <div className="form-control">
           <label className="label font-bold text-gray-700">場所 <span className="text-red-500">*</span></label>
@@ -212,10 +212,26 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         </div>
       </div>
       
-      {/* ★修正: 開始・終了時間も1列表示 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="form-control"><label className="label font-bold text-gray-700">開始時間</label><input type="time" className="w-full p-3 border border-gray-300 rounded-lg" value={report.startTime} onChange={(e) => updateReport({startTime: e.target.value})} /></div>
-        <div className="form-control"><label className="label font-bold text-gray-700">終了時間</label><input type="time" className="w-full p-3 border border-gray-300 rounded-lg" value={report.endTime} onChange={(e) => updateReport({endTime: e.target.value})} /></div>
+      {/* ★修正: 開始・終了時間は 常に横並び(grid-cols-2) かつ 間隔狭め(gap-2) */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="form-control">
+          <label className="label font-bold text-gray-700 text-xs sm:text-sm">開始時間</label>
+          <input 
+            type="time" 
+            className="w-full p-2 border border-gray-300 rounded-lg text-sm" 
+            value={report.startTime} 
+            onChange={(e) => updateReport({startTime: e.target.value})} 
+          />
+        </div>
+        <div className="form-control">
+          <label className="label font-bold text-gray-700 text-xs sm:text-sm">終了時間</label>
+          <input 
+            type="time" 
+            className="w-full p-2 border border-gray-300 rounded-lg text-sm" 
+            value={report.endTime} 
+            onChange={(e) => updateReport({endTime: e.target.value})} 
+          />
+        </div>
       </div>
       
       <div className="form-control"><label className="label font-bold text-gray-700">元請会社名</label><input type="text" className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-black outline-none cursor-not-allowed font-bold" value="松浦建設株式会社" readOnly /></div>
@@ -276,8 +292,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       {/* Subcontractor Attendees */}
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="font-bold text-gray-700 mb-3 text-center">協力会社 出席者登録</h3>
-        {/* ★修正: こちらも1列表示に変更 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
+        {/* 修正: 他の部分のグリッド設定もついでに見直しましたが、基本は縦並びでOK */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
           <div>
             <label className="text-xs font-bold text-gray-500">会社名 <span className="text-red-500">*</span></label>
             <select className={`w-full p-2 border rounded bg-white text-black outline-none appearance-none ${!tempSubCompany ? 'border-red-300' : 'border-gray-300'}`} value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>
