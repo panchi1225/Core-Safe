@@ -4,7 +4,7 @@ import {
 } from '../types';
 import { getMasterData, saveDraft, deleteDraftsByProject } from '../services/firebaseService';
 import { getDaysInMonth, getDay } from 'date-fns';
-import SafetyPlanPrintLayout from './SafetyPlanPrintLayout'; // Import needed for preview
+import SafetyPlanPrintLayout from './SafetyPlanPrintLayout'; // Preview Import
 
 interface Props {
   initialData?: any;
@@ -360,6 +360,13 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
       />
       
       <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
+    
+      <div className="hidden print:block">
+         <style>{`@media print { @page { size: landscape; } }`}</style>
+         <div className="print-page-landscape">
+           <SafetyPlanPrintLayout data={report} />
+         </div>
+      </div>
     </>
   );
 };
