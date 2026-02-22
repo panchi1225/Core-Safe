@@ -131,7 +131,7 @@ const App: React.FC = () => {
 
   // Handlers
   const openSelectionModal = (type: ReportTypeString | 'SAFETY_DIARY') => {
-    // ★修正: 安全衛生日誌の場合はアラートを表示して終了
+    // 安全衛生日誌の場合はアラートを表示して終了
     if (type === 'SAFETY_DIARY') {
       alert("この機能は現在開発中です。\n今後のアップデートをお待ちください。");
       return;
@@ -387,7 +387,10 @@ const App: React.FC = () => {
       <header className="bg-slate-800 text-white p-6 shadow-md flex justify-center items-center relative">
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-wide">Core Safe</h1>
-          <p className="text-xs text-gray-400 font-normal mt-1">-安全書類作成支援システム-</p>
+          {/* ★修正: text-xs -> text-sm に拡大 */}
+          <p className="text-sm text-gray-400 font-normal mt-1">-安全書類作成支援システム-</p>
+          {/* ★追加: 説明文 */}
+          <p className="text-xs text-gray-400 font-normal mt-1">各種書類をPC.スマホ.タブレットから作成可能</p>
         </div>
       </header>
 
@@ -485,7 +488,8 @@ const App: React.FC = () => {
 
       <footer className="mt-12 text-center text-gray-400 text-sm pb-8">
         <div>&copy; 2026 Matsuura Construction App</div>
-        <div className="mt-1">Ver.1.3.6</div>
+        {/* ★修正: Ver.1.3.7 */}
+        <div className="mt-1">Ver.1.3.7</div>
       </footer>
 
       {renderSelectionModal()}
