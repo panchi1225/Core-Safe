@@ -84,8 +84,15 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const [report, setReport] = useState<SafetyPlanReportData>(initialData || INITIAL_SAFETY_PLAN_REPORT);
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
+  const [showPreview, setShowPreview] = useState(false);
+  const [drawingRowId, setDrawingRowId] = useState<string | null>(null);
+  const [drawStartDay, setDrawStartDay] = useState<number | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [previewScale, setPreviewScale] = useState(1);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
-  // ★修正: モーダルステートの型を拡張版に合わせる
+  // モーダルステート
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     message: string;
@@ -101,16 +108,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     leftButtonLabel: '', rightButtonLabel: '',
     leftButtonClass: '', rightButtonClass: ''
   });
-
-  const [showPreview, setShowPreview] = useState(false);
-  const [drawingRowId, setDrawingRowId] = useState<string | null>(null);
-  const [drawStartDay, setDrawStartDay] = useState<number | null>(null);
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
-  const [previewScale, setPreviewScale] = useState(1);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  
-  // 完了モーダルの状態
-  const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   useEffect(() => { 
     const loadMaster = async () => { 
@@ -183,7 +180,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     setHasUnsavedChanges(true); 
   };
   
-  // 保存ボタンの処理
+  // 保存ボタン
   const handleSave = async () => {
     if (!report.project || !report.location) {
       alert("工事名と作業所を選択してください。");
@@ -196,7 +193,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
       
-      // 完了モーダルを表示
       setShowCompleteModal(true);
 
     } catch (e) { 
@@ -228,7 +224,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     } 
   };
   
-  // ★修正: ホームへ戻る際の確認モーダル設定
+  // ホームに戻る処理（モーダル設定）
   const handleHomeClick = () => { 
     if (hasUnsavedChanges) { 
       setConfirmModal({ 
@@ -289,11 +285,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     return day === drawStartDay; 
   };
 
-  const borderOuter = "border-2 border-black"; 
-  const borderThin = "border border-black"; 
-  const headerBg = "bg-cyan-100"; 
-  const inputBase = "w-full h-full bg-transparent outline-none text-center font-serif"; 
-  const selectBase = "w-full h-full bg-transparent outline-none text-center appearance-none font-serif text-center-last";
+  const borderOuter = "border-2 border-black"; const borderThin = "border border-black"; const headerBg = "bg-cyan-100"; const inputBase = "w-full h-full bg-transparent outline-none text-center font-serif"; const selectBase = "w-full h-full bg-transparent outline-none text-center appearance-none font-serif text-center-last";
 
   const renderReportSheet = (isPreview: boolean = false) => (
     <div className="p-[5mm] pt-[10mm] w-full h-full flex flex-col font-serif justify-start">
@@ -475,8 +467,52 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
            </tfoot>
          </table>
       </div>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="no-print min-h-screen bg-gray-50 flex flex-col">
+        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-30 flex justify-between items-center shrink-0">
+          <div className="flex items-center gap-3">
+            <button onClick={handleHomeClick} className="text-white hover:text-gray-300 transition-colors"><i className="fa-solid fa-house"></i></button>
+            <h1 className="text-lg font-bold"><i className="fa-solid fa-clipboard-list mr-2"></i>安全管理計画表</h1>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={handleSave} className="px-4 py-2 rounded font-bold border border-blue-400 text-white bg-blue-600 hover:bg-blue-500 flex items-center text-sm transition-colors shadow-sm">
+              <i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>
+              {saveStatus === 'saved' ? '保存完了' : '保存'}
+            </button>
+            <button onClick={() => setShowPreview(true)} className="px-4 py-2 bg-cyan-600 text-white rounded font-bold hover:bg-cyan-500 flex items-center text-sm transition-colors shadow-sm">
+              <i className="fa-solid fa-file-pdf mr-2"></i> プレビュー
+            </button>
+          </div>
+        </header>
+        
+        <main className="flex-1 overflow-auto p-4 bg-gray-100 flex justify-center">
+          <div className="bg-white shadow-xl origin-top" style={{ width: '297mm', minHeight: '210mm' }}>
+            {renderReportSheet(false)}
+          </div>
+        </main>
+      </div>
       
-      {/* 完了モーダル */}
+      {showPreview && (
+        <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-95 flex flex-col no-print">
+          <div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0">
+            <h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i> 印刷プレビュー</h2>
+            <div className="flex gap-4">
+              <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
+              <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center hover:bg-green-500"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto p-8 flex justify-center items-start bg-gray-800">
+            <div className="bg-white shadow-2xl" style={{ width: '297mm', transform: `scale(${previewScale})`, transformOrigin: 'top center', marginBottom: `${(previewScale - 1) * 100}%` }}>
+              {renderReportSheet(true)}
+            </div>
+          </div>
+        </div>
+      )}
+
       <CompleteModal 
         isOpen={showCompleteModal} 
         onOk={() => { 
@@ -484,8 +520,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
           onBackToMenu(); 
         }} 
       />
-      
-      {showPreview && renderPreviewModal()}
       
       <ConfirmationModal 
         isOpen={confirmModal.isOpen} 
@@ -497,12 +531,10 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
         leftButtonClass={confirmModal.leftButtonClass}
         rightButtonClass={confirmModal.rightButtonClass}
       />
-      
+    
       <div className="hidden print:block">
          <style>{`@media print { @page { size: landscape; } }`}</style>
          <div className="print-page-landscape">
-           {/* 安全管理計画表は単一ページで描画 */}
-           {/* PreviewとPrintで同じコンポーネントを使うため renderReportSheet を利用 */}
            {renderReportSheet(true)}
          </div>
       </div>
