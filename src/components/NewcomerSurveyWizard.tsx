@@ -175,7 +175,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const updateQual = (key: keyof Qualifications, value: any) => { setReport(prev => ({ ...prev, qualifications: { ...prev.qualifications, [key]: value } })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
-  // 社員選択時の処理
+  // ★修正: 社員選択時の処理 (経験年数反映)
   const handleEmployeeSelect = (name: string) => {
     setSelectedEmployee(name);
     if (!name || !EMPLOYEE_MASTER_DATA[name]) return;
@@ -214,6 +214,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       healthCheckYear: emp.healthCheckYear,
       healthCheckMonth: emp.healthCheckMonth,
       healthCheckDay: emp.healthCheckDay,
+      // ★追加: 経験年数
       experienceYears: emp.experienceYears,
       experienceMonths: emp.experienceMonths,
       qualifications: newQuals

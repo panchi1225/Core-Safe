@@ -11,63 +11,55 @@ export interface SavedDraft {
 
 export type ReportTypeString = 'SAFETY_TRAINING' | 'DISASTER_COUNCIL' | 'SAFETY_PLAN' | 'NEWCOMER_SURVEY';
 
-// 元請社員データの型定義
+// --- 元請社員データの型定義 (修正版) ---
 export interface EmployeeData {
+  id: string; // 管理用ID
+  
+  // 氏名
   nameSei: string;
   nameMei: string;
   furiganaSei: string;
   furiganaMei: string;
+  
+  // 生年月日・性別
   birthEra: 'Showa' | 'Heisei';
   birthYear: number;
   birthMonth: number;
   birthDay: number;
+  gender: 'Male' | 'Female';
+  
+  // 血液型
   bloodType: string;
+  bloodTypeRh: 'Plus' | 'Minus' | 'Unknown';
+  
+  // 連絡先
   address: string;
   phone: string;
+  
+  // 緊急連絡先
   emergencyContactSei: string;
   emergencyContactMei: string;
   emergencyContactRelation: string;
   emergencyContactPhone: string;
+  
+  // 職種・経験
+  jobType: string;
+  experienceYears: number;
+  experienceMonths: number;
+  lastUpdatedExperience: number; // 経験年数を更新した際の日付(timestamp) -> 自動計算用
+  
+  // 健康診断
   healthCheckYear: number; // 令和
   healthCheckMonth: number;
   healthCheckDay: number;
-  qualifications: string[]; // CSVの文字列そのまま
-  experienceYears: number;
-  experienceMonths: number;
+  
+  // 資格 (既存のQualificationsインターフェースを再利用または文字列配列)
+  // ここでは管理しやすくするため、NewcomerSurveyと同じQualifications型を使います
+  qualifications: Qualifications;
 }
 
-// テスト用社員データ
-export const EMPLOYEE_MASTER_DATA: Record<string, EmployeeData> = {
-  "山田 太郎": {
-    nameSei: "山田",
-    nameMei: "太郎",
-    furiganaSei: "ヤマダ",
-    furiganaMei: "タロウ",
-    birthEra: 'Heisei', // 平成7年
-    birthYear: 7,
-    birthMonth: 12,
-    birthDay: 1,
-    bloodType: "B",
-    address: "東京都テスト区テスト1-1-1",
-    phone: "080-1122-3344",
-    emergencyContactSei: "山田",
-    emergencyContactMei: "花子",
-    emergencyContactRelation: "妻",
-    emergencyContactPhone: "090-2233-4455",
-    healthCheckYear: 6, // 令和6年
-    healthCheckMonth: 5,
-    healthCheckDay: 1,
-    experienceYears: 8,
-    experienceMonths: 10,
-    qualifications: [
-      "車両系建設機械(整地・運搬・積込・掘削)", 
-      "車両系建設機械(解体用)", 
-      "小型移動式クレーン", 
-      "玉掛", 
-      "職長教育"
-    ]
-  }
-};
+// 互換性維持のため空のオブジェクトとして残しますが、今後はFirebaseのデータを使用します
+export const EMPLOYEE_MASTER_DATA: Record<string, EmployeeData> = {};
 
 export interface MasterData {
   // --- 基本・共通 ---
@@ -86,9 +78,9 @@ export interface MasterData {
   countermeasures: string[];// 防止対策
   
   // その他
-  subcontractors: string[]; // 協力会社名（設定画面からは削除するが、型定義としては残す）
-  processes: string[];      // 作業工程
-  cautions: string[];       // 注意事項
+  subcontractors: string[]; 
+  processes: string[];      
+  cautions: string[];       
 }
 
 export const INITIAL_MASTER_DATA: MasterData = {
