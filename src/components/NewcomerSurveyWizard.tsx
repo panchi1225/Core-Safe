@@ -8,7 +8,6 @@ interface Props {
   initialData?: any;
   initialDraftId?: string | null;
   onBackToMenu: () => void;
-  // onGoToSettings は削除
 }
 
 // --- Helper ---
@@ -32,7 +31,6 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
       pledgeDateYear: null as any,
       pledgeDateMonth: null as any,
       pledgeDateDay: null as any,
-      // ★念のため明示的に空にする
       project: "",
       director: "",
       company: ""
@@ -81,7 +79,7 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({
   );
 };
 
-// 保存完了モーダル
+// ★修正: 共通デザインの保存完了モーダル
 const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen, onOk }) => {
   if (!isOpen) return null;
   return (
@@ -91,7 +89,7 @@ const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen
           <i className="fa-solid fa-check text-3xl"></i>
         </div>
         <h3 className="text-xl font-bold text-gray-800 mb-2">保存完了</h3>
-        <p className="text-gray-600 mb-6">データの保存が完了しました。</p>
+        <p className="text-gray-600 mb-6">データを保存しました。</p>
         <button 
           onClick={onOk} 
           className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 transition-colors"
@@ -164,7 +162,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     if (newAge !== report.age && report.birthYear !== '' && report.birthMonth !== '' && report.birthDay !== '') setReport(prev => ({ ...prev, age: newAge }));
   }, [report.birthEra, report.birthYear, report.birthMonth, report.birthDay]);
 
-  // 元請会社名を「松浦建設株式会社」に強制固定
   useEffect(() => {
     if (report.contractor !== "松浦建設株式会社") {
       updateReport({ contractor: "松浦建設株式会社" });
@@ -246,9 +243,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
       
+      // ★修正: 完了モーダルを表示
       setShowCompleteModal(true);
       
-      setTimeout(() => setSaveStatus('idle'), 2000); 
     } catch (e) { 
       console.error(e); 
       alert("保存に失敗しました"); 
@@ -710,14 +707,14 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         </header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-purple-600" : ""}>基本情報</span><span className={step >= 2 ? "text-purple-600" : ""}>資格</span><span className={step >= 3 ? "text-purple-600" : ""}>誓約・署名</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-purple-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg max-w-3xl min-h-[60vh]">
-           {step === 1 && renderStep1()}{step === 2 && renderStep2()}{step === 3 && renderStep3()}
-        </main>
+           {step === 1 && renderStep1()}{step === 2 && renderStep2()}{step === 3 && renderStep3()}</main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-md z-20">
           <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button></div>
           {step < 3 ? (
              <button onClick={handleNext} className="px-8 py-3 bg-purple-600 text-white rounded-lg font-bold shadow hover:bg-purple-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>
           ) : (
              <div className="flex gap-4">
+               {/* ★修正: 「保存」ボタン（handleSave呼び出し） */}
                <button onClick={handleSave} className="px-8 py-3 bg-red-600 text-white rounded-lg font-bold shadow hover:bg-red-700 flex items-center"><i className="fa-solid fa-save mr-2"></i> 保存</button>
                <button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>
              </div>

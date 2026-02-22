@@ -9,7 +9,6 @@ interface Props {
   initialData?: any;
   initialDraftId?: string | null;
   onBackToMenu: () => void;
-  // onGoToSettings は削除
 }
 
 // --- Modals ---
@@ -25,6 +24,28 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onCon
           <button onClick={onCancel} className="px-4 py-2 bg-gray-100 rounded hover:bg-gray-200 font-bold text-gray-600">キャンセル</button>
           <button onClick={onConfirm} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold">実行する</button>
         </div>
+      </div>
+    </div>
+  );
+};
+
+// ★追加: 保存完了モーダル
+const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen, onOk }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-60 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full p-8 text-center animate-fade-in">
+        <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i className="fa-solid fa-check text-3xl"></i>
+        </div>
+        <h3 className="text-xl font-bold text-gray-800 mb-2">保存完了</h3>
+        <p className="text-gray-600 mb-6">データを保存しました。</p>
+        <button 
+          onClick={onOk} 
+          className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 transition-colors"
+        >
+          OK（ホームへ戻る）
+        </button>
       </div>
     </div>
   );
@@ -56,6 +77,9 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const [previewScale, setPreviewScale] = useState(1);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   
+  // ★追加: 完了モーダルの状態管理
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
+
   useEffect(() => { 
     const loadMaster = async () => { 
       try { 
@@ -70,14 +94,13 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
 
   useEffect(() => { const handleResize = () => { const A4_WIDTH_MM = 297; const MM_TO_PX = 3.78; const A4_WIDTH_PX = A4_WIDTH_MM * MM_TO_PX; const MARGIN = 40; const availableWidth = window.innerWidth - MARGIN; let scale = availableWidth / A4_WIDTH_PX; if (scale > 1.2) scale = 1.2; setPreviewScale(scale); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, []);
 
-  // 行数が12行未満の場合、自動的に空行を追加して12行にする
   useEffect(() => {
     if (report.processRows.length < 12) {
       const currentLength = report.processRows.length;
       const newRows = [...report.processRows];
       for (let i = 0; i < 12 - currentLength; i++) {
         newRows.push({
-          id: `row-${Date.now()}-${i}`, // ユニークIDを生成
+          id: `row-${Date.now()}-${i}`,
           category: '',
           name: '',
           bars: []
@@ -91,9 +114,32 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const bottomColSpans = useMemo(() => { const totalDays = daysInMonth.length; const baseSpan = Math.floor(totalDays / 5); const remainder = totalDays % 5; return Array.from({length: 5}).map((_, i) => baseSpan + (i < remainder ? 1 : 0)); }, [daysInMonth.length]);
 
   const updateReport = (updates: Partial<SafetyPlanReportData>) => { setReport(prev => ({ ...prev, ...updates })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
-  const handleSave = async () => { setSaveStatus('saving'); try { const newId = await saveDraft(draftId, 'SAFETY_PLAN', report); setDraftId(newId); setSaveStatus('saved'); setHasUnsavedChanges(false); setTimeout(() => setSaveStatus('idle'), 2000); } catch (e) { console.error(e); alert("保存に失敗しました"); setSaveStatus('idle'); } };
+  
+  // ★修正: 「保存」ボタンの処理
+  const handleSave = async () => {
+    if (!report.project || !report.location) {
+      alert("工事名と作業所を選択してください。");
+      return;
+    }
+    setSaveStatus('saving'); 
+    try { 
+      const newId = await saveDraft(draftId, 'SAFETY_PLAN', report); 
+      setDraftId(newId); 
+      setSaveStatus('saved'); 
+      setHasUnsavedChanges(false); 
+      
+      // ★修正: 完了モーダルを表示
+      setShowCompleteModal(true);
+
+    } catch (e) { 
+      console.error(e); 
+      alert("保存に失敗しました"); 
+      setSaveStatus('idle'); 
+    } 
+  };
   
   const handlePrint = async () => { 
+    if (!report.project || !report.location) { alert("工事名と作業所を選択してください。"); return; }
     setSaveStatus('saving'); 
     try { 
       const newId = await saveDraft(draftId, 'SAFETY_PLAN', report); 
@@ -140,8 +186,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                {isPreview ? (
                  <span className="min-w-[300px] max-w-[500px] px-1">{report.project}</span>
                ) : (
-                 <select className="outline-none bg-transparent appearance-none min-w-[300px] max-w-[500px]" value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>
-                   {/* ★修正: プレースホルダー追加 */}
+                 <select className={`outline-none bg-transparent appearance-none min-w-[300px] max-w-[500px] ${!report.project ? 'bg-red-50' : ''}`} value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>
                    <option value="">(データを選択してください)</option>
                    {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
                  </select>
@@ -152,8 +197,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                {isPreview ? (
                  <span className="min-w-[200px] px-1">{report.location}</span>
                ) : (
-                 <select className="outline-none bg-transparent appearance-none min-w-[200px]" value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>
-                   {/* ★修正: プレースホルダー追加 */}
+                 <select className={`outline-none bg-transparent appearance-none min-w-[200px] ${!report.location ? 'bg-red-50' : ''}`} value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>
                    <option value="">(データを選択してください)</option>
                    {masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}
                  </select>
@@ -170,7 +214,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
               <span className="w-20 text-[10px] inline-block text-center">{report.author}</span>
             ) : (
               <select className="border-b border-black outline-none bg-transparent w-20 text-[10px]" value={report.author} onChange={(e)=>updateReport({author: e.target.value})}>
-                {/* ★修正: プレースホルダー追加 */}
                 <option value="">(選択)</option>
                 {masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}
               </select>
@@ -305,18 +348,16 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
            </tfoot>
          </table>
       </div>
-    </div>
-  );
-
-  return (
-    <>
-      <div className="no-print min-h-screen bg-gray-50 flex flex-col">
-        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-30 flex justify-between items-center shrink-0"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300 transition-colors"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-clipboard-list mr-2"></i>安全管理計画表</h1></div><div className="flex gap-2"><button onClick={handleSave} className="px-4 py-2 rounded font-bold border border-blue-400 text-white bg-blue-600 hover:bg-blue-500 flex items-center text-sm transition-colors shadow-sm"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button><button onClick={() => setShowPreview(true)} className="px-4 py-2 bg-cyan-600 text-white rounded font-bold hover:bg-cyan-500 flex items-center text-sm transition-colors shadow-sm"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button></div></header>
-        {/* 設定ボタン削除済み */}
-        <main className="flex-1 overflow-auto p-4 bg-gray-100 flex justify-center"><div className="bg-white shadow-xl origin-top" style={{ width: '297mm', minHeight: '210mm' }}>{renderReportSheet(false)}</div></main>
-      </div>
-      {showPreview && (<div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-95 flex flex-col no-print"><div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0"><h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i>印刷プレビュー</h2><div className="flex gap-4"><button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500 transition-colors">閉じる</button><button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center hover:bg-green-500 transition-colors"><i className="fa-solid fa-print mr-2"></i> 保存して印刷</button></div></div><div className="flex-1 overflow-y-auto p-8 flex justify-center items-start bg-gray-800"><div style={{ width: '297mm', transform: `scale(${previewScale})`, transformOrigin: 'top center', marginBottom: `${(previewScale - 1) * 100}%` }}><div className="bg-white shadow-2xl">{renderReportSheet(true)}</div></div></div></div>)}
-      <div className="hidden print:block"><style>{`@media print { @page { size: landscape; } }`}</style><div className="print-page-landscape">{renderReportSheet(true)}</div></div>
+      
+      {/* ★追加: 完了モーダル */}
+      <CompleteModal 
+        isOpen={showCompleteModal} 
+        onOk={() => { 
+          setShowCompleteModal(false); 
+          onBackToMenu(); 
+        }} 
+      />
+      
       <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
     </>
   );

@@ -34,6 +34,28 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onCon
   );
 };
 
+// ★追加: 保存完了モーダル
+const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen, onOk }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-60 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full p-8 text-center animate-fade-in">
+        <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <i className="fa-solid fa-check text-3xl"></i>
+        </div>
+        <h3 className="text-xl font-bold text-gray-800 mb-2">保存完了</h3>
+        <p className="text-gray-600 mb-6">データを保存しました。</p>
+        <button 
+          onClick={onOk} 
+          className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 transition-colors"
+        >
+          OK（ホームへ戻る）
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
   const [step, setStep] = useState(1);
   const [report, setReport] = useState<ReportData>(initialData || INITIAL_REPORT);
@@ -45,6 +67,9 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
   const [previewScale, setPreviewScale] = useState(1);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: () => {} });
+  
+  // ★追加: 完了モーダルの状態管理
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
@@ -92,16 +117,12 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     }
   };
   
-  // ★修正: バリデーションロジックをステップごとに正しく分離
   const handleNext = () => {
     const newErrors: Record<string, boolean> = {};
     let hasError = false;
 
-    // STEP 1 のチェック
     if (step === 1) {
       if (!report.project) { newErrors.project = true; hasError = true; }
-      // STEP 1ではこれだけチェック
-      
       if (hasError) {
         setErrors(newErrors);
         alert("工事名を選択してください。");
@@ -109,7 +130,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       }
     }
     
-    // STEP 2 のチェック
     if (step === 2) {
       if (!report.date) { newErrors.date = true; hasError = true; }
       if (!report.location) { newErrors.location = true; hasError = true; }
@@ -136,14 +156,24 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     } 
   };
   
-  const handleTempSave = async () => { 
+  // ★修正: 「保存」ボタンの処理（保存後に完了モーダルを表示）
+  const handleSave = async () => { 
+    // 保存時にも最低限のバリデーション（工事名だけは必須）
+    if (!report.project) {
+      alert("保存するには「工事名」の選択が必須です。");
+      return;
+    }
+
     setSaveStatus('saving'); 
     try { 
       const newId = await saveDraft(draftId, 'SAFETY_TRAINING', report); 
       setDraftId(newId); 
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
-      setTimeout(() => setSaveStatus('idle'), 2000); 
+      
+      // ★修正: 完了モーダルを表示
+      setShowCompleteModal(true);
+      
     } catch (e) { 
       console.error(e); 
       alert("保存に失敗しました"); 
@@ -364,11 +394,27 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-blue-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-blue-600" : ""}>STEP 2</span><span className={step >= 3 ? "text-blue-600" : ""}>STEP 3</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">{step === 1 && renderStep1()}{step === 2 && renderStep2()}{step === 3 && renderStep3()}</main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
-          <div className="flex items-center gap-2"><button onClick={handleBack} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '一時保存'}</button></div>
-          {/* ★修正: handleNextを使用 */}
+          <div className="flex items-center gap-2">
+            <button onClick={handleBack} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button>
+            {/* ★修正: 「一時保存」を「保存」に変更し、handleSaveを呼び出す */}
+            <button onClick={handleSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center">
+              <i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>
+              {saveStatus === 'saved' ? '保存完了' : '保存'}
+            </button>
+          </div>
           {step < 3 ? (<button onClick={handleNext} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
         </footer>
       </div>
+      
+      {/* ★追加: 完了モーダル */}
+      <CompleteModal 
+        isOpen={showCompleteModal} 
+        onOk={() => { 
+          setShowCompleteModal(false); 
+          onBackToMenu(); 
+        }} 
+      />
+
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       {renderPlanSelectionModal()}
