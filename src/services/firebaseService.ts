@@ -7,16 +7,17 @@ import {
   query, 
   orderBy, 
   Timestamp,
-  setDoc,     // ★ここが増えています
-  addDoc,     // ★ここが増えています
-  getDoc,     // ★ここが増えています
-  writeBatch  // ★ここが増えています
+  setDoc,     
+  addDoc,     
+  getDoc,     
+  writeBatch
 } from 'firebase/firestore';
-import { SavedDraft, MasterData, INITIAL_MASTER_DATA } from '../types';
+import { SavedDraft, MasterData, INITIAL_MASTER_DATA, EmployeeData } from '../types'; // EmployeeDataを追加
 
 const DRAFTS_COLLECTION = 'drafts';
 const MASTER_COLLECTION = 'masterData';
 const MASTER_DOC_ID = 'general';
+const EMPLOYEES_COLLECTION = 'employees'; // ★追加
 
 // ■ データを全件取得する
 export const fetchDrafts = async (): Promise<SavedDraft[]> => {
@@ -151,23 +152,71 @@ export const deleteDraftsByProject = async (projectName: string): Promise<void> 
     throw error;
   }
 };
-// --- src/services/firebaseService.ts の一番下に追記 ---
 
 // ■ 特定のプロジェクトの「安全管理計画表」だけを探す機能
 export const fetchSafetyPlansByProject = async (projectName: string): Promise<SavedDraft[]> => {
   try {
-    // 全件取得してからフィルタリング（Firestoreのインデックス問題を回避するため簡易的に実装）
     const allDrafts = await fetchDrafts();
-    
-    // 「タイプが安全管理計画表」かつ「プロジェクト名が一致するもの」だけを抜き出す
     const matchedPlans = allDrafts.filter(draft => 
       draft.type === 'SAFETY_PLAN' && 
       draft.data.project === projectName
     );
-    
     return matchedPlans;
   } catch (error) {
     console.error("安全管理計画表の検索に失敗しました: ", error);
+    throw error;
+  }
+};
+
+// --- ★以下、新規追加: 社員データ管理機能 ---
+
+// ■ 社員データを全件取得する
+export const fetchEmployees = async (): Promise<EmployeeData[]> => {
+  try {
+    const snapshot = await getDocs(collection(db, EMPLOYEES_COLLECTION));
+    const employees: EmployeeData[] = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      // FirestoreのデータとIDを結合
+      employees.push({ ...data, id: doc.id } as EmployeeData);
+    });
+    
+    // フリガナ順にソート（カナがない場合は空文字扱いで後ろへ）
+    return employees.sort((a, b) => {
+      const kanaA = (a.furiganaSei || "") + (a.furiganaMei || "");
+      const kanaB = (b.furiganaSei || "") + (b.furiganaMei || "");
+      return kanaA.localeCompare(kanaB, 'ja');
+    });
+  } catch (error) {
+    console.error("社員データの取得失敗:", error);
+    return [];
+  }
+};
+
+// ■ 社員データを保存する（新規・更新）
+export const saveEmployee = async (employee: EmployeeData): Promise<void> => {
+  try {
+    // IDがなければ新規作成(timestamp)、あれば更新
+    const id = employee.id || Date.now().toString();
+    const docRef = doc(db, EMPLOYEES_COLLECTION, id);
+    
+    // undefinedがあるとFirestoreでエラーになるためnull変換
+    const dataToSave = JSON.parse(JSON.stringify({ ...employee, id }, (k, v) => v === undefined ? null : v));
+    
+    // マージ保存（既存フィールドを維持しつつ更新）
+    await setDoc(docRef, dataToSave, { merge: true });
+  } catch (error) {
+    console.error("社員データの保存失敗:", error);
+    throw error;
+  }
+};
+
+// ■ 社員データを削除する
+export const deleteEmployee = async (id: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, EMPLOYEES_COLLECTION, id));
+  } catch (error) {
+    console.error("社員データの削除失敗:", error);
     throw error;
   }
 };
