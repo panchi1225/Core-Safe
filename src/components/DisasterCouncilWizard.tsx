@@ -11,7 +11,7 @@ interface Props {
   onBackToMenu: () => void;
 }
 
-// --- Custom Confirmation Modal (拡張版) ---
+// --- Custom Confirmation Modal ---
 interface ConfirmModalProps {
   isOpen: boolean;
   message: string;
@@ -84,7 +84,9 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
 
-  // ★修正: モーダルステートの型を拡張版に合わせる
+  // ★追加: エラー状態管理
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     message: string;
@@ -154,15 +156,38 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     }
   }, [report.gcAttendees]);
 
-  const updateReport = (updates: Partial<DisasterCouncilReportData>) => { setReport(prev => ({ ...prev, ...updates })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
+  const updateReport = (updates: Partial<DisasterCouncilReportData>) => { 
+    setReport(prev => ({ ...prev, ...updates })); 
+    setSaveStatus('idle'); 
+    setHasUnsavedChanges(true);
+    
+    // ★追加: 入力があったらエラーを解除
+    const newErrors = { ...errors };
+    Object.keys(updates).forEach(key => {
+      if (key === 'project') delete newErrors.project;
+      if (key === 'date') delete newErrors.date;
+      if (key === 'location') delete newErrors.location;
+    });
+    setErrors(newErrors);
+  };
   
+  // ★修正: バリデーション付きハンドル
   const handleNext = () => {
+    const newErrors: Record<string, boolean> = {};
+    let hasError = false;
+
     if (step === 1) {
-      if (!report.project || !report.date || !report.location) {
+      if (!report.project) { newErrors.project = true; hasError = true; }
+      if (!report.date) { newErrors.date = true; hasError = true; }
+      if (!report.location) { newErrors.location = true; hasError = true; }
+      
+      if (hasError) {
+        setErrors(newErrors);
         alert("未入力の項目があります。\n全ての項目を選択・入力してください。");
         return;
       }
     }
+    setErrors({});
     setStep(prev => Math.min(prev + 1, 2));
   };
 
@@ -191,25 +216,44 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   };
   
   const handlePreviewClick = async () => {
-    // 既存チェック: STEP1必須項目
-    if (!report.project || !report.date || !report.location) { 
-      alert("STEP 1 の必須項目（工事名、開催日、場所）が未入力です。"); 
-      return; 
-    }
+    const newErrors: Record<string, boolean> = {};
+    let hasError = false;
 
-    // ★追加: 元請出席者の名前チェック
+    // STEP1 必須項目チェック
+    if (!report.project) { newErrors.project = true; hasError = true; }
+    if (!report.date) { newErrors.date = true; hasError = true; }
+    if (!report.location) { newErrors.location = true; hasError = true; }
+
+    // 元請出席者の名前チェック
+    // index 1 (副統括) は除外、それ以外で role があるのに name がないものをチェック
     const missingGCName = report.gcAttendees.some((att, idx) => {
-      if (idx === 1) return false; // 副統括はスキップ
-      if (idx > 3 && !att.role) return false; // 下位4名で役職未選択なら名前も不要
-      return !att.name; // 名前が空ならエラー
+      if (idx === 1) return false; 
+      if (idx > 3 && !att.role) return false; 
+      return !att.name;
     });
 
-    if (missingGCName) {
-      alert("元請出席者の名前が選択されていません。\n（副統括安全衛生責任者以外は必須です）");
+    // 元請のエラー箇所を特定して赤枠にする
+    report.gcAttendees.forEach((att, idx) => {
+      if (idx === 1) return;
+      if (idx > 3 && !att.role) return;
+      if (!att.name) {
+        newErrors[`gcAttendee_${idx}`] = true;
+        hasError = true;
+      }
+    });
+
+    if (hasError) {
+      setErrors(newErrors);
+      // メッセージの出し分け
+      if (!report.project || !report.date || !report.location) {
+        alert("STEP 1 の必須項目（工事名、開催日、場所）が未入力です。");
+      } else if (missingGCName) {
+        alert("元請出席者の名前が選択されていません。\n（副統括安全衛生責任者以外は必須です）");
+      }
       return;
     }
 
-    // ★追加: 署名有無チェック
+    // 署名有無チェック (ここは赤枠にできないのでアラートのみ)
     if (report.subcontractorAttendees.length === 0) {
       alert("協力会社の署名がありません。\n少なくとも1名の署名が必要です。");
       return;
@@ -232,7 +276,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const confirmPlanSelection = (plan: SavedDraft) => { setSelectedPlan(plan.data as SafetyPlanReportData); setPlanSelectionModal(false); setShowPreview(true); };
   const handlePrint = () => { const prevTitle = document.title; document.title = `災害防止協議会_${report.project}_第${report.count}回`; window.print(); document.title = prevTitle; };
   
-  // ★修正: ホームへ戻る際の確認モーダル設定
   const handleHomeClick = () => { 
     if (hasUnsavedChanges) { 
       setConfirmModal({ 
@@ -255,8 +298,19 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     } 
   };
 
-  // ★共通スタイル定義
-  const inputClass = "w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none";
+  // ★共通スタイル定義 (エラー時は赤枠)
+  const getErrorClass = (field: string) => {
+    return errors[field] 
+      ? "w-full h-12 p-3 border-2 border-red-500 bg-red-50 rounded-lg text-black outline-none appearance-none" 
+      : "w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none";
+  };
+
+  // STEP2の個別エラークラス (h-10などサイズが違うため)
+  const getStep2ErrorClass = (field: string) => {
+    return errors[field]
+      ? "border-2 border-red-500 bg-red-50"
+      : "border border-gray-200 bg-white";
+  };
 
   const renderStep1 = () => (
     <div className="space-y-6">
@@ -265,7 +319,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="form-control">
           <label className="label font-bold text-gray-700">工事名 <span className="text-red-500">*</span></label>
-          <select className={inputClass} value={report.project} onChange={(e) => updateReport({project: e.target.value})}>
+          <select className={getErrorClass('project')} value={report.project} onChange={(e) => updateReport({project: e.target.value})}>
             <option value="">(データを選択してください)</option>
             {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
@@ -276,10 +330,10 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="form-control"><label className="label font-bold text-gray-700">開催日 <span className="text-red-500">*</span></label><input type="date" className={inputClass} value={report.date} onChange={(e) => updateReport({date: e.target.value})} /></div>
+        <div className="form-control"><label className="label font-bold text-gray-700">開催日 <span className="text-red-500">*</span></label><input type="date" className={getErrorClass('date')} value={report.date} onChange={(e) => updateReport({date: e.target.value})} /></div>
         <div className="form-control">
           <label className="label font-bold text-gray-700">場所 <span className="text-red-500">*</span></label>
-          <select className={inputClass} value={report.location} onChange={(e) => updateReport({location: e.target.value})}>
+          <select className={getErrorClass('location')} value={report.location} onChange={(e) => updateReport({location: e.target.value})}>
             <option value="">(データを選択してください)</option>
             {masterData.locations.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
@@ -289,15 +343,16 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       <div className="grid grid-cols-2 gap-4">
         <div className="form-control">
           <label className="label font-bold text-gray-700 text-xs sm:text-sm">開始時間</label>
-          <input type="time" className={inputClass} value={report.startTime} onChange={(e) => updateReport({startTime: e.target.value})} />
+          {/* 時間は必須とは言われていないが、必要ならここも getErrorClass を適用可能。一旦標準スタイル */}
+          <input type="time" className="w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.startTime} onChange={(e) => updateReport({startTime: e.target.value})} />
         </div>
         <div className="form-control">
           <label className="label font-bold text-gray-700 text-xs sm:text-sm">終了時間</label>
-          <input type="time" className={inputClass} value={report.endTime} onChange={(e) => updateReport({endTime: e.target.value})} />
+          <input type="time" className="w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.endTime} onChange={(e) => updateReport({endTime: e.target.value})} />
         </div>
       </div>
       
-      <div className="form-control"><label className="label font-bold text-gray-700">元請会社名</label><input type="text" className={`${inputClass} bg-gray-100 cursor-not-allowed`} value="松浦建設株式会社" readOnly /></div>
+      <div className="form-control"><label className="label font-bold text-gray-700">元請会社名</label><input type="text" className="w-full h-12 p-3 border border-gray-300 rounded-lg bg-gray-100 text-black outline-none appearance-none cursor-not-allowed" value="松浦建設株式会社" readOnly /></div>
     </div>
   );
 
@@ -306,6 +361,13 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     if (!newAttendees[index]) newAttendees[index] = { role: '', name: '' };
     newAttendees[index] = { ...newAttendees[index], [field]: value };
     updateReport({ gcAttendees: newAttendees });
+    
+    // エラー解除
+    if (field === 'name' && value) {
+      const newErrors = { ...errors };
+      delete newErrors[`gcAttendee_${index}`];
+      setErrors(newErrors);
+    }
   };
 
   const [tempSubRole, setTempSubRole] = useState("");
@@ -346,7 +408,12 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
                   {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               )}
-              <select className="flex-1 h-10 p-2 border rounded text-sm bg-white text-black outline-none appearance-none min-w-0" value={report.gcAttendees[i]?.name || ""} onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}>
+              {/* ★修正: エラー時に赤枠を適用 */}
+              <select 
+                className={`flex-1 h-10 p-2 rounded text-sm text-black outline-none appearance-none min-w-0 ${getStep2ErrorClass(`gcAttendee_${i}`)}`}
+                value={report.gcAttendees[i]?.name || ""} 
+                onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}
+              >
                 <option value="">選択してください</option>
                 {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -426,7 +493,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           <h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i> 印刷プレビュー</h2>
           <div className="flex gap-4">
             <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
-            <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold hover:bg-green-500 shadow-md flex items-center"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
+            <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
