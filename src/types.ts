@@ -1,11 +1,70 @@
+// src/types.ts
+
+// --- Saved Draft Interface ---
 export interface SavedDraft {
   id: string;
   type: ReportTypeString;
   data: any;
+  createdAt: number;
+  updatedAt: number;
   lastModified: number;
 }
 
 export type ReportTypeString = 'SAFETY_TRAINING' | 'DISASTER_COUNCIL' | 'SAFETY_PLAN' | 'NEWCOMER_SURVEY';
+
+// ★追加: 元請社員データの型定義
+export interface EmployeeData {
+  nameSei: string;
+  nameMei: string;
+  furiganaSei: string;
+  furiganaMei: string;
+  birthEra: 'Showa' | 'Heisei';
+  birthYear: number;
+  birthMonth: number;
+  birthDay: number;
+  bloodType: string;
+  address: string;
+  phone: string;
+  emergencyContactSei: string;
+  emergencyContactMei: string;
+  emergencyContactRelation: string;
+  emergencyContactPhone: string;
+  healthCheckYear: number; // 令和
+  healthCheckMonth: number;
+  healthCheckDay: number;
+  qualifications: string[]; // CSVの文字列そのまま
+}
+
+// ★追加: テスト用社員データ（頂いたCSVを元に作成）
+export const EMPLOYEE_MASTER_DATA: Record<string, EmployeeData> = {
+  "山田 太郎": {
+    nameSei: "山田",
+    nameMei: "太郎",
+    furiganaSei: "ヤマダ",
+    furiganaMei: "タロウ",
+    birthEra: 'Heisei', // 平成7年
+    birthYear: 7,
+    birthMonth: 12,
+    birthDay: 1,
+    bloodType: "B",
+    address: "東京都テスト区テスト1-1-1",
+    phone: "080-1122-3344",
+    emergencyContactSei: "山田",
+    emergencyContactMei: "花子",
+    emergencyContactRelation: "妻",
+    emergencyContactPhone: "090-2233-4455",
+    healthCheckYear: 6, // 令和6年
+    healthCheckMonth: 5,
+    healthCheckDay: 1,
+    qualifications: [
+      "車両系建設機械(整地・運搬・積込・掘削)", 
+      "車両系建設機械(解体用)", 
+      "小型移動式クレーン", 
+      "玉掛", 
+      "職長教育"
+    ]
+  }
+};
 
 export interface MasterData {
   // --- 基本・共通 ---
@@ -136,7 +195,6 @@ export const INITIAL_MASTER_DATA: MasterData = {
     "重量物の複数人作業",
     "KY活動による危険共有"
   ],
-  // 以下の項目は指定がなかったため空または既存維持
   subcontractors: [], 
   processes: [],
   cautions: [],
@@ -165,12 +223,16 @@ export interface ReportData {
   caution: string;
   photoUrl: string | null;
   signatures: WorkerSignature[];
+  // 追加項目
+  year: number;
+  scenePhoto: string;
+  situationPhoto: string;
 }
 
 export const INITIAL_REPORT: ReportData = {
   project: '',
   month: new Date().getMonth() + 1,
-  contractor: '',
+  contractor: '松浦建設株式会社',
   date: new Date().toISOString().split('T')[0],
   location: '',
   startTime: "08:00",
@@ -181,7 +243,10 @@ export const INITIAL_REPORT: ReportData = {
   process: '',
   caution: '',
   photoUrl: null,
-  signatures: []
+  signatures: [],
+  year: new Date().getFullYear(),
+  scenePhoto: "",
+  situationPhoto: ""
 };
 
 // --- Disaster Council Report ---
@@ -198,26 +263,19 @@ export interface SubcontractorAttendee {
   signatureDataUrl: string;
 }
 
-export interface DisasterCouncilReportData {
+export interface DisasterCouncilReportData extends ReportData {
   count: number;
-  project: string;
-  date: string;
-  contractor: string;
   startTime: string;
   endTime: string;
-  location: string;
   gcAttendees: GCAttendee[];
   subcontractorAttendees: SubcontractorAttendee[];
 }
 
 export const INITIAL_DISASTER_COUNCIL_REPORT: DisasterCouncilReportData = {
+  ...INITIAL_REPORT,
   count: 1,
-  project: '',
-  date: new Date().toISOString().split('T')[0],
-  contractor: '',
   startTime: "13:00",
   endTime: "14:00",
-  location: '',
   gcAttendees: Array(8).fill({ role: "", name: "" }),
   subcontractorAttendees: []
 };
@@ -235,7 +293,7 @@ export interface PlanProcessRow {
   bars: PlanProcessBar[];
 }
 
-export interface SafetyPlanReportData {
+export interface SafetyPlanReportData extends ReportData {
   year: number;
   month: number;
   createdDate: string;
@@ -251,11 +309,12 @@ export interface SafetyPlanReportData {
   predictions: string[];
   countermeasures: string[];
   inspectionItems: string[];
-  safetyDuty: Record<string, string>;
+  safetyDuty: Record<number, string>; // キーをstringからnumberに変更(整合性のため)
   lastMonthReflection: string;
 }
 
 export const INITIAL_SAFETY_PLAN_REPORT: SafetyPlanReportData = {
+  ...INITIAL_REPORT,
   year: new Date().getFullYear(),
   month: new Date().getMonth() + 1,
   createdDate: new Date().toISOString().split('T')[0],
@@ -305,7 +364,7 @@ export interface Qualifications {
   otherText3: string;
 }
 
-export interface NewcomerSurveyReportData {
+export interface NewcomerSurveyReportData extends ReportData {
   // Meta (表示用)
   name?: string; 
 
@@ -337,7 +396,6 @@ export interface NewcomerSurveyReportData {
   address: string;
   phone: string;
   
-  // 緊急連絡先分割
   emergencyContactSei: string;
   emergencyContactMei: string;
   
@@ -363,6 +421,7 @@ export interface NewcomerSurveyReportData {
 }
 
 export const INITIAL_NEWCOMER_SURVEY_REPORT: NewcomerSurveyReportData = {
+  ...INITIAL_REPORT,
   project: "",
   director: "",
   

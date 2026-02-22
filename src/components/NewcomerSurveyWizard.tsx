@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA } from '../types';
+import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA, EMPLOYEE_MASTER_DATA } from '../types';
 import { getMasterData, saveDraft, deleteDraftsByProject } from '../services/firebaseService';
 import SignatureCanvas from './SignatureCanvas';
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
@@ -175,15 +175,47 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const updateQual = (key: keyof Qualifications, value: any) => { setReport(prev => ({ ...prev, qualifications: { ...prev.qualifications, [key]: value } })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
-  // 社員選択時の処理（後でデータを実装）
+  // ★社員選択時の処理 (実装)
   const handleEmployeeSelect = (name: string) => {
     setSelectedEmployee(name);
-    if (!name) return;
+    if (!name || !EMPLOYEE_MASTER_DATA[name]) return;
     
-    // ここに将来、社員データをセットする処理を追加
-    // 例:
-    // const employee = EMPLOYEES_DATA[name];
-    // updateReport({ ...employee });
+    const emp = EMPLOYEE_MASTER_DATA[name];
+    
+    // 資格のマッチングロジック
+    const newQuals = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications };
+    const empQuals = emp.qualifications || [];
+    
+    if (empQuals.some(q => q.includes("車両系建設機械(整地"))) newQuals.vehicle_leveling = true;
+    if (empQuals.some(q => q.includes("車両系建設機械(解体"))) newQuals.vehicle_demolition = true;
+    if (empQuals.some(q => q.includes("小型移動"))) newQuals.mobile_crane = true;
+    if (empQuals.some(q => q.includes("玉掛"))) newQuals.slinging = true;
+    if (empQuals.some(q => q.includes("ガス溶接"))) newQuals.gas_welding = true;
+    if (empQuals.some(q => q.includes("職長"))) newQuals.foreman = true;
+    // ...必要に応じて追加
+
+    updateReport({
+      company: "松浦建設株式会社",
+      nameSei: emp.nameSei,
+      nameMei: emp.nameMei,
+      furiganaSei: emp.furiganaSei,
+      furiganaMei: emp.furiganaMei,
+      birthEra: emp.birthEra,
+      birthYear: emp.birthYear,
+      birthMonth: emp.birthMonth,
+      birthDay: emp.birthDay,
+      bloodType: emp.bloodType,
+      address: emp.address,
+      phone: emp.phone,
+      emergencyContactSei: emp.emergencyContactSei,
+      emergencyContactMei: emp.emergencyContactMei,
+      emergencyContactRelation: emp.emergencyContactRelation,
+      emergencyContactPhone: emp.emergencyContactPhone,
+      healthCheckYear: emp.healthCheckYear,
+      healthCheckMonth: emp.healthCheckMonth,
+      healthCheckDay: emp.healthCheckDay,
+      qualifications: newQuals
+    });
   };
 
   const validateStep1 = () => {
@@ -319,6 +351,19 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
   const getErrorClass = (key: string) => errors[key] ? "border-red-500 bg-red-50 ring-1 ring-red-500" : "border-gray-300 bg-white";
 
+  // ★追加: 健康診断期限切れチェック
+  const isHealthCheckExpired = () => {
+    if (!report.healthCheckYear || !report.healthCheckMonth || !report.healthCheckDay) return false;
+    const yearAD = 2018 + report.healthCheckYear; // 令和
+    const checkDate = new Date(yearAD, report.healthCheckMonth - 1, report.healthCheckDay);
+    const today = new Date();
+    const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+    
+    return checkDate < oneYearAgo;
+  };
+
+  const isExpired = isHealthCheckExpired();
+
   // --- RENDER STEPS ---
   const renderStep1 = () => {
     return (
@@ -337,6 +382,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                value={report.project} 
                onChange={(e)=>updateReport({project: e.target.value})}
              >
+               {/* 修正: 空の選択肢を追加 */}
                <option value="">選択してください</option>
                {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
              </select>
@@ -349,13 +395,14 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                value={report.director} 
                onChange={(e)=>updateReport({director: e.target.value})}
              >
+               {/* 修正: 空の選択肢を追加 */}
                <option value="">選択してください</option>
                {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
              </select>
            </div>
         </div>
 
-        {/* ★追加: 元請社員自動入力（緑枠） */}
+        {/* 元請社員自動入力（緑枠） */}
         <div className="bg-green-50 p-4 rounded border border-green-200 w-full">
            <div className="text-sm text-green-700 font-bold mb-2">
              <i className="fa-solid fa-circle-info mr-1"></i>「松浦建設株式会社」の社員はこちらから名前を選択してください。
@@ -367,7 +414,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                onChange={(e) => handleEmployeeSelect(e.target.value)}
              >
                <option value="">選択してください</option>
-               {/* 後ほど社員データを追加 */}
+               {Object.keys(EMPLOYEE_MASTER_DATA).map(name => (
+                 <option key={name} value={name}>{name}</option>
+               ))}
              </select>
            </div>
         </div>
@@ -549,7 +598,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             <label className="label font-bold text-gray-700">健康診断受診日 (令和)</label>
             <div className="flex gap-1 items-center">
               <select 
-                className={`w-16 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('healthCheckYear')}`} 
+                className={`w-16 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckYear')}`} 
                 value={report.healthCheckYear ?? ''} 
                 onChange={(e)=>updateReport({healthCheckYear: e.target.value === '' ? null : parseInt(e.target.value)})}
               >
@@ -559,7 +608,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
               <span>年</span>
               
               <select 
-                className={`w-14 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('healthCheckMonth')}`} 
+                className={`w-14 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckMonth')}`} 
                 value={report.healthCheckMonth ?? ''} 
                 onChange={(e)=>updateReport({healthCheckMonth: e.target.value === '' ? null : parseInt(e.target.value)})}
               >
@@ -569,7 +618,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
               <span>月</span>
               
               <select 
-                className="w-14 p-2 border rounded text-center bg-white appearance-none" 
+                className={`w-14 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckDay')}`} 
                 value={report.healthCheckDay ?? ''} 
                 onChange={(e)=>updateReport({healthCheckDay: e.target.value === '' ? null : parseInt(e.target.value)})}
               >
@@ -578,6 +627,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
               </select>
               <span>日</span>
             </div>
+            {isExpired && (
+              <p className="text-xs text-red-600 font-bold mt-1">※最終受診から1年以上経過しています</p>
+            )}
           </div>
         </div>
         <div className="form-control"><label className="label font-bold text-gray-700">建退共加入状況</label><div className="flex gap-4 mt-1"><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'Joined'} onChange={() => updateReport({kentaikyo: 'Joined'})} />加入している</label><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'NotJoined'} onChange={() => updateReport({kentaikyo: 'NotJoined'})} />加入していない</label></div></div>
