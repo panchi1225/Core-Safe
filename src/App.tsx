@@ -93,8 +93,6 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, url, masterD
                 <QRCodeCanvas value={url} size={250} level={"H"} includeMargin={true} />
               </div>
               
-              {/* URL表示は削除済み */}
-
               <div className="w-full flex flex-col gap-3">
                 <button 
                   onClick={() => setShowPrintSettings(true)} 
@@ -542,7 +540,6 @@ const App: React.FC = () => {
       <header className="bg-slate-800 text-white p-6 shadow-md flex justify-center items-center relative no-print">
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-wide">安全書類作成支援システム</h1>
-          <p className="text-sm text-gray-400 font-normal mt-1">-Core Safe-</p>
           <p className="text-xs text-gray-400 font-normal mt-1">各種書類をPC.スマホ.タブレットから作成可能</p>
         </div>
       </header>
@@ -643,7 +640,7 @@ const App: React.FC = () => {
         <div>&copy; 2026 Matsuura Construction App</div>
         <div className="mt-1 flex items-center justify-center gap-2">
           <span>Core Safe</span>
-          <span>Ver.1.5.5</span>
+          <span>Ver.1.5.6</span>
         </div>
       </footer>
 
