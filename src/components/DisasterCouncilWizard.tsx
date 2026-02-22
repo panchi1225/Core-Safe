@@ -11,23 +11,33 @@ interface Props {
   onBackToMenu: () => void;
 }
 
-// --- Custom Confirmation Modal ---
+// --- Custom Confirmation Modal (拡張版) ---
 interface ConfirmModalProps {
   isOpen: boolean;
   message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
+  onLeftButtonClick: () => void;
+  onRightButtonClick: () => void;
+  leftButtonLabel: string;
+  rightButtonLabel: string;
+  leftButtonClass: string;
+  rightButtonClass: string;
 }
-const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onConfirm, onCancel }) => {
+
+const ConfirmationModal: React.FC<ConfirmModalProps> = ({ 
+  isOpen, message, 
+  onLeftButtonClick, onRightButtonClick,
+  leftButtonLabel, rightButtonLabel,
+  leftButtonClass, rightButtonClass
+}) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[60] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-fade-in">
         <h3 className="text-lg font-bold text-gray-800 mb-4">確認</h3>
-        <p className="text-gray-600 mb-6 whitespace-pre-wrap">{message}</p>
+        <p className="text-gray-600 mb-6 whitespace-pre-wrap font-bold text-red-600">{message}</p>
         <div className="flex justify-end gap-3">
-          <button onClick={onCancel} className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 font-bold">キャンセル</button>
-          <button onClick={onConfirm} className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700 font-bold">実行する</button>
+          <button onClick={onLeftButtonClick} className={leftButtonClass}>{leftButtonLabel}</button>
+          <button onClick={onRightButtonClick} className={rightButtonClass}>{rightButtonLabel}</button>
         </div>
       </div>
     </div>
@@ -71,9 +81,25 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [showPreview, setShowPreview] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previewScale, setPreviewScale] = useState(1);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: () => {} });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+
+  // ★修正: モーダルステートの型を拡張版に合わせる
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    message: string;
+    onLeftButtonClick: () => void;
+    onRightButtonClick: () => void;
+    leftButtonLabel: string;
+    rightButtonLabel: string;
+    leftButtonClass: string;
+    rightButtonClass: string;
+  }>({ 
+    isOpen: false, message: '', 
+    onLeftButtonClick: () => {}, onRightButtonClick: () => {}, 
+    leftButtonLabel: '', rightButtonLabel: '',
+    leftButtonClass: '', rightButtonClass: ''
+  });
 
   const [planSelectionModal, setPlanSelectionModal] = useState(false);
   const [availablePlans, setAvailablePlans] = useState<SavedDraft[]>([]);
@@ -172,8 +198,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     }
 
     // ★追加: 元請出席者の名前チェック
-    // index 1 (副統括安全衛生責任者) は除外、それ以外で role があるのに name がないものをチェック
-    // ※今回は上位4名は role 固定なので、0, 2, 3 は名前必須。1 は任意。
     const missingGCName = report.gcAttendees.some((att, idx) => {
       if (idx === 1) return false; // 副統括はスキップ
       if (idx > 3 && !att.role) return false; // 下位4名で役職未選択なら名前も不要
@@ -208,7 +232,28 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const confirmPlanSelection = (plan: SavedDraft) => { setSelectedPlan(plan.data as SafetyPlanReportData); setPlanSelectionModal(false); setShowPreview(true); };
   const handlePrint = () => { const prevTitle = document.title; document.title = `災害防止協議会_${report.project}_第${report.count}回`; window.print(); document.title = prevTitle; };
   
-  const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
+  // ★修正: ホームへ戻る際の確認モーダル設定
+  const handleHomeClick = () => { 
+    if (hasUnsavedChanges) { 
+      setConfirmModal({ 
+        isOpen: true, 
+        message: "データが保存されていません！\n保存ボタンを押してください！", 
+        leftButtonLabel: "ホームに戻る",
+        leftButtonClass: "px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300",
+        onLeftButtonClick: () => { 
+          setConfirmModal(prev => ({ ...prev, isOpen: false })); 
+          onBackToMenu(); 
+        },
+        rightButtonLabel: "編集を続ける",
+        rightButtonClass: "px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700",
+        onRightButtonClick: () => {
+          setConfirmModal(prev => ({ ...prev, isOpen: false })); 
+        }
+      }); 
+    } else { 
+      onBackToMenu(); 
+    } 
+  };
 
   // ★共通スタイル定義
   const inputClass = "w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none";
@@ -278,7 +323,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     };
     updateReport({ subcontractorAttendees: [...report.subcontractorAttendees, newAttendee] });
     
-    // ★修正: 署名完了後、選択状態をリセットし、キャンバスを再描画（キー更新）
     setTempSubCompany("");
     setTempSubRole("");
     setSigKey(prev => prev + 1);
@@ -317,14 +361,14 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
           <div>
             <label className="text-xs font-bold text-gray-500">会社名 <span className="text-red-500">*</span></label>
-            <select className={`w-full p-2 border rounded bg-white text-black outline-none appearance-none ${!tempSubCompany ? 'border-red-300 ring-2 ring-red-100' : 'border-gray-300'}`} value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>
+            <select className={`w-full p-2 border rounded bg-white text-black outline-none appearance-none ${!tempSubCompany ? 'border-red-300' : 'border-gray-300'}`} value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>
               <option value="">(データを選択してください)</option>
               {masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div>
             <label className="text-xs font-bold text-gray-500">役職 <span className="text-red-500">*</span></label>
-            <select className={`w-full p-2 border rounded bg-white text-black outline-none appearance-none ${!tempSubRole ? 'border-red-300 ring-2 ring-red-100' : 'border-gray-300'}`} value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>
+            <select className={`w-full p-2 border rounded bg-white text-black outline-none appearance-none ${!tempSubRole ? 'border-red-300' : 'border-gray-300'}`} value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>
               <option value="">(データを選択してください)</option>
               {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
@@ -332,7 +376,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         </div>
         <div className="mb-3">
           <label className="text-xs font-bold text-gray-500 mb-1 block">署名</label>
-          {/* ★修正: 会社名か役職のどちらか一方でも未選択なら署名不可 */}
           <div className={`border rounded border-gray-300 relative ${(!tempSubCompany || !tempSubRole) ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
             <SignatureCanvas key={sigKey} onSave={(data) => addSubAttendee(data)} onClear={() => {}} lineWidth={4} keepOpenOnSave={true} />
             {(!tempSubCompany || !tempSubRole) && (
@@ -403,8 +446,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   return (
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
-        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-people-group mr-2"></i>災害防止協議会</h1></div>
-        </header>
+        <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center"><div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-people-group mr-2"></i>災害防止協議会</h1></div></header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-green-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-green-600" : ""}>STEP 2</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-green-600 h-full transition-all duration-300" style={{ width: `${step * 50}%` }}></div></div></div>
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">{step === 1 && renderStep1()}{step === 2 && renderStep2()}</main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
@@ -413,11 +455,23 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         </footer>
       </div>
       
+      {/* 完了モーダル */}
       <CompleteModal isOpen={showCompleteModal} onOk={() => { setShowCompleteModal(false); onBackToMenu(); }} />
       
       {showPreview && renderPreviewModal()}
       {renderPlanSelectionModal()}
-      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
+      
+      <ConfirmationModal 
+        isOpen={confirmModal.isOpen} 
+        message={confirmModal.message} 
+        onLeftButtonClick={confirmModal.onLeftButtonClick} 
+        onRightButtonClick={confirmModal.onRightButtonClick}
+        leftButtonLabel={confirmModal.leftButtonLabel}
+        rightButtonLabel={confirmModal.rightButtonLabel}
+        leftButtonClass={confirmModal.leftButtonClass}
+        rightButtonClass={confirmModal.rightButtonClass}
+      />
+      
       <div className="hidden print:block">
          <DisasterCouncilPrintLayout data={report} />
          {selectedPlan && (

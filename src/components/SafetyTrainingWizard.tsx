@@ -11,23 +11,33 @@ interface Props {
   onBackToMenu: () => void;
 }
 
-// --- Custom Confirmation Modal ---
+// --- Custom Confirmation Modal (拡張版) ---
 interface ConfirmModalProps {
   isOpen: boolean;
   message: string;
-  onConfirm: () => void;
-  onCancel: () => void;
+  onLeftButtonClick: () => void;
+  onRightButtonClick: () => void;
+  leftButtonLabel: string;
+  rightButtonLabel: string;
+  leftButtonClass: string;
+  rightButtonClass: string;
 }
-const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onConfirm, onCancel }) => {
+
+const ConfirmationModal: React.FC<ConfirmModalProps> = ({ 
+  isOpen, message, 
+  onLeftButtonClick, onRightButtonClick,
+  leftButtonLabel, rightButtonLabel,
+  leftButtonClass, rightButtonClass
+}) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[60] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-fade-in">
         <h3 className="text-lg font-bold text-gray-800 mb-4">確認</h3>
-        <p className="text-gray-600 mb-6 whitespace-pre-wrap">{message}</p>
+        <p className="text-gray-600 mb-6 whitespace-pre-wrap font-bold text-red-600">{message}</p>
         <div className="flex justify-end gap-3">
-          <button onClick={onCancel} className="px-4 py-2 text-gray-600 bg-gray-100 rounded hover:bg-gray-200 font-bold">キャンセル</button>
-          <button onClick={onConfirm} className="px-4 py-2 text-white bg-red-600 rounded hover:bg-red-700 font-bold">実行する</button>
+          <button onClick={onLeftButtonClick} className={leftButtonClass}>{leftButtonLabel}</button>
+          <button onClick={onRightButtonClick} className={rightButtonClass}>{rightButtonLabel}</button>
         </div>
       </div>
     </div>
@@ -68,11 +78,26 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
   const [previewScale, setPreviewScale] = useState(1);
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: () => {} });
+  
+  // ★修正: モーダルステートの型を拡張版に合わせる
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    message: string;
+    onLeftButtonClick: () => void;
+    onRightButtonClick: () => void;
+    leftButtonLabel: string;
+    rightButtonLabel: string;
+    leftButtonClass: string;
+    rightButtonClass: string;
+  }>({ 
+    isOpen: false, message: '', 
+    onLeftButtonClick: () => {}, onRightButtonClick: () => {}, 
+    leftButtonLabel: '', rightButtonLabel: '',
+    leftButtonClass: '', rightButtonClass: ''
+  });
+
   const [showCompleteModal, setShowCompleteModal] = useState(false);
-
   const [errors, setErrors] = useState<Record<string, boolean>>({});
-
   const [planSelectionModal, setPlanSelectionModal] = useState(false);
   const [availablePlans, setAvailablePlans] = useState<SavedDraft[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<SafetyPlanReportData | null>(null);
@@ -187,10 +212,8 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   };
   
   const handlePreviewClick = async () => {
-    // 既存チェック: 工事名
     if (!report.project) { alert("工事名が選択されていません"); return; }
 
-    // ★追加: 署名がない場合はエラー
     if (report.signatures.length === 0) {
       alert("参加者の署名がありません。\n少なくとも1名の署名が必要です。");
       return;
@@ -230,16 +253,23 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     document.title = prevTitle; 
   };
   
+  // ★修正: ホームへ戻る際の確認モーダル設定
   const handleHomeClick = () => { 
     if (hasUnsavedChanges) { 
       setConfirmModal({ 
         isOpen: true, 
-        message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", 
-        onConfirm: () => { 
+        message: "データが保存されていません！\n保存ボタンを押してください！", 
+        leftButtonLabel: "ホームに戻る",
+        leftButtonClass: "px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300",
+        onLeftButtonClick: () => { 
           setConfirmModal(prev => ({ ...prev, isOpen: false })); 
           onBackToMenu(); 
         },
-        onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false }))
+        rightButtonLabel: "編集を続ける",
+        rightButtonClass: "px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700",
+        onRightButtonClick: () => {
+          setConfirmModal(prev => ({ ...prev, isOpen: false })); 
+        }
       }); 
     } else { 
       onBackToMenu(); 
@@ -337,7 +367,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         </div>
         <div className="mb-2">
           <label className="block text-sm font-bold text-gray-700 mb-2 text-center">氏名 (手書き)</label>
-          {/* ★修正: 会社名未選択時は署名できないように制御 (UIを半透明&クリック無効化) */}
           <div className={`w-full relative ${!tempCompany ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
             <SignatureCanvas key={sigKey} onSave={(dataUrl) => { addSignature(tempCompany, dataUrl); }} onClear={() => {}} lineWidth={6} keepOpenOnSave={true} />
             {!tempCompany && (
@@ -348,7 +377,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           </div>
         </div>
       </div>
-      <div className="mt-6"><h3 className="font-bold text-gray-700 mb-2">署名済みリスト ({report.signatures.length}名)</h3><div className="bg-white border rounded divide-y max-h-60 overflow-y-auto">{report.signatures.length === 0 && <div className="p-4 text-center text-gray-400">署名はまだありません</div>}{report.signatures.map((sig, idx) => (<div key={sig.id} className="p-3 flex items-center justify-between"><div className="flex items-center gap-3 flex-1 min-w-0"><span className="w-6 h-6 shrink-0 rounded-full bg-gray-200 text-xs flex items-center justify-center text-gray-700">{idx + 1}</span><div className="flex items-center gap-4 flex-1 min-w-0"><div className="text-sm font-bold text-gray-700 truncate flex-1">{sig.company}</div><div className="h-10 border border-gray-200 bg-gray-50 rounded cursor-pointer hover:border-blue-400 transition-colors flex items-center justify-center px-2 shrink-0" onClick={() => setPreviewSigUrl(sig.signatureDataUrl)} title="タップして拡大"><img src={sig.signatureDataUrl} alt="sig" className="h-full object-contain" /></div></div></div><button onClick={() => { setConfirmModal({ isOpen: true, message: `著名リスト${idx + 1}を削除しますか？`, onConfirm: () => { setReport(prev => ({...prev, signatures: prev.signatures.filter(s => s.id !== sig.id)})); setConfirmModal(prev => ({ ...prev, isOpen: false })); setHasUnsavedChanges(true); }, onCancel: () => setConfirmModal(prev => ({ ...prev, isOpen: false })) }); }} className="ml-3 text-red-400 hover:text-red-600 p-2 shrink-0"><i className="fa-solid fa-trash"></i></button></div>))}</div></div>
+      <div className="mt-6"><h3 className="font-bold text-gray-700 mb-2">署名済みリスト ({report.signatures.length}名)</h3><div className="bg-white border rounded divide-y max-h-60 overflow-y-auto">{report.signatures.length === 0 && <div className="p-4 text-center text-gray-400">署名はまだありません</div>}{report.signatures.map((sig, idx) => (<div key={sig.id} className="p-3 flex items-center justify-between"><div className="flex items-center gap-3 flex-1 min-w-0"><span className="w-6 h-6 shrink-0 rounded-full bg-gray-200 text-xs flex items-center justify-center text-gray-700">{idx + 1}</span><div className="flex items-center gap-4 flex-1 min-w-0"><div className="text-sm font-bold text-gray-700 truncate flex-1">{sig.company}</div><div className="h-10 border border-gray-200 bg-gray-50 rounded cursor-pointer hover:border-blue-400 transition-colors flex items-center justify-center px-2 shrink-0" onClick={() => setPreviewSigUrl(sig.signatureDataUrl)} title="タップして拡大"><img src={sig.signatureDataUrl} alt="sig" className="h-full object-contain" /></div></div></div><button onClick={() => { setConfirmModal({ isOpen: true, message: `著名リスト${idx + 1}を削除しますか？`, onLeftButtonClick: () => { setReport(prev => ({...prev, signatures: prev.signatures.filter(s => s.id !== sig.id)})); setConfirmModal(prev => ({ ...prev, isOpen: false })); setHasUnsavedChanges(true); }, onRightButtonClick: () => setConfirmModal(prev => ({ ...prev, isOpen: false })), leftButtonLabel: "削除する", rightButtonLabel: "キャンセル", leftButtonClass: "px-4 py-2 bg-red-600 text-white rounded font-bold", rightButtonClass: "px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold" }); }} className="ml-3 text-red-400 hover:text-red-600 p-2 shrink-0"><i className="fa-solid fa-trash"></i></button></div>))}</div></div>
     </div>
   );
 
@@ -360,7 +389,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i> 印刷プレビュー</h2>
           <div className="flex gap-4">
             <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
-            <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
+            <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center hover:bg-green-500"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
@@ -400,7 +429,13 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-blue-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-blue-600" : ""}>STEP 2</span><span className={step >= 3 ? "text-blue-600" : ""}>STEP 3</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-blue-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">{step === 1 && renderStep1()}{step === 2 && renderStep2()}{step === 3 && renderStep3()}</main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
-          <div className="flex items-center gap-2"><button onClick={handleBack} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleTempSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '保存'}</button></div>
+          <div className="flex items-center gap-2">
+            <button onClick={handleBack} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button>
+            <button onClick={handleSave} className="px-4 py-3 rounded-lg font-bold border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 flex items-center">
+              <i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>
+              {saveStatus === 'saved' ? '保存完了' : '保存'}
+            </button>
+          </div>
           {step < 3 ? (<button onClick={handleNext} className="px-8 py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
         </footer>
       </div>
@@ -417,7 +452,17 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
       {renderPlanSelectionModal()}
-      <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
+      
+      <ConfirmationModal 
+        isOpen={confirmModal.isOpen} 
+        message={confirmModal.message} 
+        onLeftButtonClick={confirmModal.onLeftButtonClick} 
+        onRightButtonClick={confirmModal.onRightButtonClick}
+        leftButtonLabel={confirmModal.leftButtonLabel}
+        rightButtonLabel={confirmModal.rightButtonLabel}
+        leftButtonClass={confirmModal.leftButtonClass}
+        rightButtonClass={confirmModal.rightButtonClass}
+      />
       
       <div className="hidden print:block">
          <PrintLayout data={report} />
