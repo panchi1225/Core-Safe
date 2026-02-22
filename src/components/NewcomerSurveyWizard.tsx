@@ -67,7 +67,7 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[60] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-fadeIn">
+      <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-fade-in">
         <h3 className="text-lg font-bold text-gray-800 mb-4">確認</h3>
         <p className="text-gray-600 mb-6 whitespace-pre-wrap font-bold text-red-600">{message}</p>
         <div className="flex justify-end gap-3">
@@ -84,7 +84,7 @@ const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-60 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full p-8 text-center animate-fadeIn">
+      <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full p-8 text-center animate-fade-in">
         <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
           <i className="fa-solid fa-check text-3xl"></i>
         </div>
@@ -110,6 +110,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previewScale, setPreviewScale] = useState(1);
   
+  // 社員自動入力用ステート
+  const [selectedEmployee, setSelectedEmployee] = useState("");
+
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     message: string;
@@ -139,13 +142,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
   useEffect(() => { const loadMaster = async () => { try { const data = await getMasterData(); setMasterData(data); } catch (e) { console.error("マスタ取得エラー", e); } }; loadMaster(); }, []);
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
-
-  // ★修正: 所属会社名の自動選択ロジックを削除しました
-  // useEffect(() => {
-  //   if (masterData.contractors.length > 0 && !report.company) {
-  //     updateReport({ company: masterData.contractors[0] });
-  //   }
-  // }, [masterData.contractors, report.company]);
 
   useEffect(() => {
     const calculateAge = () => {
@@ -179,6 +175,17 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const updateQual = (key: keyof Qualifications, value: any) => { setReport(prev => ({ ...prev, qualifications: { ...prev.qualifications, [key]: value } })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
+  // 社員選択時の処理（後でデータを実装）
+  const handleEmployeeSelect = (name: string) => {
+    setSelectedEmployee(name);
+    if (!name) return;
+    
+    // ここに将来、社員データをセットする処理を追加
+    // 例:
+    // const employee = EMPLOYEES_DATA[name];
+    // updateReport({ ...employee });
+  };
+
   const validateStep1 = () => {
     const newErrors: Record<string, boolean> = {};
     const r = report;
@@ -319,6 +326,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 1: 基本情報</h2>
         <p className="text-sm text-red-500 font-bold"><i className="fa-solid fa-circle-exclamation mr-1"></i>全ての項目が必須です</p>
         
+        {/* 現場・作業所選択（紫枠） */}
         <div className="bg-purple-50 p-4 rounded border border-purple-100 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
            <div className="col-span-1 md:col-span-2 text-sm text-purple-700 font-bold mb-1"><i className="fa-solid fa-circle-info mr-1"></i>はじめに現場を選択してください</div>
            
@@ -329,7 +337,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                value={report.project} 
                onChange={(e)=>updateReport({project: e.target.value})}
              >
-               {/* 修正: 空の選択肢を追加 */}
                <option value="">選択してください</option>
                {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
              </select>
@@ -342,9 +349,25 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                value={report.director} 
                onChange={(e)=>updateReport({director: e.target.value})}
              >
-               {/* 修正: 空の選択肢を追加 */}
                <option value="">選択してください</option>
                {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+             </select>
+           </div>
+        </div>
+
+        {/* ★追加: 元請社員自動入力（緑枠） */}
+        <div className="bg-green-50 p-4 rounded border border-green-200 w-full">
+           <div className="text-sm text-green-700 font-bold mb-2">
+             <i className="fa-solid fa-circle-info mr-1"></i>「松浦建設株式会社」の社員はこちらから名前を選択してください。
+           </div>
+           <div className="w-full overflow-hidden">
+             <select 
+               className="w-full p-2 border border-gray-300 rounded bg-white"
+               value={selectedEmployee}
+               onChange={(e) => handleEmployeeSelect(e.target.value)}
+             >
+               <option value="">選択してください</option>
+               {/* 後ほど社員データを追加 */}
              </select>
            </div>
         </div>
