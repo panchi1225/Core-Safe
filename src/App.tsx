@@ -7,8 +7,8 @@ import NewcomerSurveyWizard from './components/NewcomerSurveyWizard';
 import MasterSettings from './components/MasterSettings';
 
 // Firebase機能
-import { fetchDrafts, removeDraft } from './services/firebaseService'; 
-import { SavedDraft, ReportData, DisasterCouncilReportData, ReportTypeString, NewcomerSurveyReportData } from './types';
+import { fetchDrafts, removeDraft, getMasterData } from './services/firebaseService'; 
+import { SavedDraft, ReportData, DisasterCouncilReportData, ReportTypeString, NewcomerSurveyReportData, MasterData, INITIAL_MASTER_DATA } from './types';
 
 // --- 確認用モーダル ---
 interface ConfirmModalProps {
@@ -22,7 +22,7 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onCon
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 no-print">
       <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 animate-fade-in">
         <h3 className="text-lg font-bold text-gray-800 mb-4">確認</h3>
         <p className="text-gray-600 mb-6 whitespace-pre-wrap">{message}</p>
@@ -45,21 +45,130 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onCon
   );
 };
 
-// --- QRコード表示モーダル ---
-const QRCodeModal: React.FC<{ isOpen: boolean; onClose: () => void; url: string }> = ({ isOpen, onClose, url }) => {
+// --- QRコード表示・印刷モーダル ---
+interface QRCodeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  url: string;
+  masterData: MasterData;
+}
+
+const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, url, masterData }) => {
+  const [selectedProject, setSelectedProject] = useState("");
+  const [selectedManager, setSelectedManager] = useState("");
+
+  // モーダルが開くたびに選択状態をリセットする場合
+  useEffect(() => {
+    if (isOpen) {
+      if (masterData.projects.length > 0) setSelectedProject("");
+      if (masterData.supervisors.length > 0) setSelectedManager("");
+    }
+  }, [isOpen, masterData]);
+
   if (!isOpen) return null;
+
+  const handlePrint = () => {
+    if (!selectedProject || !selectedManager) {
+      alert("印刷するには「現場名」と「作業所長名」を選択してください。");
+      return;
+    }
+    window.print();
+  };
+
   return (
-    <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-80 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center animate-fade-in" onClick={e => e.stopPropagation()}>
-        <h3 className="text-xl font-bold text-gray-800 mb-2">新規入場者用 入力フォーム</h3>
-        <p className="text-sm text-gray-500 mb-6 text-center">入場者自身の端末で読み取ってください。<br/>自動的に入力画面が開きます。</p>
-        <div className="p-4 border-4 border-gray-200 rounded-lg bg-white mb-6">
-          <QRCodeCanvas value={url} size={250} level={"H"} includeMargin={true} />
+    <>
+      {/* 画面表示用モーダル (印刷時は非表示) */}
+      <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-80 flex items-center justify-center p-4 no-print" onClick={onClose}>
+        <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center animate-fade-in" onClick={e => e.stopPropagation()}>
+          <h3 className="text-xl font-bold text-gray-800 mb-2">新規入場者用 入力フォーム</h3>
+          <p className="text-sm text-gray-500 mb-6 text-center">現場掲示用に印刷する場合は、<br/>下記項目を選択して印刷ボタンを押してください。</p>
+          
+          <div className="w-full space-y-4 mb-6">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">現場名</label>
+              <select 
+                className="w-full p-2 border border-gray-300 rounded bg-gray-50"
+                value={selectedProject}
+                onChange={(e) => setSelectedProject(e.target.value)}
+              >
+                <option value="">(選択してください)</option>
+                {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">作業所長名</label>
+              <select 
+                className="w-full p-2 border border-gray-300 rounded bg-gray-50"
+                value={selectedManager}
+                onChange={(e) => setSelectedManager(e.target.value)}
+              >
+                <option value="">(選択してください)</option>
+                {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="p-4 border-4 border-gray-200 rounded-lg bg-white mb-6">
+            <QRCodeCanvas value={url} size={200} level={"H"} includeMargin={true} />
+          </div>
+          
+          {/* URL表示は削除しました */}
+
+          <div className="w-full flex flex-col gap-3">
+            <button 
+              onClick={handlePrint} 
+              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 flex items-center justify-center gap-2"
+            >
+              <i className="fa-solid fa-print"></i> ポスターを印刷 (A4縦)
+            </button>
+            <button onClick={onClose} className="w-full py-3 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-700">閉じる</button>
+          </div>
         </div>
-        <p className="text-xs text-gray-400 break-all text-center mb-6">{url}</p>
-        <button onClick={onClose} className="w-full py-3 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-700">閉じる</button>
       </div>
-    </div>
+
+      {/* 印刷用レイアウト (画面上は非表示) */}
+      <div className="hidden print:flex fixed inset-0 z-[100] bg-white flex-col items-center justify-start p-0 m-0 w-full h-full">
+        <style>{`@media print { @page { size: A4 portrait; margin: 0; } body { background: white; } }`}</style>
+        <div className="w-[210mm] h-[297mm] p-[20mm] flex flex-col items-center text-center border-0">
+          
+          {/* ヘッダー */}
+          <div className="w-full border-b-4 border-black mb-10 pb-4">
+            <h1 className="text-4xl font-extrabold tracking-widest text-black">新規入場者アンケート</h1>
+            <p className="text-xl mt-2 font-bold text-gray-700">Web入力フォーム</p>
+          </div>
+
+          {/* 現場情報 */}
+          <div className="w-full mb-12 text-left space-y-6">
+            <div className="border-2 border-black rounded-lg p-6">
+              <p className="text-sm text-gray-500 font-bold mb-1">工事名</p>
+              <p className="text-2xl font-bold leading-tight min-h-[2rem]">{selectedProject || "（現場名未選択）"}</p>
+            </div>
+            <div className="border-2 border-black rounded-lg p-6">
+              <p className="text-sm text-gray-500 font-bold mb-1">作業所長</p>
+              <p className="text-3xl font-bold min-h-[2.5rem]">{selectedManager || "（所長名未選択）"}</p>
+            </div>
+          </div>
+
+          {/* QRコードエリア */}
+          <div className="flex-1 flex flex-col items-center justify-center w-full">
+            <div className="border-8 border-black p-4 bg-white rounded-xl mb-6">
+              <QRCodeCanvas value={url} size={400} level={"H"} includeMargin={false} />
+            </div>
+            <p className="text-2xl font-bold text-black mb-2">スマートフォンで読み取ってください</p>
+            <p className="text-lg text-gray-600">
+              ※iPhone/Android対応<br/>
+              ※アプリのインストールは不要です
+            </p>
+          </div>
+
+          {/* フッター */}
+          <div className="w-full mt-auto pt-8 border-t-2 border-gray-300">
+            <p className="text-sm text-gray-500 font-bold">Core Safe -安全書類作成支援システム-</p>
+            <p className="text-lg font-bold mt-1">松浦建設株式会社</p>
+          </div>
+        </div>
+      </div>
+    </>
   );
 };
 
@@ -79,6 +188,9 @@ const App: React.FC = () => {
 
   // QRモーダル開閉ステート
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  
+  // マスタデータ（App全体で保持し、QRモーダル等へ渡す）
+  const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
 
   // Confirmation Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -108,7 +220,22 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Firebaseからデータを読み込む処理
+  // マスタデータの読み込み（QRモーダル用）
+  useEffect(() => {
+    if (isQRModalOpen) {
+      const loadMaster = async () => {
+        try {
+          const data = await getMasterData();
+          setMasterData(data);
+        } catch (e) {
+          console.error("マスタ取得エラー", e);
+        }
+      };
+      loadMaster();
+    }
+  }, [isQRModalOpen]);
+
+  // Firebaseからドラフトデータを読み込む処理
   useEffect(() => {
     if (isModalOpen) {
       const loadDrafts = async () => {
@@ -384,17 +511,15 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-800">
-      <header className="bg-slate-800 text-white p-6 shadow-md flex justify-center items-center relative">
+      <header className="bg-slate-800 text-white p-6 shadow-md flex justify-center items-center relative no-print">
         <div className="text-center">
           <h1 className="text-2xl font-bold tracking-wide">Core Safe</h1>
-          {/* ★修正: text-xs -> text-sm に拡大 */}
           <p className="text-sm text-gray-400 font-normal mt-1">-安全書類作成支援システム-</p>
-          {/* ★追加: 説明文 */}
           <p className="text-xs text-gray-400 font-normal mt-1">各種書類をPC.スマホ.タブレットから作成可能</p>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto p-6 mt-8">
+      <main className="max-w-4xl mx-auto p-6 mt-8 no-print">
         <h2 className="text-xl font-bold mb-6 text-gray-700 border-l-4 border-slate-800 pl-3">
           作成する帳票を選択してください
         </h2>
@@ -486,10 +611,9 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <footer className="mt-12 text-center text-gray-400 text-sm pb-8">
+      <footer className="mt-12 text-center text-gray-400 text-sm pb-8 no-print">
         <div>&copy; 2026 Matsuura Construction App</div>
-        {/* ★修正: Ver.1.3.7 */}
-        <div className="mt-1">Ver.1.3.7</div>
+        <div className="mt-1">Ver.1.4.1</div>
       </footer>
 
       {renderSelectionModal()}
@@ -506,6 +630,7 @@ const App: React.FC = () => {
         isOpen={isQRModalOpen}
         onClose={() => setIsQRModalOpen(false)}
         url={qrUrl}
+        masterData={masterData}
       />
     </div>
   );
