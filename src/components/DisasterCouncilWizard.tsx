@@ -34,7 +34,7 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onCon
   );
 };
 
-// ★追加: 保存完了モーダル
+// --- Complete Modal ---
 const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen, onOk }) => {
   if (!isOpen) return null;
   return (
@@ -73,8 +73,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [previewScale, setPreviewScale] = useState(1);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: () => {} });
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  
-  // ★追加: 完了モーダルの状態管理
   const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   const [planSelectionModal, setPlanSelectionModal] = useState(false);
@@ -144,7 +142,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
 
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
 
-  // ★修正: 「保存」ボタンの処理
   const handleSave = async () => { 
     if (!report.project) {
       alert("保存するには「工事名」の選択が必須です。");
@@ -158,7 +155,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
       
-      // ★修正: 完了モーダルを表示
       setShowCompleteModal(true);
 
     } catch (e) { 
@@ -191,17 +187,21 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const renderStep1 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 1: 基本情報</h2>
-      <div className="grid grid-cols-2 gap-4">
+      
+      {/* ★修正: モバイルで1列、PCで2列に変更 (grid-cols-1 md:grid-cols-2) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="form-control">
           <label className="label font-bold text-gray-700">工事名 <span className="text-red-500">*</span></label>
-          <select className={`w-full p-3 border rounded-lg bg-white text-black outline-none appearance-none ${!report.project ? 'border-red-300' : 'border-gray-300'}`} value={report.project} onChange={(e) => updateReport({project: e.target.value})}>
+          <select className={`w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none ${!report.project ? 'border-red-300' : 'border-gray-300'}`} value={report.project} onChange={(e) => updateReport({project: e.target.value})}>
             <option value="">(データを選択してください)</option>
             {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
         <div className="form-control"><label className="label font-bold text-gray-700">開催回</label><div className="flex items-center"><span className="mr-2">第</span><input type="number" className="w-20 p-3 border border-gray-300 rounded-lg text-center" value={report.count} onChange={(e) => updateReport({count: parseInt(e.target.value)})} /><span className="ml-2">回</span></div></div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      
+      {/* ★修正: モバイルで1列、PCで2列 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="form-control"><label className="label font-bold text-gray-700">開催日 <span className="text-red-500">*</span></label><input type="date" className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.date} onChange={(e) => updateReport({date: e.target.value})} /></div>
         <div className="form-control">
           <label className="label font-bold text-gray-700">場所 <span className="text-red-500">*</span></label>
@@ -211,10 +211,13 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           </select>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      
+      {/* ★修正: 開始・終了時間も1列表示にして幅を確保 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="form-control"><label className="label font-bold text-gray-700">開始時間</label><input type="time" className="w-full p-3 border border-gray-300 rounded-lg" value={report.startTime} onChange={(e) => updateReport({startTime: e.target.value})} /></div>
         <div className="form-control"><label className="label font-bold text-gray-700">終了時間</label><input type="time" className="w-full p-3 border border-gray-300 rounded-lg" value={report.endTime} onChange={(e) => updateReport({endTime: e.target.value})} /></div>
       </div>
+      
       <div className="form-control"><label className="label font-bold text-gray-700">元請会社名</label><input type="text" className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-black outline-none cursor-not-allowed font-bold" value="松浦建設株式会社" readOnly /></div>
     </div>
   );
@@ -254,14 +257,14 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex items-center gap-2">
               {i < 4 ? (
-                <span className="w-40 h-10 flex items-center justify-center text-xs font-bold bg-gray-50 px-2 border rounded text-gray-700">{TOP_FIXED_ROLES[i]}</span>
+                <span className="w-40 h-10 flex items-center justify-center text-xs font-bold bg-gray-50 px-2 border rounded text-gray-700 shrink-0">{TOP_FIXED_ROLES[i]}</span>
               ) : (
-                <select className="w-40 h-10 text-xs font-bold bg-white px-2 border rounded text-center outline-none appearance-none" value={report.gcAttendees[i]?.role || ""} onChange={(e) => updateGCAttendee(i, 'role', e.target.value)}>
+                <select className="w-40 h-10 text-xs font-bold bg-white px-2 border rounded text-center outline-none appearance-none shrink-0" value={report.gcAttendees[i]?.role || ""} onChange={(e) => updateGCAttendee(i, 'role', e.target.value)}>
                   <option value="">(役職選択)</option>
                   {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               )}
-              <select className="flex-1 h-10 p-2 border rounded text-sm bg-white text-black outline-none appearance-none" value={report.gcAttendees[i]?.name || ""} onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}>
+              <select className="flex-1 h-10 p-2 border rounded text-sm bg-white text-black outline-none appearance-none min-w-0" value={report.gcAttendees[i]?.name || ""} onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}>
                 <option value="">選択してください</option>
                 {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -273,7 +276,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       {/* Subcontractor Attendees */}
       <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
         <h3 className="font-bold text-gray-700 mb-3 text-center">協力会社 出席者登録</h3>
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
           <div>
             <label className="text-xs font-bold text-gray-500">会社名 <span className="text-red-500">*</span></label>
             <select className={`w-full p-2 border rounded bg-white text-black outline-none appearance-none ${!tempSubCompany ? 'border-red-300' : 'border-gray-300'}`} value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>
@@ -366,27 +369,13 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-green-600" : ""}>STEP 1</span><span className={step >= 2 ? "text-green-600" : ""}>STEP 2</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-green-600 h-full transition-all duration-300" style={{ width: `${step * 50}%` }}></div></div></div>
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">{step === 1 && renderStep1()}{step === 2 && renderStep2()}</main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
-          <div className="flex items-center gap-2">
-            <button onClick={handleBack} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button>
-            {/* ★修正: handleSaveを呼び出し */}
-            <button onClick={handleSave} className="px-4 py-3 rounded-lg font-bold border border-green-200 text-green-600 bg-green-50 hover:bg-green-100 flex items-center">
-              <i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>
-              {saveStatus === 'saved' ? '保存完了' : '保存'}
-            </button>
-          </div>
+          <div className="flex items-center gap-2"><button onClick={handleBack} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button><button onClick={handleSave} className="px-4 py-3 rounded-lg font-bold border border-green-200 text-green-600 bg-green-50 hover:bg-green-100 flex items-center"><i className={`fa-solid ${saveStatus === 'saved' ? 'fa-check' : 'fa-save'} mr-2`}></i>{saveStatus === 'saved' ? '保存完了' : '保存'}</button></div>
           {step < 2 ? (<button onClick={handleNext} className="px-8 py-3 bg-green-600 text-white rounded-lg font-bold shadow hover:bg-green-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>) : (<button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>)}
         </footer>
       </div>
       
-      {/* ★追加: 完了モーダル */}
-      <CompleteModal 
-        isOpen={showCompleteModal} 
-        onOk={() => { 
-          setShowCompleteModal(false); 
-          onBackToMenu(); 
-        }} 
-      />
-
+      <CompleteModal isOpen={showCompleteModal} onOk={() => { setShowCompleteModal(false); onBackToMenu(); }} />
+      
       {showPreview && renderPreviewModal()}
       {renderPlanSelectionModal()}
       <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
