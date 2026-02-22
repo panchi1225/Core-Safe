@@ -58,12 +58,9 @@ const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen
 
 const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
   const [step, setStep] = useState(1);
-  
-  // ★修正: 新規作成時に終了時間を "12:15" にデフォルト設定
   const [report, setReport] = useState<ReportData>(
     initialData || { ...INITIAL_REPORT, endTime: "12:15" }
   );
-
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
   const [showPreview, setShowPreview] = useState(false);
@@ -190,7 +187,14 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   };
   
   const handlePreviewClick = async () => {
+    // 既存チェック: 工事名
     if (!report.project) { alert("工事名が選択されていません"); return; }
+
+    // ★追加: 署名がない場合はエラー
+    if (report.signatures.length === 0) {
+      alert("参加者の署名がありません。\n少なくとも1名の署名が必要です。");
+      return;
+    }
 
     setSaveStatus('saving');
     try {
@@ -333,6 +337,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         </div>
         <div className="mb-2">
           <label className="block text-sm font-bold text-gray-700 mb-2 text-center">氏名 (手書き)</label>
+          {/* ★修正: 会社名未選択時は署名できないように制御 (UIを半透明&クリック無効化) */}
           <div className={`w-full relative ${!tempCompany ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
             <SignatureCanvas key={sigKey} onSave={(dataUrl) => { addSignature(tempCompany, dataUrl); }} onClear={() => {}} lineWidth={6} keepOpenOnSave={true} />
             {!tempCompany && (
@@ -355,7 +360,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i> 印刷プレビュー</h2>
           <div className="flex gap-4">
             <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
-            <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center hover:bg-green-500"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
+            <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
