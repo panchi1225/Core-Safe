@@ -184,6 +184,9 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   
   const handleHomeClick = () => { if (hasUnsavedChanges) { setConfirmModal({ isOpen: true, message: "保存されていない変更があります。\n保存せずにホームに戻りますか？", onConfirm: () => { setConfirmModal(prev => ({ ...prev, isOpen: false })); onBackToMenu(); } }); } else { onBackToMenu(); } };
 
+  // ★共通スタイル定義: 高さ(h-12), 白背景(bg-white), 外枠(appearance-none) を統一
+  const inputClass = "w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none";
+
   const renderStep1 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 1: 基本情報</h2>
@@ -191,32 +194,38 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="form-control">
           <label className="label font-bold text-gray-700">工事名 <span className="text-red-500">*</span></label>
-          <select className={`w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none ${!report.project ? 'border-red-300' : 'border-gray-300'}`} value={report.project} onChange={(e) => updateReport({project: e.target.value})}>
+          {/* 修正: 共通クラス適用 */}
+          <select className={inputClass} value={report.project} onChange={(e) => updateReport({project: e.target.value})}>
             <option value="">(データを選択してください)</option>
             {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
-        <div className="form-control"><label className="label font-bold text-gray-700">開催回</label><div className="flex items-center"><span className="mr-2">第</span><input type="number" className="w-20 p-3 border border-gray-300 rounded-lg text-center" value={report.count} onChange={(e) => updateReport({count: parseInt(e.target.value)})} /><span className="ml-2">回</span></div></div>
+        <div className="form-control"><label className="label font-bold text-gray-700">開催回</label><div className="flex items-center"><span className="mr-2">第</span>
+          {/* 修正: 共通クラスに近いスタイル適用（幅指定があるため） */}
+          <input type="number" className="w-20 h-12 p-3 border border-gray-300 rounded-lg text-center bg-white text-black outline-none appearance-none" value={report.count} onChange={(e) => updateReport({count: parseInt(e.target.value)})} />
+        <span className="ml-2">回</span></div></div>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="form-control"><label className="label font-bold text-gray-700">開催日 <span className="text-red-500">*</span></label><input type="date" className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.date} onChange={(e) => updateReport({date: e.target.value})} /></div>
+        {/* 修正: 共通クラス適用 */}
+        <div className="form-control"><label className="label font-bold text-gray-700">開催日 <span className="text-red-500">*</span></label><input type="date" className={inputClass} value={report.date} onChange={(e) => updateReport({date: e.target.value})} /></div>
         <div className="form-control">
           <label className="label font-bold text-gray-700">場所 <span className="text-red-500">*</span></label>
-          <select className={`w-full p-3 border rounded-lg bg-white text-black outline-none appearance-none ${!report.location ? 'border-red-300' : 'border-gray-300'}`} value={report.location} onChange={(e) => updateReport({location: e.target.value})}>
+          {/* 修正: 共通クラス適用 */}
+          <select className={inputClass} value={report.location} onChange={(e) => updateReport({location: e.target.value})}>
             <option value="">(データを選択してください)</option>
             {masterData.locations.map(l => <option key={l} value={l}>{l}</option>)}
           </select>
         </div>
       </div>
       
-      {/* ★修正: gapをgap-4に広げ、入力欄のパディングをp-3に変更 */}
+      {/* 修正: gapをgap-4で確保し、時間入力欄にも共通クラス(bg-white等)を適用 */}
       <div className="grid grid-cols-2 gap-4">
         <div className="form-control">
           <label className="label font-bold text-gray-700 text-xs sm:text-sm">開始時間</label>
           <input 
             type="time" 
-            className="w-full p-3 border border-gray-300 rounded-lg text-sm" 
+            className={inputClass}
             value={report.startTime} 
             onChange={(e) => updateReport({startTime: e.target.value})} 
           />
@@ -225,14 +234,15 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           <label className="label font-bold text-gray-700 text-xs sm:text-sm">終了時間</label>
           <input 
             type="time" 
-            className="w-full p-3 border border-gray-300 rounded-lg text-sm" 
+            className={inputClass}
             value={report.endTime} 
             onChange={(e) => updateReport({endTime: e.target.value})} 
           />
         </div>
       </div>
       
-      <div className="form-control"><label className="label font-bold text-gray-700">元請会社名</label><input type="text" className="w-full p-3 border border-gray-300 rounded-lg bg-gray-100 text-black outline-none cursor-not-allowed font-bold" value="松浦建設株式会社" readOnly /></div>
+      {/* 修正: 共通クラス適用 */}
+      <div className="form-control"><label className="label font-bold text-gray-700">元請会社名</label><input type="text" className={`${inputClass} bg-gray-100 cursor-not-allowed`} value="松浦建設株式会社" readOnly /></div>
     </div>
   );
 
