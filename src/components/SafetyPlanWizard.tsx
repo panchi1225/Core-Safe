@@ -306,7 +306,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                  <span className="min-w-[300px] max-w-[500px] px-1">{report.project}</span>
                ) : (
                  <select className={`outline-none bg-transparent appearance-none min-w-[300px] max-w-[500px] ${!report.project ? 'bg-red-50' : ''}`} value={report.project} onChange={(e)=>updateReport({project: e.target.value})}>
-                   <option value="">(データを選択してください)</option>
+                   <option value="">選択してください</option>
                    {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
                  </select>
                )}
@@ -317,7 +317,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                  <span className="min-w-[200px] px-1">{report.location}</span>
                ) : (
                  <select className={`outline-none bg-transparent appearance-none min-w-[200px] ${!report.location ? 'bg-red-50' : ''}`} value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>
-                   <option value="">(データを選択してください)</option>
+                   <option value="">選択してください</option>
                    {masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}
                  </select>
                )}

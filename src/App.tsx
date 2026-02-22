@@ -54,12 +54,14 @@ interface QRCodeModalProps {
 }
 
 const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, url, masterData }) => {
+  const [showPrintSettings, setShowPrintSettings] = useState(false);
   const [selectedProject, setSelectedProject] = useState("");
   const [selectedManager, setSelectedManager] = useState("");
 
-  // モーダルが開くたびに選択状態をリセットする場合
+  // モーダルが開くたびに状態をリセット
   useEffect(() => {
     if (isOpen) {
+      setShowPrintSettings(false);
       if (masterData.projects.length > 0) setSelectedProject("");
       if (masterData.supervisors.length > 0) setSelectedManager("");
     }
@@ -80,49 +82,75 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, url, masterD
       {/* 画面表示用モーダル (印刷時は非表示) */}
       <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-80 flex items-center justify-center p-4 no-print" onClick={onClose}>
         <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full flex flex-col items-center animate-fade-in" onClick={e => e.stopPropagation()}>
-          <h3 className="text-xl font-bold text-gray-800 mb-2">新規入場者用 入力フォーム</h3>
-          <p className="text-sm text-gray-500 mb-6 text-center">現場掲示用に印刷する場合は、<br/>下記項目を選択して印刷ボタンを押してください。</p>
           
-          <div className="w-full space-y-4 mb-6">
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">現場名</label>
-              <select 
-                className="w-full p-2 border border-gray-300 rounded bg-gray-50"
-                value={selectedProject}
-                onChange={(e) => setSelectedProject(e.target.value)}
-              >
-                <option value="">(選択してください)</option>
-                {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">作業所長名</label>
-              <select 
-                className="w-full p-2 border border-gray-300 rounded bg-gray-50"
-                value={selectedManager}
-                onChange={(e) => setSelectedManager(e.target.value)}
-              >
-                <option value="">(選択してください)</option>
-                {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-          </div>
+          {!showPrintSettings ? (
+            /* --- STEP 1: QRコード表示画面 --- */
+            <>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">新規入場者用 入力フォーム</h3>
+              <p className="text-sm text-gray-500 mb-6 text-center">入場者自身の端末で読み取ってください。<br/>自動的に入力画面が開きます。</p>
+              
+              <div className="p-4 border-4 border-gray-200 rounded-lg bg-white mb-6">
+                <QRCodeCanvas value={url} size={250} level={"H"} includeMargin={true} />
+              </div>
+              
+              {/* URL表示は削除済み */}
 
-          <div className="p-4 border-4 border-gray-200 rounded-lg bg-white mb-6">
-            <QRCodeCanvas value={url} size={200} level={"H"} includeMargin={true} />
-          </div>
-          
-          {/* URL表示は削除しました */}
+              <div className="w-full flex flex-col gap-3">
+                <button 
+                  onClick={() => setShowPrintSettings(true)} 
+                  className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 flex items-center justify-center gap-2"
+                >
+                  <i className="fa-solid fa-print"></i> ポスターを印刷
+                </button>
+                <button onClick={onClose} className="w-full py-3 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-700">閉じる</button>
+              </div>
+            </>
+          ) : (
+            /* --- STEP 2: 印刷設定画面 --- */
+            <>
+              <div className="w-full flex items-center mb-4">
+                <button onClick={() => setShowPrintSettings(false)} className="text-gray-400 hover:text-gray-600 mr-2"><i className="fa-solid fa-arrow-left"></i></button>
+                <h3 className="text-xl font-bold text-gray-800">印刷設定</h3>
+              </div>
+              <p className="text-sm text-gray-500 mb-6 text-center">印刷するポスターに表示する情報を選択してください。</p>
+              
+              <div className="w-full space-y-4 mb-8">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">現場名 <span className="text-red-500">*</span></label>
+                  <select 
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-black outline-none appearance-none"
+                    value={selectedProject}
+                    onChange={(e) => setSelectedProject(e.target.value)}
+                  >
+                    <option value="">(選択してください)</option>
+                    {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1">作業所長名 <span className="text-red-500">*</span></label>
+                  <select 
+                    className="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 text-black outline-none appearance-none"
+                    value={selectedManager}
+                    onChange={(e) => setSelectedManager(e.target.value)}
+                  >
+                    <option value="">(選択してください)</option>
+                    {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+              </div>
 
-          <div className="w-full flex flex-col gap-3">
-            <button 
-              onClick={handlePrint} 
-              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 flex items-center justify-center gap-2"
-            >
-              <i className="fa-solid fa-print"></i> ポスターを印刷 (A4縦)
-            </button>
-            <button onClick={onClose} className="w-full py-3 bg-gray-600 text-white rounded-lg font-bold hover:bg-gray-700">閉じる</button>
-          </div>
+              <div className="w-full flex flex-col gap-3">
+                <button 
+                  onClick={handlePrint} 
+                  className={`w-full py-3 text-white rounded-lg font-bold flex items-center justify-center gap-2 transition-colors ${(!selectedProject || !selectedManager) ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+                  disabled={!selectedProject || !selectedManager}
+                >
+                  <i className="fa-solid fa-print"></i> 印刷実行 (A4縦)
+                </button>
+                <button onClick={onClose} className="w-full py-3 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300">キャンセル</button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -141,11 +169,11 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, url, masterD
           <div className="w-full mb-12 text-left space-y-6">
             <div className="border-2 border-black rounded-lg p-6">
               <p className="text-sm text-gray-500 font-bold mb-1">工事名</p>
-              <p className="text-2xl font-bold leading-tight min-h-[2rem]">{selectedProject || "（現場名未選択）"}</p>
+              <p className="text-2xl font-bold leading-tight min-h-[2rem]">{selectedProject}</p>
             </div>
             <div className="border-2 border-black rounded-lg p-6">
               <p className="text-sm text-gray-500 font-bold mb-1">作業所長</p>
-              <p className="text-3xl font-bold min-h-[2.5rem]">{selectedManager || "（所長名未選択）"}</p>
+              <p className="text-3xl font-bold min-h-[2.5rem]">{selectedManager}</p>
             </div>
           </div>
 
@@ -613,7 +641,7 @@ const App: React.FC = () => {
 
       <footer className="mt-12 text-center text-gray-400 text-sm pb-8 no-print">
         <div>&copy; 2026 Matsuura Construction App</div>
-        <div className="mt-1">Ver.1.4.1</div>
+        <div className="mt-1">Ver.1.4.2</div>
       </footer>
 
       {renderSelectionModal()}
@@ -625,7 +653,7 @@ const App: React.FC = () => {
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
 
-      {/* QRコード表示モーダル */}
+      {/* QRコード表示・印刷モーダル */}
       <QRCodeModal 
         isOpen={isQRModalOpen}
         onClose={() => setIsQRModalOpen(false)}

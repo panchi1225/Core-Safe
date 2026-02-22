@@ -286,7 +286,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <div className="form-control">
         <label className="label font-bold text-gray-700">工事名 <span className="text-red-500 text-xs">*必須</span></label>
         <select className={`w-full p-3 border rounded-lg bg-white text-black outline-none appearance-none ${getErrorClass('project')}`} value={report.project} onChange={(e) => updateReport('project', e.target.value)}>
-          <option value="">(データを選択してください)</option>
+          <option value="">選択してください</option>
           {masterData.projects.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
       </div>
@@ -311,7 +311,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div>
           <label className="label text-sm font-bold text-gray-700">場所 <span className="text-red-500">*</span></label>
           <select className={`w-full h-11 p-2 border rounded bg-white text-black outline-none appearance-none ${getErrorClass('location')}`} value={report.location} onChange={(e) => updateReport('location', e.target.value)}>
-            <option value="">(データを選択してください)</option>
+            <option value="">選択してください</option>
             {masterData.locations.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
@@ -323,7 +323,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <div>
         <label className="label text-sm font-bold text-gray-700">実施者 <span className="text-red-500">*</span></label>
         <select className={`w-full h-11 p-2 border rounded bg-white text-black outline-none appearance-none ${getErrorClass('instructor')}`} value={report.instructor} onChange={(e) => updateReport('instructor', e.target.value)}>
-          <option value="">(データを選択してください)</option>
+          <option value="">選択してください</option>
           {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
@@ -334,14 +334,14 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
            <div className="flex items-center gap-2">
              <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(3)</span>
              <select className={`flex-1 p-2 border rounded bg-white text-black outline-none text-sm appearance-none ${getErrorClass('topic')}`} value={report.topic} onChange={(e) => updateReport('topic', e.target.value)}>
-               <option value="">(データを選択してください)</option>
+               <option value="">選択してください</option>
                {masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}
              </select>
            </div>
            <div className="flex items-center gap-2">
              <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(4)</span>
              <select className={`flex-1 p-2 border rounded bg-white text-black outline-none text-sm appearance-none ${getErrorClass('caution')}`} value={report.caution} onChange={(e) => updateReport('caution', e.target.value)}>
-               <option value="">(データを選択してください)</option>
+               <option value="">選択してください</option>
                {masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}
              </select>
            </div>
@@ -363,7 +363,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="mb-4">
           <label className="block text-sm font-bold text-gray-700 mb-1">会社名 <span className="text-red-500">*必須</span></label>
           <select className={`w-full p-3 border rounded-lg bg-gray-50 text-lg text-black outline-none appearance-none ${!tempCompany ? 'border-red-300 ring-2 ring-red-100' : 'border-gray-300'}`} value={tempCompany} onChange={(e) => setTempCompany(e.target.value)}>
-            <option value="">(データを選択してください)</option>
+            <option value="">選択してください</option>
             {masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
         </div>
