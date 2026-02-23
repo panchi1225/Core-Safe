@@ -23,26 +23,30 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
 
   // Handle resizing of the canvas when modal opens or window resizes
   useEffect(() => {
-    if (!isModalOpen) return;
+    if (!isModalOpen || !containerRef.current) return;
 
-    const updateSize = () => {
-      if (containerRef.current) {
-        const dpr = window.devicePixelRatio || 1;
-        const width = Math.floor(containerRef.current.clientWidth * dpr);
-        const height = Math.floor(containerRef.current.clientHeight * dpr);
-        
-        if (width > 0 && height > 0) {
-          setCanvasSize({ width, height });
+    // Wait for the layout to settle
+    const timer = setTimeout(() => {
+      const updateSize = () => {
+        if (containerRef.current) {
+          const dpr = window.devicePixelRatio || 1;
+          const width = Math.floor(containerRef.current.clientWidth * dpr);
+          const height = Math.floor(containerRef.current.clientHeight * dpr);
+          
+          if (width > 0 && height > 0) {
+            setCanvasSize({ width, height });
+          }
         }
-      }
-    };
+      };
+      updateSize();
+    }, 300);
 
-    // 初期サイズ設定
-    updateSize();
+    // Also update on resize (orientation change)
+    window.addEventListener('resize', () => {
+        setTimeout(updateSize, 300);
+    });
 
-    // リサイズイベント監視
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    return () => clearTimeout(timer);
   }, [isModalOpen]);
 
   // Update canvas context properties
@@ -64,6 +68,7 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
   /**
    * getPos:
    * マウス・タッチ座標をCanvas内のローカル座標（ピクセル単位）に変換します。
+   * 回転ロジックを削除し、常に標準のマッピングを使用します。
    */
   const getPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -173,7 +178,7 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
     );
   }
 
-  // ★修正: 縦向き時の強制回転クラスを除去し、全画面フィットに変更
+  // ★修正: 回転クラスを削除し、常に全画面固定
   return (
     <div 
       className="fixed inset-0 z-[100] bg-gray-900 bg-opacity-95 select-none touch-none" 
