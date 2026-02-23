@@ -30,7 +30,16 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
     </div>
   );
 
-  const JOB_TYPES = ["土工", "鳶", "大工", "オペ", "鉄筋工", "交通整理人", "その他"];
+  // 固定リスト (Wizard側と統一)
+  const JOB_TYPES = ["土工", "鳶", "大工", "オペ", "鉄筋工", "交通整理人"];
+
+  // 職種判定ロジック
+  // リストに含まれているか？
+  const isPreset = JOB_TYPES.includes(data.jobType);
+  // リストに含まれておらず、かつ空文字でない場合は「その他」扱い
+  const isOther = !isPreset && data.jobType !== "";
+  // その他の場合に表示するテキスト (jobTypeOtherがあればそれ、なければ入力されたjobTypeそのもの)
+  const otherText = data.jobTypeOther || (isOther && data.jobType !== 'その他' ? data.jobType : '');
 
   return (
     <div className="font-serif text-black leading-tight bg-white relative">
@@ -102,16 +111,18 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
              </div>
           </div>
 
-          {/* Row 3: Job Type */}
+          {/* Row 3: Job Type (修正箇所) */}
           <div className="flex border-b border-black shrink-0 h-[40px]">
             <div className={`w-24 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm`}>
               職　　　種
             </div>
             <div className={`flex-1 border-b border-black px-2 flex items-center text-sm`}>
               <div className="flex flex-nowrap items-center w-full">
+                {/* 固定リストの表示 */}
                 {JOB_TYPES.map((job, idx) => (
                   <React.Fragment key={job}>
                     <div className="flex items-center whitespace-nowrap">
+                      {/* jobTypeと一致すれば丸をつける */}
                       <span className={`px-1 ${data.jobType === job ? 'border border-black rounded-full font-bold' : ''}`}>
                         {job}
                       </span>
@@ -119,10 +130,18 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                     </div>
                   </React.Fragment>
                 ))}
+                
+                {/* 「その他」の表示 */}
                 <div className="flex items-center whitespace-nowrap ml-1">
+                  <span className="text-gray-400 mx-1">・</span>
+                  {/* リスト外の値なら「その他」に丸をつける */}
+                  <span className={`px-1 ${(isOther || data.jobType === 'その他') ? 'border border-black rounded-full font-bold' : ''}`}>
+                    その他
+                  </span>
                   <span>（</span>
-                  <span className="inline-block min-w-[100px] text-center px-1 italic">
-                     {data.jobType === 'その他' ? data.jobTypeOther : ''}
+                  <span className="inline-block min-w-[100px] text-center px-1 italic border-b border-dotted border-gray-400">
+                     {/* 手入力された職種名を表示 */}
+                     {otherText}
                   </span>
                   <span>）</span>
                 </div>
@@ -294,7 +313,6 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                 新規入場時誓約
               </h3>
               
-              {/* ★修正: 8項目を縦一列に配置、文字サイズ拡大、行間調整 */}
               <ul className="list-none pl-2 space-y-1 text-xs leading-snug">
                  <li className="flex items-start"><span className="mr-1.5">-</span>私は当作業所の新規入場時教育を受けました。</li>
                  <li className="flex items-start"><span className="mr-1.5">-</span>作業所の遵守事項やルールを厳守し作業します。</li>
@@ -312,7 +330,6 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                <div className="w-[50%] space-y-2">
                   <div className="flex items-end border-b border-black pb-0.5">
                     <span className="text-[9px] font-bold w-12 mb-0.5 whitespace-nowrap">現場名</span>
-                    {/* ★修正: text-centerを追加して中央寄せ */}
                     <span className={`flex-1 font-bold px-1 text-center ${getProjectNameClass(data.project)}`}>
                       {data.project}
                     </span>
