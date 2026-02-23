@@ -21,44 +21,29 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
   // Canvas dimensions state
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
-  // Orientation state for auto-landscape
-  const [isPortrait, setIsPortrait] = useState(false);
-
-  // Check orientation on resize
-  useEffect(() => {
-    const checkOrientation = () => {
-      // Treat as portrait if height > width
-      setIsPortrait(window.innerHeight > window.innerWidth);
-    };
-    
-    checkOrientation();
-    window.addEventListener('resize', checkOrientation);
-    return () => window.removeEventListener('resize', checkOrientation);
-  }, []);
-
   // Handle resizing of the canvas when modal opens or window resizes
   useEffect(() => {
-    if (!isModalOpen || !containerRef.current) return;
+    if (!isModalOpen) return;
 
-    // Wait for the layout to settle
-    const timer = setTimeout(() => {
-      const updateSize = () => {
-        if (containerRef.current) {
-          const dpr = window.devicePixelRatio || 1;
-          // clientWidth/Height respect the CSS rotation and flexbox constraints
-          const width = Math.floor(containerRef.current.clientWidth * dpr);
-          const height = Math.floor(containerRef.current.clientHeight * dpr);
-          
-          if (width > 0 && height > 0) {
-            setCanvasSize({ width, height });
-          }
+    const updateSize = () => {
+      if (containerRef.current) {
+        const dpr = window.devicePixelRatio || 1;
+        const width = Math.floor(containerRef.current.clientWidth * dpr);
+        const height = Math.floor(containerRef.current.clientHeight * dpr);
+        
+        if (width > 0 && height > 0) {
+          setCanvasSize({ width, height });
         }
-      };
-      updateSize();
-    }, 300);
+      }
+    };
 
-    return () => clearTimeout(timer);
-  }, [isModalOpen, isPortrait]);
+    // 初期サイズ設定
+    updateSize();
+
+    // リサイズイベント監視
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, [isModalOpen]);
 
   // Update canvas context properties
   useEffect(() => {
@@ -91,25 +76,15 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
     const dx = cx - rect.left;
     const dy = cy - rect.top;
 
-    if (isPortrait) {
-      // 縦持ち(UIは90度回転)時のマッピング
-      return {
-        x: (dy / rect.height) * canvas.width,
-        y: (1 - (dx / rect.width)) * canvas.height
-      };
-    } else {
-      // 通常時
-      return {
-        x: (dx / rect.width) * canvas.width,
-        y: (dy / rect.height) * canvas.height
-      };
-    }
+    return {
+      x: (dx / rect.width) * canvas.width,
+      y: (dy / rect.height) * canvas.height
+    };
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (usePenMode && e.pointerType !== 'pen') return;
     
-    // イベントのデフォルト挙動を抑制（選択やメニュー表示の防止）
     e.preventDefault();
     e.stopPropagation();
     
@@ -198,17 +173,14 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
     );
   }
 
-  const modalContainerClass = isPortrait
-    ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100dvh] h-[100dvw] rotate-90 origin-center"
-    : "fixed inset-0 w-full h-full";
-
+  // ★修正: 縦向き時の強制回転クラスを除去し、全画面フィットに変更
   return (
     <div 
       className="fixed inset-0 z-[100] bg-gray-900 bg-opacity-95 select-none touch-none" 
       onContextMenu={(e) => e.preventDefault()}
       style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
     >
-      <div className={`${modalContainerClass} bg-white flex flex-col overflow-hidden shadow-2xl relative select-none`}>
+      <div className="fixed inset-0 w-full h-full bg-white flex flex-col overflow-hidden shadow-2xl relative select-none">
         
         {saveSuccess && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] bg-gray-800 bg-opacity-90 text-white px-8 py-6 rounded-xl shadow-2xl animate-fade-in flex flex-col items-center backdrop-blur-sm pointer-events-none">
