@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA, EmployeeData } from '../types';
 import { getMasterData, saveDraft, deleteDraftsByProject, fetchEmployees } from '../services/firebaseService';
-import SignatureCanvas from './SignatureCanvas';
+import SignatureCanvas, { SignatureCanvasHandle } from './SignatureCanvas';
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
 
 interface Props {
@@ -11,11 +11,11 @@ interface Props {
   onBackToMenu: () => void;
 }
 
-// --- 固定職種リスト ---
-const PRESET_JOB_TYPES = ["土工", "鳶", "大工", "オペ", "鉄筋工", "交通整理人"];
-
 // --- Helper ---
 const range = (start: number, end: number) => Array.from({ length: end - start + 1 }, (_, i) => start + i);
+
+// --- 固定職種リスト ---
+const PRESET_JOB_TYPES = ["土工", "鳶", "大工", "オペ", "鉄筋工", "交通整理人"];
 
 // --- 安全装置 ---
 const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
@@ -140,12 +140,15 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   
+  // ★修正: sigPadRef の定義を追加
+  const sigPadRef = useRef<SignatureCanvasHandle>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [step]);
 
+  // マスタデータと社員データを取得
   useEffect(() => { 
     const loadData = async () => { 
       try { 
@@ -193,6 +196,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const updateQual = (key: keyof Qualifications, value: any) => { setReport(prev => ({ ...prev, qualifications: { ...prev.qualifications, [key]: value } })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
+  // 社員選択時のロジック
   const handleEmployeeSelect = (empId: string) => {
     setSelectedEmployeeId(empId);
     if (!empId) return;
@@ -200,9 +204,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     const emp = employees.find(e => e.id === empId);
     if (!emp) return;
     
+    // 経験年数の再計算
     let currentExpYears = emp.experienceYears;
     let currentExpMonths = emp.experienceMonths;
-    
     if (emp.lastUpdatedExperience) {
       const lastUpdate = new Date(emp.lastUpdatedExperience);
       const now = new Date();
@@ -217,7 +221,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       }
     }
 
-    // ★修正: 職種の判定ロジック (リスト外ならその他に振り分け)
+    // 職種の判定
     const isPreset = PRESET_JOB_TYPES.includes(emp.jobType);
     const finalJobType = isPreset ? emp.jobType : (emp.jobType ? 'その他' : '');
     const finalJobTypeOther = isPreset ? '' : emp.jobType;
@@ -246,8 +250,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       healthCheckDay: emp.healthCheckDay,
       experienceYears: currentExpYears,
       experienceMonths: currentExpMonths,
-      jobType: finalJobType, // 修正
-      jobTypeOther: finalJobTypeOther, // 修正
+      jobType: finalJobType,
+      jobTypeOther: finalJobTypeOther,
       qualifications: { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...emp.qualifications }
     });
   };
@@ -267,9 +271,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     if (!r.birthDay) newErrors.birthDay = true;
     if (!r.company) newErrors.company = true;
     
-    if (r.experienceYears === undefined || r.experienceYears === null || isNaN(Number(r.experienceYears))) {
-      newErrors.experienceYears = true;
-    }
+    if (r.experienceYears === undefined || r.experienceYears === null) newErrors.experienceYears = true;
     
     if (!r.jobType) newErrors.jobType = true;
     if (r.jobType === 'その他' && !r.jobTypeOther) newErrors.jobTypeOther = true;
@@ -407,6 +409,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                value={report.director} 
                onChange={(e)=>updateReport({director: e.target.value})}
              >
+               {/* 修正: 空の選択肢を追加 */}
                <option value="">選択してください</option>
                {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
              </select>
@@ -618,7 +621,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <select className="p-2 border rounded" value={report.pledgeDateMonth??''} onChange={e=>updateReport({pledgeDateMonth:parseInt(e.target.value)})}><option value="">-</option>{range(1,12).map(m=><option key={m} value={m}>{m}</option>)}</select>月
           <select className="p-2 border rounded" value={report.pledgeDateDay??''} onChange={e=>updateReport({pledgeDateDay:parseInt(e.target.value)})}><option value="">-</option>{range(1,31).map(d=><option key={d} value={d}>{d}</option>)}</select>日
         </div>
-        <div className="border-2 border-dashed border-gray-300 rounded bg-white"><SignatureCanvas ref={sigPadRef} canvasProps={{ className: 'w-full h-40' }} onEnd={()=>{if(sigPadRef.current) updateReport({signatureDataUrl:sigPadRef.current.toDataURL()})}} /></div>
+        <div className="border-2 border-dashed border-gray-300 rounded bg-white"><SignatureCanvas ref={sigPadRef} canvasProps={{ className: 'w-full h-40' }} onSave={handleSignatureSave} onClear={() => updateReport({signatureDataUrl: null})} /></div>
         <button onClick={()=>sigPadRef.current?.clear()} className="mt-2 text-sm text-red-500 underline">クリア</button>
       </div>
     </div>
