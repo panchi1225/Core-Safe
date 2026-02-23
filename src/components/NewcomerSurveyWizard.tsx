@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
 import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA, EmployeeData } from '../types';
-import { getMasterData, saveDraft, deleteDraftsByProject, fetchEmployees } from '../services/firebaseService'; 
-import { useReactToPrint } from 'react-to-print'; // 印刷用フック
-import SignatureCanvas from './SignatureCanvas';
+import { getMasterData, saveDraft, deleteDraftsByProject, fetchEmployees } from '../services/firebaseService';
+import SignatureCanvas, { SignatureCanvasHandle } from './SignatureCanvas';
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
 
 interface Props {
@@ -13,6 +13,9 @@ interface Props {
 
 // --- Helper ---
 const range = (start: number, end: number) => Array.from({ length: end - start + 1 }, (_, i) => start + i);
+
+// --- 固定職種リスト ---
+const PRESET_JOB_TYPES = ["土工", "鳶", "大工", "オペ", "鉄筋工", "交通整理人"];
 
 // --- 安全装置 ---
 const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
@@ -136,15 +139,16 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
   
   const [errors, setErrors] = useState<Record<string, boolean>>({});
-
-  // ★修正: 参照エラーの原因となっていた Ref の定義を追加
-  const sigPadRef = useRef<any>(null);
+  
+  // Ref定義
+  const sigPadRef = useRef<SignatureCanvasHandle>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [step]);
 
+  // マスタデータと社員データを取得
   useEffect(() => { 
     const loadData = async () => { 
       try { 
@@ -164,6 +168,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       if (report.birthYear === '' || report.birthMonth === '' || report.birthDay === '') return report.age;
       let yearAD = 0;
       if (report.birthEra === 'Showa') yearAD = 1925 + report.birthYear; else if (report.birthEra === 'Heisei') yearAD = 1988 + report.birthYear;
+      else if (report.birthEra === 'Reiwa') yearAD = 2018 + report.birthYear;
       if (yearAD === 0) return report.age;
       const today = new Date(); const birthDate = new Date(yearAD, report.birthMonth - 1, report.birthDay);
       let age = today.getFullYear() - birthDate.getFullYear(); const m = today.getMonth() - birthDate.getMonth();
@@ -191,6 +196,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const updateQual = (key: keyof Qualifications, value: any) => { setReport(prev => ({ ...prev, qualifications: { ...prev.qualifications, [key]: value } })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
+  // 社員選択時のロジック
   const handleEmployeeSelect = (empId: string) => {
     setSelectedEmployeeId(empId);
     if (!empId) return;
@@ -200,7 +206,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     
     let currentExpYears = emp.experienceYears;
     let currentExpMonths = emp.experienceMonths;
-    
     if (emp.lastUpdatedExperience) {
       const lastUpdate = new Date(emp.lastUpdatedExperience);
       const now = new Date();
@@ -214,6 +219,10 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         currentExpMonths = totalMonths % 12;
       }
     }
+
+    const isPreset = PRESET_JOB_TYPES.includes(emp.jobType);
+    const finalJobType = isPreset ? emp.jobType : (emp.jobType ? 'その他' : '');
+    const finalJobTypeOther = isPreset ? '' : emp.jobType;
 
     updateReport({
       company: "松浦建設株式会社",
@@ -239,8 +248,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       healthCheckDay: emp.healthCheckDay,
       experienceYears: currentExpYears,
       experienceMonths: currentExpMonths,
-      jobType: emp.jobType, 
-      qualifications: { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...emp.qualifications } 
+      jobType: finalJobType,
+      jobTypeOther: finalJobTypeOther,
+      qualifications: { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...emp.qualifications }
     });
   };
 
@@ -259,9 +269,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     if (!r.birthDay) newErrors.birthDay = true;
     if (!r.company) newErrors.company = true;
     
-    if (r.experienceYears === undefined || r.experienceYears === null || isNaN(Number(r.experienceYears))) {
-      newErrors.experienceYears = true;
-    }
+    if (r.experienceYears === undefined || r.experienceYears === null) newErrors.experienceYears = true;
     
     if (!r.jobType) newErrors.jobType = true;
     if (r.jobType === 'その他' && !r.jobTypeOther) newErrors.jobTypeOther = true;
@@ -307,9 +315,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       setDraftId(newId); 
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
-      
       setShowCompleteModal(true);
-      
     } catch (e) { 
       console.error(e); 
       alert("保存に失敗しました"); 
@@ -366,7 +372,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     const checkDate = new Date(yearAD, report.healthCheckMonth - 1, report.healthCheckDay);
     const today = new Date();
     const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
-    
     return checkDate < oneYearAgo;
   };
 
@@ -482,8 +487,28 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="form-control">
           <label className="label font-bold text-gray-700">職種</label>
           <div className="flex gap-2">
-            <select className={`w-1/2 p-2 border rounded ${getErrorClass('jobType')}`} value={report.jobType} onChange={(e) => updateReport({jobType: e.target.value})}><option value="土工">土工</option><option value="鳶">鳶</option><option value="大工">大工</option><option value="オペ">オペ</option><option value="鉄筋工">鉄筋工</option><option value="交通整理人">交通整理人</option><option value="その他">その他</option></select>
-            {report.jobType === 'その他' && (<input type="text" className={`flex-1 p-2 border rounded max-w-full ${getErrorClass('jobTypeOther')}`} placeholder="詳細を入力" value={report.jobTypeOther} onChange={(e)=>updateReport({jobTypeOther: e.target.value})} />)}
+            <select 
+              className={`w-1/2 p-2 border rounded ${getErrorClass('jobType')}`} 
+              value={report.jobType} 
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'その他') updateReport({jobType: 'その他'});
+                else updateReport({jobType: val, jobTypeOther: ''});
+              }}
+            >
+              <option value="">選択</option>
+              {PRESET_JOB_TYPES.map(j=><option key={j} value={j}>{j}</option>)}
+              <option value="その他">その他</option>
+            </select>
+            {report.jobType === 'その他' && (
+              <input 
+                type="text" 
+                className={`flex-1 p-2 border rounded max-w-full ${getErrorClass('jobTypeOther')}`} 
+                placeholder="詳細を入力" 
+                value={report.jobTypeOther} 
+                onChange={(e)=>updateReport({jobTypeOther: e.target.value})} 
+              />
+            )}
           </div>
         </div>
 
@@ -586,16 +611,57 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const renderStep3 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 3: 誓約・署名</h2>
-      <div className="bg-gray-50 p-6 rounded-lg border text-sm leading-relaxed"><ul className="list-disc pl-5"><li>諸規定及び指示事項を堅く守り、安全作業に従事致します。</li><li>暴力団排除条例に基づき、反社会的勢力ではないことを確約致します。</li></ul></div>
-      <div className="text-center">
-        <div className="mb-2 font-bold">誓約日 (令和)</div>
-        <div className="flex justify-center gap-2 mb-6">
-          <select className="p-2 border rounded" value={report.pledgeDateYear??''} onChange={e=>updateReport({pledgeDateYear:parseInt(e.target.value)})}><option value="">-</option>{range(1,30).map(y=><option key={y} value={y}>{y}</option>)}</select>年
-          <select className="p-2 border rounded" value={report.pledgeDateMonth??''} onChange={e=>updateReport({pledgeDateMonth:parseInt(e.target.value)})}><option value="">-</option>{range(1,12).map(m=><option key={m} value={m}>{m}</option>)}</select>月
-          <select className="p-2 border rounded" value={report.pledgeDateDay??''} onChange={e=>updateReport({pledgeDateDay:parseInt(e.target.value)})}><option value="">-</option>{range(1,31).map(d=><option key={d} value={d}>{d}</option>)}</select>日
+      
+      {/* 修正箇所: 誓約文を元通りに戻す */}
+      <div className="bg-gray-50 p-6 rounded-lg border leading-relaxed text-gray-800">
+        <h3 className="font-bold text-lg mb-4 text-center">新規入場時誓約</h3>
+        <ul className="list-disc pl-5 space-y-2 mb-6">
+          <li>私は当作業所の新規入場時教育を受けました。</li>
+          <li>作業所の遵守事項やルールを厳守し作業します。</li>
+          <li>どんな小さなケガでも、必ず当日に報告します。</li>
+          <li>自分の身を守り、また周囲の人の安全にも気を配ります。</li>
+          <li>危険個所を発見したときは、直ちに現場責任者もしくは元請職員に連絡します。</li>
+          <li>作業中は有資格者証を携帯します。</li>
+          <li>記載した個人情報を緊急時連絡等、労務・安全衛生管理に使用することに同意します。</li>
+          <li>上記の事項を相違なく報告します。</li>
+        </ul>
+        <div className="bg-white p-4 rounded border text-center">
+          {/* 誓約日と署名欄 (元コード維持) */}
+          <div className="mb-4 flex flex-row items-center justify-center gap-1 flex-nowrap">
+            <label className="font-bold whitespace-nowrap text-sm md:text-base">誓約日(令和)</label>
+            <select className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" value={report.pledgeDateYear??''} onChange={e=>updateReport({pledgeDateYear:parseInt(e.target.value)})}>
+               <option value="">-</option>{range(1, 30).map(y => <option key={y} value={y}>{y}</option>)}
+            </select><span className="text-sm md:text-base">年</span>
+            <select className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" value={report.pledgeDateMonth??''} onChange={e=>updateReport({pledgeDateMonth:parseInt(e.target.value)})}>
+               <option value="">-</option>{range(1, 12).map(m=><option key={m} value={m}>{m}</option>)}
+            </select><span className="text-sm md:text-base">月</span>
+            <select className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" value={report.pledgeDateDay??''} onChange={e=>updateReport({pledgeDateDay:parseInt(e.target.value)})}>
+               <option value="">-</option>{range(1, 31).map(d=><option key={d} value={d}>{d}</option>)}
+            </select><span className="text-sm md:text-base">日</span>
+          </div>
+          
+          <label className="block font-bold text-gray-700 mb-2">本人署名</label>
+          <div className="mx-auto w-full max-w-sm">
+            {report.signatureDataUrl ? (
+              <div className="mt-4">
+                <p className="text-xs text-green-600 font-bold mb-1">署名済み</p>
+                <div className="cursor-pointer hover:opacity-80 transition-opacity inline-block border border-transparent hover:border-blue-300 rounded p-1" onClick={() => setPreviewSigUrl(report.signatureDataUrl)} title="タップして拡大">
+                  <img src={report.signatureDataUrl} alt="Signature" className="h-10 mx-auto border" />
+                </div>
+                <button onClick={()=>updateReport({signatureDataUrl: null})} className="ml-4 text-xs text-red-500 underline">削除</button>
+              </div>
+            ) : (
+              <div className="w-full">
+                <SignatureCanvas 
+                  ref={sigPadRef}
+                  onSave={handleSignatureSave} 
+                  onClear={() => updateReport({signatureDataUrl: null})} 
+                  canvasProps={{ className: 'w-full h-40' }}
+                />
+              </div>
+            )}
+          </div>
         </div>
-        <div className="border-2 border-dashed border-gray-300 rounded bg-white"><SignatureCanvas ref={sigPadRef} canvasProps={{ className: 'w-full h-40' }} onSave={handleSignatureSave} onClear={() => updateReport({signatureDataUrl: null})} /></div>
-        <button onClick={()=>sigPadRef.current?.clear()} className="mt-2 text-sm text-red-500 underline">クリア</button>
       </div>
     </div>
   );
