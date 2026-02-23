@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
 import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA, EmployeeData } from '../types';
-import { getMasterData, saveDraft, deleteDraftsByProject, fetchEmployees } from '../services/firebaseService'; // fetchEmployeesを追加
+import { getMasterData, saveDraft, deleteDraftsByProject, fetchEmployees } from '../services/firebaseService';
 import SignatureCanvas from './SignatureCanvas';
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
 
@@ -9,6 +10,9 @@ interface Props {
   initialDraftId?: string | null;
   onBackToMenu: () => void;
 }
+
+// --- 固定職種リスト ---
+const PRESET_JOB_TYPES = ["土工", "鳶", "大工", "オペ", "鉄筋工", "交通整理人"];
 
 // --- Helper ---
 const range = (start: number, end: number) => Array.from({ length: end - start + 1 }, (_, i) => start + i);
@@ -110,7 +114,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previewScale, setPreviewScale] = useState(1);
   
-  // ★修正: 社員データリスト用ステート
   const [employees, setEmployees] = useState<EmployeeData[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
 
@@ -136,12 +139,13 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
   
   const [errors, setErrors] = useState<Record<string, boolean>>({});
+  
+  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [step]);
 
-  // ★修正: マスタデータと社員データを取得
   useEffect(() => { 
     const loadData = async () => { 
       try { 
@@ -161,6 +165,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       if (report.birthYear === '' || report.birthMonth === '' || report.birthDay === '') return report.age;
       let yearAD = 0;
       if (report.birthEra === 'Showa') yearAD = 1925 + report.birthYear; else if (report.birthEra === 'Heisei') yearAD = 1988 + report.birthYear;
+      else if (report.birthEra === 'Reiwa') yearAD = 2018 + report.birthYear;
       if (yearAD === 0) return report.age;
       const today = new Date(); const birthDate = new Date(yearAD, report.birthMonth - 1, report.birthDay);
       let age = today.getFullYear() - birthDate.getFullYear(); const m = today.getMonth() - birthDate.getMonth();
@@ -188,7 +193,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const updateQual = (key: keyof Qualifications, value: any) => { setReport(prev => ({ ...prev, qualifications: { ...prev.qualifications, [key]: value } })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
-  // ★修正: 社員選択時の処理（Firebaseデータを使用）
   const handleEmployeeSelect = (empId: string) => {
     setSelectedEmployeeId(empId);
     if (!empId) return;
@@ -196,26 +200,27 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     const emp = employees.find(e => e.id === empId);
     if (!emp) return;
     
-    // 経験年数の再計算
     let currentExpYears = emp.experienceYears;
     let currentExpMonths = emp.experienceMonths;
     
     if (emp.lastUpdatedExperience) {
       const lastUpdate = new Date(emp.lastUpdatedExperience);
       const now = new Date();
-      // 経過月数を計算
       let monthsDiff = (now.getFullYear() - lastUpdate.getFullYear()) * 12 + (now.getMonth() - lastUpdate.getMonth());
-      // 日付がまだ来ていなければ1ヶ月引く（簡易計算）
       if (now.getDate() < lastUpdate.getDate()) {
         monthsDiff--;
       }
-      
       if (monthsDiff > 0) {
         const totalMonths = currentExpYears * 12 + currentExpMonths + monthsDiff;
         currentExpYears = Math.floor(totalMonths / 12);
         currentExpMonths = totalMonths % 12;
       }
     }
+
+    // ★修正: 職種の判定ロジック (リスト外ならその他に振り分け)
+    const isPreset = PRESET_JOB_TYPES.includes(emp.jobType);
+    const finalJobType = isPreset ? emp.jobType : (emp.jobType ? 'その他' : '');
+    const finalJobTypeOther = isPreset ? '' : emp.jobType;
 
     updateReport({
       company: "松浦建設株式会社",
@@ -228,8 +233,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       birthMonth: emp.birthMonth,
       birthDay: emp.birthDay,
       bloodType: emp.bloodType,
-      bloodTypeRh: emp.bloodTypeRh, // RHも反映
-      gender: emp.gender,           // 性別も反映
+      bloodTypeRh: emp.bloodTypeRh,
+      gender: emp.gender,
       address: emp.address,
       phone: emp.phone,
       emergencyContactSei: emp.emergencyContactSei,
@@ -241,8 +246,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       healthCheckDay: emp.healthCheckDay,
       experienceYears: currentExpYears,
       experienceMonths: currentExpMonths,
-      jobType: emp.jobType, // 職種も反映
-      qualifications: { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...emp.qualifications } // 資格をマージ
+      jobType: finalJobType, // 修正
+      jobTypeOther: finalJobTypeOther, // 修正
+      qualifications: { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...emp.qualifications }
     });
   };
 
@@ -309,9 +315,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       setDraftId(newId); 
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
-      
       setShowCompleteModal(true);
-      
     } catch (e) { 
       console.error(e); 
       alert("保存に失敗しました"); 
@@ -327,28 +331,11 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     setShowPreview(true);
   };
 
-  const handleSaveAndPrint = async () => {
-    if (!report.signatureDataUrl) {
-      alert("署名がありません。\n署名を行ってください。");
-      return;
-    }
-
-    setSaveStatus('saving');
-    try {
-      const fullName = (report.nameSei || '') + (report.nameMei || '');
-      const dataToSave = { ...report, name: fullName || '氏名未入力' };
-      const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', dataToSave);
-      setDraftId(newId);
-      setSaveStatus('saved');
-      setHasUnsavedChanges(false);
-      setTimeout(() => setSaveStatus('idle'), 2000);
-      const prevTitle = document.title;
-      const fileName = `新規_${report.company || '未入力'}_${fullName || '未入力'}`;
-      document.title = fileName;
-      window.print();
-      document.title = prevTitle;
-    } catch (e) { alert("保存に失敗しました"); setSaveStatus('idle'); }
-  };
+  const handleSaveAndPrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `新規入場者アンケート_${report.nameSei || ''}${report.nameMei || ''}`,
+    onAfterPrint: () => {}
+  });
 
   const handleHomeClick = () => { 
     if (hasUnsavedChanges) { 
@@ -381,11 +368,10 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
   const isHealthCheckExpired = () => {
     if (!report.healthCheckYear || !report.healthCheckMonth || !report.healthCheckDay) return false;
-    const yearAD = 2018 + report.healthCheckYear; // 令和
+    const yearAD = 2018 + report.healthCheckYear;
     const checkDate = new Date(yearAD, report.healthCheckMonth - 1, report.healthCheckDay);
     const today = new Date();
     const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
-    
     return checkDate < oneYearAgo;
   };
 
@@ -421,14 +407,13 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
                value={report.director} 
                onChange={(e)=>updateReport({director: e.target.value})}
              >
-               {/* 修正: 空の選択肢を追加 */}
                <option value="">選択してください</option>
                {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
              </select>
            </div>
         </div>
 
-        {/* ★修正: 元請社員自動入力（Firebaseデータを使用） */}
+        {/* 社員自動入力 */}
         <div className="bg-green-50 p-4 rounded border border-green-200 w-full">
            <div className="text-sm text-green-700 font-bold mb-2">
              <i className="fa-solid fa-circle-info mr-1"></i>「松浦建設株式会社」の社員はこちらから名前を選択してください。
@@ -464,37 +449,10 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="form-control">
             <label className="label font-bold text-gray-700">生年月日・性別</label>
             <div className="flex gap-2 mb-2 items-center">
-              <select className="p-2 border rounded bg-white" value={report.birthEra} onChange={(e)=>updateReport({birthEra: e.target.value as any})}><option value="Showa">昭和</option><option value="Heisei">平成</option></select>
-              
-              <select 
-                className={`w-16 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('birthYear')}`} 
-                value={report.birthYear} 
-                onChange={(e)=>updateReport({birthYear: e.target.value === '' ? '' : parseInt(e.target.value)})}
-              >
-                <option value="">-</option>
-                {range(1, report.birthEra === 'Showa' ? 64 : 31).map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-              <span>年</span>
-              
-              <select 
-                className={`w-14 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('birthMonth')}`} 
-                value={report.birthMonth} 
-                onChange={(e)=>updateReport({birthMonth: e.target.value === '' ? '' : parseInt(e.target.value)})}
-              >
-                <option value="">-</option>
-                {range(1, 12).map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-              <span>月</span>
-              
-              <select 
-                className={`w-14 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('birthDay')}`} 
-                value={report.birthDay} 
-                onChange={(e)=>updateReport({birthDay: e.target.value === '' ? '' : parseInt(e.target.value)})}
-              >
-                <option value="">-</option>
-                {range(1, 31).map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-              <span>日</span>
+              <select className="p-2 border rounded bg-white" value={report.birthEra} onChange={(e)=>updateReport({birthEra: e.target.value as any})}><option value="Showa">昭和</option><option value="Heisei">平成</option><option value="Reiwa">令和</option></select>
+              <select className={`w-16 p-2 border rounded ${getErrorClass('birthYear')}`} value={report.birthYear} onChange={(e)=>updateReport({birthYear:parseInt(e.target.value)||''})}><option value="">-</option>{range(1, 64).map(y=><option key={y} value={y}>{y}</option>)}</select><span>年</span>
+              <select className={`w-14 p-2 border rounded ${getErrorClass('birthMonth')}`} value={report.birthMonth} onChange={(e)=>updateReport({birthMonth:parseInt(e.target.value)||''})}><option value="">-</option>{range(1, 12).map(m=><option key={m} value={m}>{m}</option>)}</select><span>月</span>
+              <select className={`w-14 p-2 border rounded ${getErrorClass('birthDay')}`} value={report.birthDay} onChange={(e)=>updateReport({birthDay:parseInt(e.target.value)||''})}><option value="">-</option>{range(1, 31).map(d=><option key={d} value={d}>{d}</option>)}</select><span>日</span>
             </div>
             <div className="flex gap-4 items-center">
               <div className="flex gap-2 border p-1 rounded bg-white">
@@ -509,39 +467,18 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label font-bold text-gray-700">所属会社名 (マスタ選択)</label>
-            <select 
-              className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} 
-              value={report.company} 
-              onChange={(e) => updateReport({company: e.target.value})}
-            >
-              {/* 修正: 空の選択肢を追加 */}
-              <option value="">選択してください</option>
-              {masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+            <select className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} value={report.company} onChange={(e) => updateReport({company: e.target.value})}><option value="">選択してください</option>{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select>
             <div className="flex items-center gap-2 text-sm"><span>(</span><input type="text" className={`w-10 border-b text-center ${getErrorClass('subcontractorRank')}`} value={report.subcontractorRank} onChange={(e)=>updateReport({subcontractorRank: e.target.value})} /><span>次) 下請け</span></div>
           </div>
           <div className="form-control">
             <label className="label font-bold text-gray-700">経験年数</label>
             <div className="flex items-center gap-2 mt-2">
-              <select 
-                className={`w-16 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('experienceYears')}`} 
-                value={report.experienceYears ?? ''} 
-                onChange={(e)=>updateReport({experienceYears: e.target.value === '' ? null : parseInt(e.target.value)})}
-              >
-                 <option value="">-</option>
-                 {range(0, 60).map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-              <span>年</span>
-              
-              <select 
-                className="w-16 p-2 border rounded text-center bg-white appearance-none" 
-                value={report.experienceMonths ?? ''} 
-                onChange={(e)=>updateReport({experienceMonths: e.target.value === '' ? null : parseInt(e.target.value)})}
-              >
-                 <option value="">-</option>
-                 {range(0, 11).map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-              <span>ヶ月</span>
+              <select className={`w-16 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('experienceYears')}`} value={report.experienceYears ?? ''} onChange={(e)=>updateReport({experienceYears: e.target.value === '' ? null : parseInt(e.target.value)})}>
+                 <option value="">-</option>{range(0, 60).map(y => <option key={y} value={y}>{y}</option>)}
+              </select><span>年</span>
+              <select className="w-16 p-2 border rounded text-center bg-white appearance-none" value={report.experienceMonths ?? ''} onChange={(e)=>updateReport({experienceMonths: e.target.value === '' ? null : parseInt(e.target.value)})}>
+                 <option value="">-</option>{range(0, 11).map(m => <option key={m} value={m}>{m}</option>)}
+              </select><span>ヶ月</span>
             </div>
           </div>
         </div>
@@ -549,8 +486,28 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="form-control">
           <label className="label font-bold text-gray-700">職種</label>
           <div className="flex gap-2">
-            <select className={`w-1/2 p-2 border rounded ${getErrorClass('jobType')}`} value={report.jobType} onChange={(e) => updateReport({jobType: e.target.value})}><option value="土工">土工</option><option value="鳶">鳶</option><option value="大工">大工</option><option value="オペ">オペ</option><option value="鉄筋工">鉄筋工</option><option value="交通整理人">交通整理人</option><option value="その他">その他</option></select>
-            {report.jobType === 'その他' && (<input type="text" className={`flex-1 p-2 border rounded max-w-full ${getErrorClass('jobTypeOther')}`} placeholder="詳細を入力" value={report.jobTypeOther} onChange={(e)=>updateReport({jobTypeOther: e.target.value})} />)}
+            <select 
+              className={`w-1/2 p-2 border rounded ${getErrorClass('jobType')}`} 
+              value={report.jobType} 
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'その他') updateReport({jobType: 'その他'});
+                else updateReport({jobType: val, jobTypeOther: ''});
+              }}
+            >
+              <option value="">選択</option>
+              {PRESET_JOB_TYPES.map(j=><option key={j} value={j}>{j}</option>)}
+              <option value="その他">その他</option>
+            </select>
+            {report.jobType === 'その他' && (
+              <input 
+                type="text" 
+                className={`flex-1 p-2 border rounded max-w-full ${getErrorClass('jobTypeOther')}`} 
+                placeholder="詳細を入力" 
+                value={report.jobTypeOther} 
+                onChange={(e)=>updateReport({jobTypeOther: e.target.value})} 
+              />
+            )}
           </div>
         </div>
 
@@ -562,51 +519,23 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
         <div className="form-control bg-gray-50 p-3 rounded border-2 border-red-500 w-full">
           <label className="label font-bold text-gray-700 mb-2 block">緊急連絡先</label>
-          
           <div className="mb-2">
             <label className="text-xs text-gray-500 font-bold mb-1 block">氏名</label>
             <div className="flex gap-2">
-              <input 
-                type="text" 
-                className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('emergencyContactSei')}`} 
-                placeholder="氏" 
-                value={report.emergencyContactSei} 
-                onChange={(e) => updateReport({emergencyContactSei: e.target.value})} 
-              />
-              <input 
-                type="text" 
-                className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('emergencyContactMei')}`} 
-                placeholder="名" 
-                value={report.emergencyContactMei} 
-                onChange={(e) => updateReport({emergencyContactMei: e.target.value})} 
-              />
+              <input type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('emergencyContactSei')}`} placeholder="氏" value={report.emergencyContactSei} onChange={(e) => updateReport({emergencyContactSei: e.target.value})} />
+              <input type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('emergencyContactMei')}`} placeholder="名" value={report.emergencyContactMei} onChange={(e) => updateReport({emergencyContactMei: e.target.value})} />
             </div>
           </div>
-          
           <div className="flex flex-wrap gap-3">
             <div className="w-full sm:flex-1">
               <label className="text-xs text-gray-500 font-bold mb-1 block">続柄</label>
-              <select 
-                className={`w-full p-2 border rounded max-w-full ${getErrorClass('emergencyContactRelation')}`} 
-                value={report.emergencyContactRelation} 
-                onChange={(e) => updateReport({emergencyContactRelation: e.target.value})}
-              >
-                <option value="">選択してください</option>
-                <option value="妻">妻</option><option value="夫">夫</option><option value="父">父</option><option value="母">母</option>
-                <option value="子">子</option><option value="兄">兄</option><option value="弟">弟</option><option value="姉">姉</option>
-                <option value="妹">妹</option><option value="祖父">祖父</option><option value="祖母">祖母</option>
-                <option value="同居人">同居人</option><option value="その他">その他</option>
+              <select className={`w-full p-2 border rounded max-w-full ${getErrorClass('emergencyContactRelation')}`} value={report.emergencyContactRelation} onChange={(e) => updateReport({emergencyContactRelation: e.target.value})}>
+                <option value="">選択してください</option><option value="妻">妻</option><option value="夫">夫</option><option value="父">父</option><option value="母">母</option><option value="子">子</option><option value="兄">兄</option><option value="弟">弟</option><option value="姉">姉</option><option value="妹">妹</option><option value="祖父">祖父</option><option value="祖母">祖母</option><option value="同居人">同居人</option><option value="その他">その他</option>
               </select>
             </div>
             <div className="w-full sm:flex-1">
               <label className="text-xs text-gray-500 font-bold mb-1 block">緊急電話番号</label>
-              <input 
-                type="text" 
-                className={`w-full p-2 border rounded max-w-full ${getErrorClass('emergencyContactPhone')}`} 
-                placeholder="090-0000-0000" 
-                value={report.emergencyContactPhone} 
-                onChange={(e) => updateReport({emergencyContactPhone: e.target.value})} 
-              />
+              <input type="text" className={`w-full p-2 border rounded max-w-full ${getErrorClass('emergencyContactPhone')}`} placeholder="090-0000-0000" value={report.emergencyContactPhone} onChange={(e) => updateReport({emergencyContactPhone: e.target.value})} />
             </div>
           </div>
         </div>
@@ -623,39 +552,17 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="form-control">
             <label className="label font-bold text-gray-700">健康診断受診日 (令和)</label>
             <div className="flex gap-1 items-center">
-              <select 
-                className={`w-16 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckYear')}`} 
-                value={report.healthCheckYear ?? ''} 
-                onChange={(e)=>updateReport({healthCheckYear: e.target.value === '' ? null : parseInt(e.target.value)})}
-              >
-                <option value="">-</option>
-                {range(1, 30).map(y => <option key={y} value={y}>{y}</option>)}
-              </select>
-              <span>年</span>
-              
-              <select 
-                className={`w-14 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckMonth')}`} 
-                value={report.healthCheckMonth ?? ''} 
-                onChange={(e)=>updateReport({healthCheckMonth: e.target.value === '' ? null : parseInt(e.target.value)})}
-              >
-                <option value="">-</option>
-                {range(1, 12).map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-              <span>月</span>
-              
-              <select 
-                className={`w-14 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckDay')}`} 
-                value={report.healthCheckDay ?? ''} 
-                onChange={(e)=>updateReport({healthCheckDay: e.target.value === '' ? null : parseInt(e.target.value)})}
-              >
-                <option value="">-</option>
-                {range(1, 31).map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-              <span>日</span>
+              <select className={`w-16 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckYear')}`} value={report.healthCheckYear ?? ''} onChange={(e)=>updateReport({healthCheckYear: e.target.value === '' ? null : parseInt(e.target.value)})}>
+                <option value="">-</option>{range(1, 30).map(y => <option key={y} value={y}>{y}</option>)}
+              </select><span>年</span>
+              <select className={`w-14 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckMonth')}`} value={report.healthCheckMonth ?? ''} onChange={(e)=>updateReport({healthCheckMonth: e.target.value === '' ? null : parseInt(e.target.value)})}>
+                <option value="">-</option>{range(1, 12).map(m => <option key={m} value={m}>{m}</option>)}
+              </select><span>月</span>
+              <select className={`w-14 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckDay')}`} value={report.healthCheckDay ?? ''} onChange={(e)=>updateReport({healthCheckDay: e.target.value === '' ? null : parseInt(e.target.value)})}>
+                <option value="">-</option>{range(1, 31).map(d => <option key={d} value={d}>{d}</option>)}
+              </select><span>日</span>
             </div>
-            {isExpired && (
-              <p className="text-xs text-red-600 font-bold mt-1">※最終受診から1年以上経過しています</p>
-            )}
+            {isExpired && <p className="text-xs text-red-600 font-bold mt-1">※最終受診から1年以上経過しています</p>}
           </div>
         </div>
         <div className="form-control"><label className="label font-bold text-gray-700">建退共加入状況</label><div className="flex gap-4 mt-1"><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'Joined'} onChange={() => updateReport({kentaikyo: 'Joined'})} />加入している</label><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'NotJoined'} onChange={() => updateReport({kentaikyo: 'NotJoined'})} />加入していない</label></div></div>
@@ -668,52 +575,33 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     return (
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 2: 資格</h2>
-        <p className="text-sm text-gray-500">保有している資格にチェックを入れてください。</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-4 rounded border shadow-sm">
-             <h3 className="font-bold border-b mb-3">技能講習</h3>
-             <div className="space-y-2">
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.vehicle_leveling} onChange={(e)=>updateQual('vehicle_leveling', e.target.checked)} />車輌系建設機械（整地、積込運搬等）</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.vehicle_demolition} onChange={(e)=>updateQual('vehicle_demolition', e.target.checked)} />車輌系建設機械（解体用）</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.mobile_crane} onChange={(e)=>updateQual('mobile_crane', e.target.checked)} />小型移動クレーン</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.slinging} onChange={(e)=>updateQual('slinging', e.target.checked)} />玉掛</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.gas_welding} onChange={(e)=>updateQual('gas_welding', e.target.checked)} />ガス溶接</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.earth_retaining} onChange={(e)=>updateQual('earth_retaining', e.target.checked)} />土留め支保工作業主任者</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.excavation} onChange={(e)=>updateQual('excavation', e.target.checked)} />地山掘削作業主任者</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.scaffolding} onChange={(e)=>updateQual('scaffolding', e.target.checked)} />足場組立て等作業主任者</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.formwork} onChange={(e)=>updateQual('formwork', e.target.checked)} />型枠支保工作業主任者</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.oxygen_deficiency} onChange={(e)=>updateQual('oxygen_deficiency', e.target.checked)} />酸素欠乏危険作業主任者</label>
-                <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.rough_terrain} onChange={(e)=>updateQual('rough_terrain', e.target.checked)} />不整地運搬車</label>
-             </div>
+        <div className="bg-white p-4 rounded border shadow-sm">
+          <h3 className="font-bold border-b mb-3">技能講習</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {[
+              {k:'vehicle_leveling',l:'車輌系建設機械(整地)'}, {k:'vehicle_demolition',l:'車輌系建設機械(解体)'}, {k:'mobile_crane',l:'小型移動クレーン'},
+              {k:'slinging',l:'玉掛'}, {k:'gas_welding',l:'ガス溶接'}, {k:'earth_retaining',l:'土留め支保工作業主任者'},
+              {k:'excavation',l:'地山掘削作業主任者'}, {k:'scaffolding',l:'足場組立て等作業主任者'}, {k:'formwork',l:'型枠支保工作業主任者'},
+              {k:'oxygen_deficiency',l:'酸素欠乏危険作業主任者'}, {k:'rough_terrain',l:'不整地運搬車'}
+            ].map(q => <label key={q.k} className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={(qual as any)[q.k]} onChange={e=>updateQual(q.k as any, e.target.checked)} />{q.l}</label>)}
           </div>
-          <div className="space-y-6">
-             <div className="bg-white p-4 rounded border shadow-sm">
-               <h3 className="font-bold border-b mb-3">特別教育</h3>
-               <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.arc_welding} onChange={(e)=>updateQual('arc_welding', e.target.checked)} />アーク溶接</label>
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.grinding_wheel} onChange={(e)=>updateQual('grinding_wheel', e.target.checked)} />研削といし取替え業務</label>
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.low_voltage} onChange={(e)=>updateQual('low_voltage', e.target.checked)} />低圧電気取扱</label>
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.roller} onChange={(e)=>updateQual('roller', e.target.checked)} />ローラー運転業務</label>
-                  <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={qual.asbestos} onChange={(e)=>updateQual('asbestos', e.target.checked)} />石綿取り扱い業務</label>
-               </div>
-             </div>
-             <div className="bg-white p-4 rounded border shadow-sm">
-               <h3 className="font-bold border-b mb-3">その他</h3>
-               <label className="flex items-center gap-2 cursor-pointer mb-2"><input type="checkbox" checked={qual.foreman} onChange={(e)=>updateQual('foreman', e.target.checked)} />職長教育</label>
-               
-               <label className="flex items-center gap-2 cursor-pointer mb-1"><input type="checkbox" checked={(qual as any).license_regular} onChange={(e)=>updateQual('license_regular' as any, e.target.checked)} />普通自動車免許</label>
-               <label className="flex items-center gap-2 cursor-pointer mb-1"><input type="checkbox" checked={(qual as any).license_large} onChange={(e)=>updateQual('license_large' as any, e.target.checked)} />大型自動車免許</label>
-               <label className="flex items-center gap-2 cursor-pointer mb-1"><input type="checkbox" checked={(qual as any).license_large_special} onChange={(e)=>updateQual('license_large_special' as any, e.target.checked)} />大型特殊自動車免許</label>
-               <label className="flex items-center gap-2 cursor-pointer mb-4"><input type="checkbox" checked={(qual as any).license_towing} onChange={(e)=>updateQual('license_towing' as any, e.target.checked)} />牽引自動車免許</label>
-
-               <div className="text-sm font-bold mb-2">上記以外の資格</div>
-               <div className="space-y-2">
-                  <input type="text" className="w-full p-2 border rounded" placeholder="資格名" value={qual.otherText1} onChange={(e)=>updateQual('otherText1', e.target.value)} />
-                  <input type="text" className="w-full p-2 border rounded" placeholder="資格名" value={qual.otherText2} onChange={(e)=>updateQual('otherText2', e.target.value)} />
-                  <input type="text" className="w-full p-2 border rounded" placeholder="資格名" value={qual.otherText3} onChange={(e)=>updateQual('otherText3', e.target.value)} />
-               </div>
-             </div>
+        </div>
+        <div className="bg-white p-4 rounded border shadow-sm">
+          <h3 className="font-bold border-b mb-3">特別教育・その他</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
+            {[
+              {k:'arc_welding',l:'アーク溶接'}, {k:'grinding_wheel',l:'研削といし'}, {k:'low_voltage',l:'低圧電気取扱'},
+              {k:'roller',l:'ローラー運転'}, {k:'asbestos',l:'石綿取り扱い'}, {k:'foreman',l:'職長教育'},
+              {k:'electrician',l:'電気工事士'}
+            ].map(q => <label key={q.k} className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={(qual as any)[q.k]} onChange={e=>updateQual(q.k as any, e.target.checked)} />{q.l}</label>)}
           </div>
+          <div className="border-t pt-2 mb-2"><h4 className="font-bold text-sm mb-2">運転免許</h4>
+            {[
+              {k:'license_regular',l:'普通自動車免許'}, {k:'license_large',l:'大型自動車免許'},
+              {k:'license_large_special',l:'大型特殊自動車免許'}, {k:'license_towing',l:'牽引自動車免許'}
+            ].map(q => <label key={q.k} className="flex items-center gap-2 cursor-pointer mb-1"><input type="checkbox" checked={(qual as any)[q.k]} onChange={e=>updateQual(q.k as any, e.target.checked)} />{q.l}</label>)}
+          </div>
+          <div className="mt-2"><label className="block text-sm font-bold mb-1">その他資格</label><input type="text" className="w-full p-2 border rounded" placeholder="資格名" value={qual.otherText1||''} onChange={e=>updateQual('otherText1', e.target.value)} /></div>
         </div>
       </div>
     );
@@ -722,60 +610,17 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const renderStep3 = () => (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 3: 誓約・署名</h2>
-      <div className="bg-gray-50 p-6 rounded-lg border leading-relaxed text-gray-800"><h3 className="font-bold text-lg mb-4 text-center">新規入場時誓約</h3><ul className="list-disc pl-5 space-y-2 mb-6"><li>私は当作業所の新規入場時教育を受けました。</li><li>作業所の遵守事項やルールを厳守し作業します。</li><li>どんな小さなケガでも、必ず当日に報告します。</li><li>自分の身を守り、また周囲の人の安全にも気を配ります。</li><li>危険個所を発見したときは、直ちに現場責任者もしくは元請職員に連絡します。</li><li>作業中は有資格者証を携帯します。</li><li>記載した個人情報を緊急時連絡等、労務・安全衛生管理に使用することに同意します。</li><li>上記の事項を相違なく報告します。</li></ul><div className="bg-white p-4 rounded border text-center">
-      
-      {/* 誓約日のレイアウト調整 (iPhoneでの折り返し防止) */}
-      <div className="mb-4 flex flex-row items-center justify-center gap-1 flex-nowrap">
-        <label className="font-bold whitespace-nowrap text-sm md:text-base">誓約日(令和)</label>
-        {/* 修正箇所: 年をセレクトボックス化 */}
-        <select 
-          className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" 
-          value={report.pledgeDateYear ?? ''} 
-          onChange={(e)=>updateReport({pledgeDateYear: e.target.value === '' ? null : parseInt(e.target.value)})}
-        >
-           <option value="">-</option>
-           {range(1, 30).map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
-        <span className="text-sm md:text-base">年</span>
-        {/* 修正箇所: 月をセレクトボックス化 */}
-        <select 
-          className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" 
-          value={report.pledgeDateMonth ?? ''} 
-          onChange={(e)=>updateReport({pledgeDateMonth: e.target.value === '' ? null : parseInt(e.target.value)})}
-        >
-           <option value="">-</option>
-           {range(1, 12).map(m => <option key={m} value={m}>{m}</option>)}
-        </select>
-        <span className="text-sm md:text-base">月</span>
-        {/* 修正箇所: 日をセレクトボックス化 */}
-        <select 
-          className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" 
-          value={report.pledgeDateDay ?? ''} 
-          onChange={(e)=>updateReport({pledgeDateDay: e.target.value === '' ? null : parseInt(e.target.value)})}
-        >
-           <option value="">-</option>
-           {range(1, 31).map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
-        <span className="text-sm md:text-base">日</span>
-      </div>
-      
-      <label className="block font-bold text-gray-700 mb-2">本人署名</label><div className="mx-auto w-full max-w-sm">
-      
-      {report.signatureDataUrl ? (
-        <div className="mt-4"><p className="text-xs text-green-600 font-bold mb-1">署名済み</p><div className="cursor-pointer hover:opacity-80 transition-opacity inline-block border border-transparent hover:border-blue-300 rounded p-1" onClick={() => setPreviewSigUrl(report.signatureDataUrl)} title="タップして拡大"><img src={report.signatureDataUrl} alt="Signature" className="h-10 mx-auto border" /></div><button onClick={()=>updateReport({signatureDataUrl: null})} className="ml-4 text-xs text-red-500 underline">削除</button></div>
-      ) : (
-        <div className="w-full">
-          <SignatureCanvas 
-            key={sigKey} 
-            onSave={(dataUrl) => { updateReport({ signatureDataUrl: dataUrl }); setSigKey(prev => prev + 1); }} 
-            onClear={() => {}} 
-            lineWidth={6} 
-            keepOpenOnSave={true} 
-          />
+      <div className="bg-gray-50 p-6 rounded-lg border text-sm leading-relaxed"><ul className="list-disc pl-5"><li>諸規定及び指示事項を堅く守り、安全作業に従事致します。</li><li>暴力団排除条例に基づき、反社会的勢力ではないことを確約致します。</li></ul></div>
+      <div className="text-center">
+        <div className="mb-2 font-bold">誓約日 (令和)</div>
+        <div className="flex justify-center gap-2 mb-6">
+          <select className="p-2 border rounded" value={report.pledgeDateYear??''} onChange={e=>updateReport({pledgeDateYear:parseInt(e.target.value)})}><option value="">-</option>{range(1,30).map(y=><option key={y} value={y}>{y}</option>)}</select>年
+          <select className="p-2 border rounded" value={report.pledgeDateMonth??''} onChange={e=>updateReport({pledgeDateMonth:parseInt(e.target.value)})}><option value="">-</option>{range(1,12).map(m=><option key={m} value={m}>{m}</option>)}</select>月
+          <select className="p-2 border rounded" value={report.pledgeDateDay??''} onChange={e=>updateReport({pledgeDateDay:parseInt(e.target.value)})}><option value="">-</option>{range(1,31).map(d=><option key={d} value={d}>{d}</option>)}</select>日
         </div>
-      )}
-      
-      </div></div></div>
+        <div className="border-2 border-dashed border-gray-300 rounded bg-white"><SignatureCanvas ref={sigPadRef} canvasProps={{ className: 'w-full h-40' }} onEnd={()=>{if(sigPadRef.current) updateReport({signatureDataUrl:sigPadRef.current.toDataURL()})}} /></div>
+        <button onClick={()=>sigPadRef.current?.clear()} className="mt-2 text-sm text-red-500 underline">クリア</button>
+      </div>
     </div>
   );
 
