@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useReactToPrint } from 'react-to-print';
 import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA, EmployeeData } from '../types';
-import { getMasterData, saveDraft, deleteDraftsByProject, fetchEmployees } from '../services/firebaseService';
-import SignatureCanvas, { SignatureCanvasHandle } from './SignatureCanvas';
+import { getMasterData, saveDraft, deleteDraftsByProject, fetchEmployees } from '../services/firebaseService'; 
+import { useReactToPrint } from 'react-to-print'; // 印刷用フック
+import SignatureCanvas from './SignatureCanvas';
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
 
 interface Props {
@@ -13,9 +13,6 @@ interface Props {
 
 // --- Helper ---
 const range = (start: number, end: number) => Array.from({ length: end - start + 1 }, (_, i) => start + i);
-
-// --- 固定職種リスト ---
-const PRESET_JOB_TYPES = ["土工", "鳶", "大工", "オペ", "鉄筋工", "交通整理人"];
 
 // --- 安全装置 ---
 const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
@@ -139,16 +136,15 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
   
   const [errors, setErrors] = useState<Record<string, boolean>>({});
-  
-  // ★修正: sigPadRef の定義を追加
-  const sigPadRef = useRef<SignatureCanvasHandle>(null);
+
+  // ★修正: 参照エラーの原因となっていた Ref の定義を追加
+  const sigPadRef = useRef<any>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [step]);
 
-  // マスタデータと社員データを取得
   useEffect(() => { 
     const loadData = async () => { 
       try { 
@@ -168,7 +164,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       if (report.birthYear === '' || report.birthMonth === '' || report.birthDay === '') return report.age;
       let yearAD = 0;
       if (report.birthEra === 'Showa') yearAD = 1925 + report.birthYear; else if (report.birthEra === 'Heisei') yearAD = 1988 + report.birthYear;
-      else if (report.birthEra === 'Reiwa') yearAD = 2018 + report.birthYear;
       if (yearAD === 0) return report.age;
       const today = new Date(); const birthDate = new Date(yearAD, report.birthMonth - 1, report.birthDay);
       let age = today.getFullYear() - birthDate.getFullYear(); const m = today.getMonth() - birthDate.getMonth();
@@ -196,7 +191,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const updateQual = (key: keyof Qualifications, value: any) => { setReport(prev => ({ ...prev, qualifications: { ...prev.qualifications, [key]: value } })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
-  // 社員選択時のロジック
   const handleEmployeeSelect = (empId: string) => {
     setSelectedEmployeeId(empId);
     if (!empId) return;
@@ -204,9 +198,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     const emp = employees.find(e => e.id === empId);
     if (!emp) return;
     
-    // 経験年数の再計算
     let currentExpYears = emp.experienceYears;
     let currentExpMonths = emp.experienceMonths;
+    
     if (emp.lastUpdatedExperience) {
       const lastUpdate = new Date(emp.lastUpdatedExperience);
       const now = new Date();
@@ -220,11 +214,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         currentExpMonths = totalMonths % 12;
       }
     }
-
-    // 職種の判定
-    const isPreset = PRESET_JOB_TYPES.includes(emp.jobType);
-    const finalJobType = isPreset ? emp.jobType : (emp.jobType ? 'その他' : '');
-    const finalJobTypeOther = isPreset ? '' : emp.jobType;
 
     updateReport({
       company: "松浦建設株式会社",
@@ -250,9 +239,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       healthCheckDay: emp.healthCheckDay,
       experienceYears: currentExpYears,
       experienceMonths: currentExpMonths,
-      jobType: finalJobType,
-      jobTypeOther: finalJobTypeOther,
-      qualifications: { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...emp.qualifications }
+      jobType: emp.jobType, 
+      qualifications: { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...emp.qualifications } 
     });
   };
 
@@ -271,7 +259,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     if (!r.birthDay) newErrors.birthDay = true;
     if (!r.company) newErrors.company = true;
     
-    if (r.experienceYears === undefined || r.experienceYears === null) newErrors.experienceYears = true;
+    if (r.experienceYears === undefined || r.experienceYears === null || isNaN(Number(r.experienceYears))) {
+      newErrors.experienceYears = true;
+    }
     
     if (!r.jobType) newErrors.jobType = true;
     if (r.jobType === 'その他' && !r.jobTypeOther) newErrors.jobTypeOther = true;
@@ -317,7 +307,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       setDraftId(newId); 
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
+      
       setShowCompleteModal(true);
+      
     } catch (e) { 
       console.error(e); 
       alert("保存に失敗しました"); 
@@ -374,6 +366,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     const checkDate = new Date(yearAD, report.healthCheckMonth - 1, report.healthCheckDay);
     const today = new Date();
     const oneYearAgo = new Date(today.getFullYear() - 1, today.getMonth(), today.getDate());
+    
     return checkDate < oneYearAgo;
   };
 
@@ -489,28 +482,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="form-control">
           <label className="label font-bold text-gray-700">職種</label>
           <div className="flex gap-2">
-            <select 
-              className={`w-1/2 p-2 border rounded ${getErrorClass('jobType')}`} 
-              value={report.jobType} 
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === 'その他') updateReport({jobType: 'その他'});
-                else updateReport({jobType: val, jobTypeOther: ''});
-              }}
-            >
-              <option value="">選択</option>
-              {PRESET_JOB_TYPES.map(j=><option key={j} value={j}>{j}</option>)}
-              <option value="その他">その他</option>
-            </select>
-            {report.jobType === 'その他' && (
-              <input 
-                type="text" 
-                className={`flex-1 p-2 border rounded max-w-full ${getErrorClass('jobTypeOther')}`} 
-                placeholder="詳細を入力" 
-                value={report.jobTypeOther} 
-                onChange={(e)=>updateReport({jobTypeOther: e.target.value})} 
-              />
-            )}
+            <select className={`w-1/2 p-2 border rounded ${getErrorClass('jobType')}`} value={report.jobType} onChange={(e) => updateReport({jobType: e.target.value})}><option value="土工">土工</option><option value="鳶">鳶</option><option value="大工">大工</option><option value="オペ">オペ</option><option value="鉄筋工">鉄筋工</option><option value="交通整理人">交通整理人</option><option value="その他">その他</option></select>
+            {report.jobType === 'その他' && (<input type="text" className={`flex-1 p-2 border rounded max-w-full ${getErrorClass('jobTypeOther')}`} placeholder="詳細を入力" value={report.jobTypeOther} onChange={(e)=>updateReport({jobTypeOther: e.target.value})} />)}
           </div>
         </div>
 
