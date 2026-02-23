@@ -140,7 +140,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   
-  // Ref定義
   const sigPadRef = useRef<SignatureCanvasHandle>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -148,7 +147,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     window.scrollTo(0, 0);
   }, [step]);
 
-  // マスタデータと社員データを取得
   useEffect(() => { 
     const loadData = async () => { 
       try { 
@@ -196,7 +194,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   
   const updateQual = (key: keyof Qualifications, value: any) => { setReport(prev => ({ ...prev, qualifications: { ...prev.qualifications, [key]: value } })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
   
-  // 社員選択時のロジック
   const handleEmployeeSelect = (empId: string) => {
     setSelectedEmployeeId(empId);
     if (!empId) return;
@@ -602,7 +599,14 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
               {k:'license_large_special',l:'大型特殊自動車免許'}, {k:'license_towing',l:'牽引自動車免許'}
             ].map(q => <label key={q.k} className="flex items-center gap-2 cursor-pointer mb-1"><input type="checkbox" checked={(qual as any)[q.k]} onChange={e=>updateQual(q.k as any, e.target.checked)} />{q.l}</label>)}
           </div>
-          <div className="mt-2"><label className="block text-sm font-bold mb-1">その他資格</label><input type="text" className="w-full p-2 border rounded" placeholder="資格名" value={qual.otherText1||''} onChange={e=>updateQual('otherText1', e.target.value)} /></div>
+          
+          {/* ★修正: その他資格入力欄を3つに戻す */}
+          <div className="mt-2 text-sm font-bold mb-2">上記以外の資格</div>
+          <div className="space-y-2">
+             <input type="text" className="w-full p-2 border rounded" placeholder="資格名" value={qual.otherText1||''} onChange={e=>updateQual('otherText1', e.target.value)} />
+             <input type="text" className="w-full p-2 border rounded" placeholder="資格名" value={qual.otherText2||''} onChange={e=>updateQual('otherText2', e.target.value)} />
+             <input type="text" className="w-full p-2 border rounded" placeholder="資格名" value={qual.otherText3||''} onChange={e=>updateQual('otherText3', e.target.value)} />
+          </div>
         </div>
       </div>
     );
@@ -612,7 +616,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 3: 誓約・署名</h2>
       
-      {/* 修正箇所: 誓約文を元通りに戻す */}
+      {/* 誓約文: 詳細版 */}
       <div className="bg-gray-50 p-6 rounded-lg border leading-relaxed text-gray-800">
         <h3 className="font-bold text-lg mb-4 text-center">新規入場時誓約</h3>
         <ul className="list-disc pl-5 space-y-2 mb-6">
@@ -622,11 +626,11 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <li>自分の身を守り、また周囲の人の安全にも気を配ります。</li>
           <li>危険個所を発見したときは、直ちに現場責任者もしくは元請職員に連絡します。</li>
           <li>作業中は有資格者証を携帯します。</li>
-          <li>記載した個人情報を緊急時連絡等、労務・安全衛生管理に使用することに同意します。</li>
+          <li>記載した個人情報を労務・安全衛生管理に使用することに同意します。</li>
           <li>上記の事項を相違なく報告します。</li>
         </ul>
         <div className="bg-white p-4 rounded border text-center">
-          {/* 誓約日と署名欄 (元コード維持) */}
+          {/* 誓約日 */}
           <div className="mb-4 flex flex-row items-center justify-center gap-1 flex-nowrap">
             <label className="font-bold whitespace-nowrap text-sm md:text-base">誓約日(令和)</label>
             <select className="w-14 md:w-16 p-2 border rounded text-center text-sm md:text-base bg-white appearance-none" value={report.pledgeDateYear??''} onChange={e=>updateReport({pledgeDateYear:parseInt(e.target.value)})}>
