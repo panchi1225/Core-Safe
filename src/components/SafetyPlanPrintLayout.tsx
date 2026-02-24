@@ -66,10 +66,32 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
 
   const bottomColSpans = useMemo(() => {
     const totalDays = daysInMonth.length;
-    const baseSpan = Math.floor(totalDays / 5);
-    const remainder = totalDays % 5;
-    return Array.from({length: 5}).map((_, i) => baseSpan + (i < remainder ? 1 : 0));
-  }, [daysInMonth.length]);
+    const weeks: number[] = [];
+    let dayCount = 0;
+    for (let d = 1; d <= totalDays; d++) {
+      dayCount++;
+      const isLastDay = d === totalDays;
+      const currentDate = new Date(data.year, data.month - 1, d);
+      const isSaturday = getDay(currentDate) === 6;
+      if (isSaturday || isLastDay) {
+        if (weeks.length === 3 || isLastDay) {
+          if (weeks.length < 3) {
+            weeks.push(dayCount);
+          } else if (weeks.length === 3) {
+            weeks.push(totalDays - weeks.reduce((a, b) => a + b, 0));
+          }
+          break;
+        } else {
+          weeks.push(dayCount);
+          dayCount = 0;
+        }
+      }
+    }
+    while (weeks.length < 4) {
+      weeks.push(0);
+    }
+    return weeks;
+  }, [daysInMonth.length, data.year, data.month]);
 
   // ★追加: 安全目標のデフォルト値（古いデータ互換性のため）
   const safetyGoals = data.safetyGoals || ["", "", ""];
@@ -205,7 +227,7 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
               </tr>
               <tr className="h-[6mm]">
                  <td className={`${borderThin} ${headerBg} text-center font-normal`}>安全当番</td>
-                 {daysInMonth.map(d => <td key={d.date} className={`${borderThin} p-0 text-center text-[8px]`}>{data.safetyDuty[d.date]}</td>)}
+                 {bottomColSpans.map((span, i) => <td key={i} colSpan={span} className={`${borderThin} p-0 text-center text-[9px]`}>{data.safetyDuty[i]}</td>)}
                  <td className={`${borderThin}`}></td>
               </tr>
               <tr className="h-[10mm]">

@@ -304,7 +304,7 @@ export interface SafetyPlanReportData extends ReportData {
   predictions: string[];
   countermeasures: string[];
   inspectionItems: string[];
-  safetyDuty: Record<number, string>;
+  safetyDuty: Record<number, string>;  // weekIndex(0-3) -> 担当者名
   lastMonthReflection: string;
   // ★追加: 安全衛生目標 (3つ固定)
   safetyGoals: string[];
@@ -324,9 +324,9 @@ export const INITIAL_SAFETY_PLAN_REPORT: SafetyPlanReportData = {
   councilLeader: "",
   patrolDate: "",
   processRows: [],
-  predictions: Array(5).fill(""),
-  countermeasures: Array(5).fill(""),
-  inspectionItems: Array(5).fill(""),
+  predictions: Array(4).fill(""),
+  countermeasures: Array(4).fill(""),
+  inspectionItems: Array(4).fill(""),
   safetyDuty: {},
   lastMonthReflection: "",
   safetyGoals: ["", "", ""] // ★追加: 初期値は空文字3つ
