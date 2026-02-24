@@ -80,11 +80,11 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
       }
     }
     // 最初の週が4日以内なら第2週と合体
-    if (rawWeeks.length >= 2 && rawWeeks[0] <= 4) {
+    if (rawWeeks.length >= 2 && rawWeeks[0] <= 3) {
       rawWeeks[1] = rawWeeks[0] + rawWeeks[1];
       rawWeeks.shift();
     }
-    // 最後の週が4日以内なら前の週と合体
+    // 最後の週が3日以内なら前の週と合体
     if (rawWeeks.length >= 2 && rawWeeks[rawWeeks.length - 1] <= 4) {
       rawWeeks[rawWeeks.length - 2] = rawWeeks[rawWeeks.length - 2] + rawWeeks[rawWeeks.length - 1];
       rawWeeks.pop();
