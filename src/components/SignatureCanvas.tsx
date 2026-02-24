@@ -24,16 +24,30 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
   // Orientation state
   const [isPortrait, setIsPortrait] = useState(false);
 
-  // Check orientation on resize
+  // ★修正: 縦横判定をより確実な matchMedia に変更
   useEffect(() => {
-    const checkOrientation = () => {
-      // Treat as portrait if height > width
-      setIsPortrait(window.innerHeight > window.innerWidth);
-    };
+    const mediaQuery = window.matchMedia("(orientation: portrait)");
     
-    checkOrientation();
-    window.addEventListener('resize', checkOrientation);
-    return () => window.removeEventListener('resize', checkOrientation);
+    const updateOrientation = () => {
+      setIsPortrait(mediaQuery.matches);
+    };
+
+    // 初期チェック
+    updateOrientation();
+
+    // 向きの変更を監視
+    mediaQuery.addEventListener("change", updateOrientation);
+    
+    // 念のためresizeイベントでもチェック（キーボード開閉対策など）
+    const handleResize = () => {
+        setIsPortrait(window.innerHeight > window.innerWidth);
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+        mediaQuery.removeEventListener("change", updateOrientation);
+        window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   // Handle resizing of the canvas when modal opens or window resizes
@@ -45,7 +59,6 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
       const updateSize = () => {
         if (containerRef.current) {
           const dpr = window.devicePixelRatio || 1;
-          // clientWidth/Height respect the CSS rotation and flexbox constraints
           const width = Math.floor(containerRef.current.clientWidth * dpr);
           const height = Math.floor(containerRef.current.clientHeight * dpr);
           
@@ -58,7 +71,7 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [isModalOpen, isPortrait]);
+  }, [isModalOpen, isPortrait]); // isPortraitが変わったときもサイズ再計算
 
   // Update canvas context properties
   useEffect(() => {
@@ -109,7 +122,6 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (usePenMode && e.pointerType !== 'pen') return;
     
-    // イベントのデフォルト挙動を抑制（選択やメニュー表示の防止）
     e.preventDefault();
     e.stopPropagation();
     
