@@ -176,33 +176,30 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
 
   const bottomColSpans = useMemo(() => { 
     const totalDays = daysInMonth.length; 
-    const weeks: number[] = [];
+    // 月曜始まり〜日曜終わりで週を分割
+    const rawWeeks: number[] = [];
     let dayCount = 0;
     for (let d = 1; d <= totalDays; d++) {
       dayCount++;
-      const isLastDay = d === totalDays;
       const currentDate = new Date(report.year, report.month - 1, d);
-      const isSaturday = getDay(currentDate) === 6;
-      if (isSaturday || isLastDay) {
-        if (weeks.length === 3 || isLastDay) {
-          // 第4週: 残りすべてをまとめる
-          if (weeks.length < 3) {
-            weeks.push(dayCount);
-          } else if (weeks.length === 3) {
-            weeks.push(totalDays - weeks.reduce((a, b) => a + b, 0));
-          }
-          break;
-        } else {
-          weeks.push(dayCount);
-          dayCount = 0;
-        }
+      const isSunday = getDay(currentDate) === 0;
+      const isLastDay = d === totalDays;
+      if (isSunday || isLastDay) {
+        rawWeeks.push(dayCount);
+        dayCount = 0;
       }
     }
-    // 週が4つに満たない場合の補正
-    while (weeks.length < 4) {
-      weeks.push(0);
+    // 最初の週が4日以内なら第2週と合体
+    if (rawWeeks.length >= 2 && rawWeeks[0] <= 4) {
+      rawWeeks[1] = rawWeeks[0] + rawWeeks[1];
+      rawWeeks.shift();
     }
-    return weeks;
+    // 最後の週が4日以内なら前の週と合体
+    if (rawWeeks.length >= 2 && rawWeeks[rawWeeks.length - 1] <= 4) {
+      rawWeeks[rawWeeks.length - 2] = rawWeeks[rawWeeks.length - 2] + rawWeeks[rawWeeks.length - 1];
+      rawWeeks.pop();
+    }
+    return rawWeeks;
   }, [daysInMonth.length, report.year, report.month]);
 
   const updateReport = (updates: Partial<SafetyPlanReportData>) => { 

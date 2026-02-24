@@ -324,9 +324,9 @@ export const INITIAL_SAFETY_PLAN_REPORT: SafetyPlanReportData = {
   councilLeader: "",
   patrolDate: "",
   processRows: [],
-  predictions: Array(4).fill(""),
-  countermeasures: Array(4).fill(""),
-  inspectionItems: Array(4).fill(""),
+  predictions: Array(5).fill(""),
+  countermeasures: Array(5).fill(""),
+  inspectionItems: Array(5).fill(""),
   safetyDuty: {},
   lastMonthReflection: "",
   safetyGoals: ["", "", ""] // ★追加: 初期値は空文字3つ
