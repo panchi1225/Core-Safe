@@ -11,73 +11,50 @@ export interface SavedDraft {
 
 export type ReportTypeString = 'SAFETY_TRAINING' | 'DISASTER_COUNCIL' | 'SAFETY_PLAN' | 'NEWCOMER_SURVEY';
 
-// --- 元請社員データの型定義 (修正版) ---
+// --- 元請社員データの型定義 ---
 export interface EmployeeData {
-  id: string; // 管理用ID
-  
-  // 氏名
+  id: string; 
   nameSei: string;
   nameMei: string;
   furiganaSei: string;
   furiganaMei: string;
-  
-  // 生年月日・性別
   birthEra: 'Showa' | 'Heisei';
   birthYear: number;
   birthMonth: number;
   birthDay: number;
   gender: 'Male' | 'Female';
-  
-  // 血液型
   bloodType: string;
   bloodTypeRh: 'Plus' | 'Minus' | 'Unknown';
-  
-  // 連絡先
   address: string;
   phone: string;
-  
-  // 緊急連絡先
   emergencyContactSei: string;
   emergencyContactMei: string;
   emergencyContactRelation: string;
   emergencyContactPhone: string;
-  
-  // 職種・経験
   jobType: string;
   experienceYears: number;
   experienceMonths: number;
-  lastUpdatedExperience: number; // 経験年数を更新した際の日付(timestamp) -> 自動計算用
-  
-  // 健康診断
-  healthCheckYear: number; // 令和
+  lastUpdatedExperience: number;
+  healthCheckYear: number; 
   healthCheckMonth: number;
   healthCheckDay: number;
-  
-  // 資格 (既存のQualificationsインターフェースを再利用または文字列配列)
-  // ここでは管理しやすくするため、NewcomerSurveyと同じQualifications型を使います
   qualifications: Qualifications;
 }
 
-// 互換性維持のため空のオブジェクトとして残しますが、今後はFirebaseのデータを使用します
 export const EMPLOYEE_MASTER_DATA: Record<string, EmployeeData> = {};
 
 export interface MasterData {
-  // --- 基本・共通 ---
-  projects: string[];       // 工事名
-  workplaces: string[];     // 作業所名
-  contractors: string[];    // 会社名 (元請/施工者)
-  supervisors: string[];    // 現場責任者
-  locations: string[];      // 場所
-  
-  // --- 各種項目 ---
-  roles: string[];          // 役職
-  topics: string[];         // 安全訓練内容
-  jobTypes: string[];       // 工種
-  goals: string[];          // 安全衛生目標
-  predictions: string[];    // 予想災害
-  countermeasures: string[];// 防止対策
-  
-  // その他
+  projects: string[];
+  workplaces: string[];
+  contractors: string[];
+  supervisors: string[];
+  locations: string[];
+  roles: string[];
+  topics: string[];
+  jobTypes: string[];
+  goals: string[];
+  predictions: string[];
+  countermeasures: string[];
   subcontractors: string[]; 
   processes: string[];      
   cautions: string[];       
@@ -221,6 +198,7 @@ export interface ReportData {
   year: number;
   scenePhoto: string;
   situationPhoto: string;
+  remarks: string; // ★追加: 備考欄
 }
 
 export const INITIAL_REPORT: ReportData = {
@@ -240,7 +218,8 @@ export const INITIAL_REPORT: ReportData = {
   signatures: [],
   year: new Date().getFullYear(),
   scenePhoto: "",
-  situationPhoto: ""
+  situationPhoto: "",
+  remarks: "" // ★追加: 初期値
 };
 
 // --- Disaster Council Report ---
@@ -359,58 +338,41 @@ export interface Qualifications {
 }
 
 export interface NewcomerSurveyReportData extends ReportData {
-  // Meta (表示用)
   name?: string; 
-
   project: string;
   director: string;
-  
-  // 氏名分割
   furiganaSei: string;
   furiganaMei: string;
   nameSei: string;
   nameMei: string;
-  
   birthEra: 'Showa' | 'Heisei';
   birthYear: number | '';
   birthMonth: number | '';
   birthDay: number | '';
   gender: 'Male' | 'Female';
   age: number;
-  
   company: string;
   subcontractorRank: string;
-  
   experienceYears: number | null;
   experienceMonths: number | null;
-  
   jobType: string;
   jobTypeOther: string;
-  
   address: string;
   phone: string;
-  
   emergencyContactSei: string;
   emergencyContactMei: string;
-  
   emergencyContactRelation: string;
   emergencyContactPhone: string;
-  
   bloodType: string;
   bloodTypeRh: 'Plus' | 'Minus' | 'Unknown';
-  
   healthCheckYear: number | null;
   healthCheckMonth: number | null;
   healthCheckDay: number | null;
-  
   kentaikyo: 'Joined' | 'NotJoined';
-  
   qualifications: Qualifications;
-  
   pledgeDateYear: number | null;
   pledgeDateMonth: number | null;
   pledgeDateDay: number | null;
-  
   signatureDataUrl: string | null;
 }
 
@@ -418,55 +380,41 @@ export const INITIAL_NEWCOMER_SURVEY_REPORT: NewcomerSurveyReportData = {
   ...INITIAL_REPORT,
   project: "",
   director: "",
-  
   furiganaSei: "",
   furiganaMei: "",
   nameSei: "",
   nameMei: "",
-  
   birthEra: 'Heisei',
   birthYear: '',
   birthMonth: '',
   birthDay: '',
   gender: 'Male',
   age: 0,
-  
   company: "", 
-  
   subcontractorRank: "", 
-  
   experienceYears: null,
   experienceMonths: null,
-  
   jobType: "土工",
   jobTypeOther: "",
-  
   address: "",
   phone: "",
-  
   emergencyContactSei: "",
   emergencyContactMei: "",
   emergencyContactRelation: "",
   emergencyContactPhone: "",
-  
   bloodType: "A",
   bloodTypeRh: "Unknown", 
-  
   healthCheckYear: null,
   healthCheckMonth: null,
   healthCheckDay: null,
-  
   kentaikyo: 'Joined',
-  
   qualifications: {
     vehicle_leveling: false, vehicle_demolition: false, mobile_crane: false, slinging: false, gas_welding: false, earth_retaining: false, excavation: false, scaffolding: false, formwork: false, oxygen_deficiency: false, rough_terrain: false, arc_welding: false, grinding_wheel: false, low_voltage: false, roller: false, asbestos: false, foreman: false, 
     license_regular: false, license_large: false, license_large_special: false, license_towing: false,
     otherText1: "", otherText2: "", otherText3: ""
   },
-  
   pledgeDateYear: null,
   pledgeDateMonth: null,
   pledgeDateDay: null,
-  
   signatureDataUrl: null
 };

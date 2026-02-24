@@ -49,7 +49,6 @@ const PrintLayout: React.FC<Props> = ({ data }) => {
     return (
       <div className="print-page p-[15mm] flex flex-col h-full justify-between">
         <div>
-          {/* ★修正: (1～10) などの範囲表記を削除 */}
           <h3 className="text-xl font-bold text-center mb-4">{data.month} 月度安全訓練実施者名簿</h3>
           
           <table className="w-full border-collapse border-2 border-black">
@@ -102,11 +101,12 @@ const PrintLayout: React.FC<Props> = ({ data }) => {
 
       {/* PAGE 2: DETAILS */}
       <div className="print-page p-[15mm]">
-        <div className="border-2 border-black p-6 h-full">
-          <h3 className="text-2xl font-bold mb-8 text-center">安全訓練実施内容</h3>
+        <div className="border-2 border-black p-6 h-full flex flex-col">
+          {/* 修正: タイトル周りの余白を縮小 */}
+          <h3 className="text-xl font-bold mb-4 text-center">安全訓練実施内容</h3>
 
-          <div className="grid grid-cols-[80px_1fr] gap-y-4 text-lg mb-8">
-            <div className="col-span-2 h-8"></div>
+          {/* 修正: gapを詰め、レイアウトを調整 */}
+          <div className="grid grid-cols-[80px_1fr] gap-y-2 text-base mb-4">
             <div className="font-bold">実施日</div>
             <div>{new Date(data.date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
             <div className="font-bold">場　所</div>
@@ -115,8 +115,9 @@ const PrintLayout: React.FC<Props> = ({ data }) => {
             <div>{data.startTime} ～ {data.endTime} （休憩時間15分含む）</div>
             <div className="font-bold">実施者</div>
             <div>{data.instructor}</div>
-            <div className="font-bold">内　容</div>
-            <div className="space-y-2">
+            
+            <div className="font-bold pt-1">内　容</div>
+            <div className="space-y-1 pt-1">
               <div className="flex"><span className="w-8">(1)</span> <span>今月の災害防止目標</span></div>
               <div className="flex"><span className="w-8">(2)</span> <span>今月の作業工程</span></div>
               <div className="flex"><span className="w-8">(3)</span> <span>{data.topic}</span></div>
@@ -124,11 +125,17 @@ const PrintLayout: React.FC<Props> = ({ data }) => {
               <div className="flex"><span className="w-8">(5)</span> <span>web資料・動画による安全教育</span></div>
               <div className="flex"><span className="w-8">(6)</span> <span>質疑応答</span></div>
             </div>
+
+            {/* ★追加: 備考欄 */}
+            <div className="font-bold pt-2">備　考</div>
+            <div className="pt-2 whitespace-pre-wrap leading-snug min-h-[3rem]">
+              {data.remarks || "（特になし）"}
+            </div>
           </div>
 
-          <div className="mt-8">
-            <h4 className="text-lg mb-4">実施写真</h4>
-            <div className="w-full h-[400px] border border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50">
+          <div className="mt-2 flex-1 flex flex-col">
+            <h4 className="text-base mb-2">実施写真</h4>
+            <div className="w-full flex-1 border border-gray-300 flex items-center justify-center overflow-hidden bg-gray-50 min-h-[300px]">
                {data.photoUrl ? (
                  <img src={data.photoUrl} alt="Evidence" className="max-w-full max-h-full object-contain" />
                ) : (

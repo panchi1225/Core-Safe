@@ -183,7 +183,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     } 
   };
   
-  // ★修正: 関数名を handleTempSave から handleSave に変更
   const handleSave = async () => { 
     if (!report.project) {
       alert("保存するには「工事名」の選択が必須です。");
@@ -347,6 +346,18 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
            </div>
         </div>
         <div className="text-sm text-gray-600 pl-2 border-l-4 border-gray-300 mt-2 space-y-2 py-1"><div className="flex gap-2"><span className="font-bold w-8">(5)</span><span>web資料・動画による安全教育 (固定)</span></div><div className="flex gap-2"><span className="font-bold w-8">(6)</span><span>質疑応答 (固定)</span></div></div>
+      
+        {/* ★追加: 備考欄 */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <label className="block text-sm font-bold text-gray-700 mb-2">備考 (自由記入)</label>
+          <textarea 
+            className="w-full p-3 border border-gray-300 rounded-lg bg-white text-sm focus:ring-2 focus:ring-blue-200 outline-none"
+            rows={3}
+            placeholder="特記事項があれば入力してください"
+            value={report.remarks || ''}
+            onChange={(e) => updateReport('remarks', e.target.value)}
+          />
+        </div>
       </div>
       <div className="form-control"><label className="label font-bold flex justify-between text-gray-700"><span>現場写真 (黒板入り)<span className="text-red-500 text-sm ml-1 font-bold">※必須</span></span></label><input type="file" accept="image/*" className="w-full mt-2 text-sm text-gray-500" onChange={handlePhotoUpload} />{report.photoUrl && (<div className="mt-3"><img src={report.photoUrl} alt="preview" className="h-40 w-full object-contain border bg-gray-50 rounded" /></div>)}</div>
     </div>
