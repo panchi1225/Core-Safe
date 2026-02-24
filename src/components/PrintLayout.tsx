@@ -102,10 +102,8 @@ const PrintLayout: React.FC<Props> = ({ data }) => {
       {/* PAGE 2: DETAILS */}
       <div className="print-page p-[15mm]">
         <div className="border-2 border-black p-6 h-full flex flex-col">
-          {/* 修正: タイトル周りの余白を縮小 */}
           <h3 className="text-xl font-bold mb-4 text-center">安全訓練実施内容</h3>
 
-          {/* 修正: gapを詰め、レイアウトを調整 */}
           <div className="grid grid-cols-[80px_1fr] gap-y-2 text-base mb-4">
             <div className="font-bold">実施日</div>
             <div>{new Date(data.date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}</div>
@@ -126,10 +124,11 @@ const PrintLayout: React.FC<Props> = ({ data }) => {
               <div className="flex"><span className="w-8">(6)</span> <span>質疑応答</span></div>
             </div>
 
-            {/* ★追加: 備考欄 */}
+            {/* ★修正: 備考欄 (確実に空欄にする) */}
             <div className="font-bold pt-2">備　考</div>
             <div className="pt-2 whitespace-pre-wrap leading-snug min-h-[3rem]">
-              {data.remarks || "（特になし）"}
+              {/* data.remarksが未定義、null、または"（特になし）"の場合は空文字を表示 */}
+              {(data.remarks && data.remarks !== "（特になし）") ? data.remarks : ""}
             </div>
           </div>
 
