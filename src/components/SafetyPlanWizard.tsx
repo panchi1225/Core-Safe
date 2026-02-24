@@ -95,8 +95,16 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
   const [showPreview, setShowPreview] = useState(false);
-  const [drawingRowId, setDrawingRowId] = useState<string | null>(null);
-  const [drawStartDay, setDrawStartDay] = useState<number | null>(null);
+  const [ganttMode, setGanttMode] = useState<'idle' | 'selectStart' | 'selectEnd'>('idle');
+  const [ganttRowId, setGanttRowId] = useState<string | null>(null);
+  const [ganttStartDay, setGanttStartDay] = useState<number | null>(null);
+  const [ganttMessage, setGanttMessage] = useState<string>('');
+  const [barActionModal, setBarActionModal] = useState<{
+    isOpen: boolean;
+    rowId: string;
+    barIndex: number;
+    bar: { startDay: number; endDay: number } | null;
+  }>({ isOpen: false, rowId: '', barIndex: -1, bar: null });
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previewScale, setPreviewScale] = useState(1);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -278,31 +286,101 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     } 
   };
 
-  const handleCellClick = (rowId: string, day: number) => { 
-    if (drawingRowId === null) { 
-      setDrawingRowId(rowId); 
-      setDrawStartDay(day); 
-    } else { 
-      if (drawingRowId !== rowId) { 
-        setDrawingRowId(rowId); 
-        setDrawStartDay(day); 
-      } else { 
-        if (drawStartDay !== null) { 
-          const start = Math.min(drawStartDay, day); 
-          const end = Math.max(drawStartDay, day); 
-          const newRows = report.processRows.map(row => { 
-            if (row.id === rowId) { 
-              const cleanedBars = row.bars.filter(b => b.endDay < start || b.startDay > end); 
-              return { ...row, bars: [...cleanedBars, { startDay: start, endDay: end }] }; 
-            } 
-            return row; 
-          }); 
-          updateReport({ processRows: newRows }); 
-        } 
-        setDrawingRowId(null); 
-        setDrawStartDay(null); 
-      } 
-    } 
+  const handleCellClick = (rowId: string, day: number) => {
+    // 既存バーをタップした場合
+    const row = report.processRows.find(r => r.id === rowId);
+    if (row) {
+      const barIdx = row.bars.findIndex(b => day >= b.startDay && day <= b.endDay);
+      if (barIdx !== -1 && ganttMode === 'idle') {
+        setBarActionModal({ isOpen: true, rowId, barIndex: barIdx, bar: row.bars[barIdx] });
+        return;
+      }
+    }
+
+    if (ganttMode === 'idle') {
+      // 空セルタップ → 開始日選択モードへ
+      setGanttMode('selectStart');
+      setGanttRowId(rowId);
+      setGanttMessage(`「${row?.name || '工程'}」の開始日をタップしてください`);
+    } else if (ganttMode === 'selectStart') {
+      if (ganttRowId !== rowId) {
+        // 別の行をタップ → その行で開始日選択に切替
+        const newRow = report.processRows.find(r => r.id === rowId);
+        setGanttRowId(rowId);
+        setGanttMessage(`「${newRow?.name || '工程'}」の開始日をタップしてください`);
+        return;
+      }
+      // 開始日確定 → 終了日選択モードへ
+      setGanttStartDay(day);
+      setGanttMode('selectEnd');
+      setGanttMessage(`終了日をタップしてください（開始日: ${day}日）`);
+    } else if (ganttMode === 'selectEnd') {
+      if (ganttRowId !== rowId) {
+        // 別の行をタップ → リセットしてその行で開始
+        const newRow = report.processRows.find(r => r.id === rowId);
+        setGanttMode('selectStart');
+        setGanttRowId(rowId);
+        setGanttStartDay(null);
+        setGanttMessage(`「${newRow?.name || '工程'}」の開始日をタップしてください`);
+        return;
+      }
+      if (ganttStartDay !== null) {
+        const start = Math.min(ganttStartDay, day);
+        const end = Math.max(ganttStartDay, day);
+        const newRows = report.processRows.map(r => {
+          if (r.id === rowId) {
+            return { ...r, bars: [...r.bars, { startDay: start, endDay: end }] };
+          }
+          return r;
+        });
+        updateReport({ processRows: newRows });
+      }
+      // リセット
+      setGanttMode('idle');
+      setGanttRowId(null);
+      setGanttStartDay(null);
+      setGanttMessage('');
+    }
+  };
+
+  const cancelGantt = () => {
+    setGanttMode('idle');
+    setGanttRowId(null);
+    setGanttStartDay(null);
+    setGanttMessage('');
+  };
+
+  const handleBarDelete = () => {
+    const { rowId, barIndex } = barActionModal;
+    const newRows = report.processRows.map(r => {
+      if (r.id === rowId) {
+        const newBars = r.bars.filter((_, idx) => idx !== barIndex);
+        return { ...r, bars: newBars };
+      }
+      return r;
+    });
+    updateReport({ processRows: newRows });
+    setBarActionModal({ isOpen: false, rowId: '', barIndex: -1, bar: null });
+  };
+
+  const handleBarEdit = () => {
+    const { rowId, barIndex } = barActionModal;
+    // まず既存バーを削除
+    const newRows = report.processRows.map(r => {
+      if (r.id === rowId) {
+        const newBars = r.bars.filter((_, idx) => idx !== barIndex);
+        return { ...r, bars: newBars };
+      }
+      return r;
+    });
+    updateReport({ processRows: newRows });
+    setBarActionModal({ isOpen: false, rowId: '', barIndex: -1, bar: null });
+    // 開始日選択モードへ
+    const row = report.processRows.find(r => r.id === rowId);
+    setGanttMode('selectStart');
+    setGanttRowId(rowId);
+    setGanttStartDay(null);
+    setGanttMessage(`「${row?.name || '工程'}」の新しい開始日をタップしてください`);
   };
 
   const isCellActive = (rowId: string, day: number) => { 
@@ -312,8 +390,17 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   };
 
   const isCellInDraft = (rowId: string, day: number) => { 
-    if (drawingRowId !== rowId || drawStartDay === null) return false; 
-    return day === drawStartDay; 
+    if (ganttRowId !== rowId) return false;
+    if (ganttMode === 'selectStart') return false;
+    if (ganttMode === 'selectEnd' && ganttStartDay !== null) {
+      return day === ganttStartDay;
+    }
+    return false;
+  };
+
+  const isCellInRange = (rowId: string, day: number) => {
+    if (ganttRowId !== rowId || ganttMode !== 'selectEnd' || ganttStartDay === null) return false;
+    return day === ganttStartDay;
   };
 
   const borderOuter = "border-2 border-black"; const borderThin = "border border-black"; const headerBg = "bg-cyan-100"; const inputBase = "w-full h-full bg-transparent outline-none text-center font-serif"; const selectBase = "w-full h-full bg-transparent outline-none text-center appearance-none font-serif text-center-last";
@@ -455,7 +542,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
            </thead>
            <tbody>
               {report.processRows.map((row) => (
-                <tr key={row.id} className="h-[6mm]">
+                <tr key={row.id} className={`h-[6mm] ${!isPreview && ganttMode !== 'idle' && ganttRowId === row.id ? 'bg-yellow-50' : ''}`}>
                   <td className={`${borderThin} px-0 align-middle`}>
                     {isPreview ? (
                       <span className="w-full h-full flex items-center pl-1 font-bold text-[9px] truncate text-left">{row.name}</span>
@@ -473,7 +560,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                       </select>
                     )}
                   </td>
-                  {daysInMonth.map(d => { const active = isCellActive(row.id, d.date); const isDraft = isCellInDraft(row.id, d.date); return (<td key={d.date} className={`${borderThin} p-0 relative ${isPreview ? '' : 'cursor-pointer hover:bg-yellow-50'} ${d.bgClass}`} onClick={() => !isPreview && handleCellClick(row.id, d.date)}>{active && <div className="absolute inset-y-[30%] left-0 right-0 bg-blue-600"></div>}{isDraft && <div className="absolute inset-y-[30%] left-0 right-0 bg-blue-300 opacity-50"></div>}</td>); })}
+                  {daysInMonth.map(d => { const active = isCellActive(row.id, d.date); const isDraft = isCellInDraft(row.id, d.date); const isStart = isCellInRange(row.id, d.date); return (<td key={d.date} className={`${borderThin} p-0 relative ${isPreview ? '' : 'cursor-pointer hover:bg-yellow-100'} ${d.bgClass} ${isStart ? 'bg-green-200' : ''}`} onClick={() => !isPreview && handleCellClick(row.id, d.date)}>{active && <div className="absolute inset-y-[30%] left-0 right-0 bg-blue-600"></div>}{isDraft && <div className="absolute inset-y-[30%] left-0 right-0 bg-green-400 opacity-70"></div>}</td>); })}
                   <td className={`${borderThin}`}></td>
                 </tr>
               ))}
@@ -589,12 +676,45 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
           </div>
         </header>
         
+        {ganttMode !== 'idle' && (
+          <div className="bg-blue-600 text-white px-4 py-2 flex items-center justify-between shadow-md">
+            <div className="flex items-center gap-2">
+              <i className="fa-solid fa-pencil"></i>
+              <span className="font-bold text-sm">{ganttMessage}</span>
+            </div>
+            <button onClick={cancelGantt} className="px-3 py-1 bg-white text-blue-600 rounded font-bold text-sm hover:bg-gray-100 transition-colors">
+              キャンセル
+            </button>
+          </div>
+        )}
         <main className="flex-1 overflow-auto p-4 bg-gray-100 flex justify-center">
           <div className="bg-white shadow-xl origin-top" style={{ width: '297mm', minHeight: '210mm' }}>
             {renderReportSheet(false)}
           </div>
         </main>
       </div>
+
+      {barActionModal.isOpen && (
+        <div className="fixed inset-0 z-[60] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-xs w-full p-6 animate-fade-in">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">工程線の操作</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              {barActionModal.bar ? `${barActionModal.bar.startDay}日 〜 ${barActionModal.bar.endDay}日` : ''}
+            </p>
+            <div className="flex flex-col gap-2">
+              <button onClick={handleBarDelete} className="w-full py-3 bg-red-600 text-white rounded-lg font-bold shadow hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
+                <i className="fa-solid fa-trash"></i> この線を削除する
+              </button>
+              <button onClick={handleBarEdit} className="w-full py-3 bg-orange-500 text-white rounded-lg font-bold shadow hover:bg-orange-600 transition-colors flex items-center justify-center gap-2">
+                <i className="fa-solid fa-pen-to-square"></i> 期間を変更する
+              </button>
+              <button onClick={() => setBarActionModal({ isOpen: false, rowId: '', barIndex: -1, bar: null })} className="w-full py-2 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition-colors">
+                閉じる
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {showPreview && (
         <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-95 flex flex-col no-print">
