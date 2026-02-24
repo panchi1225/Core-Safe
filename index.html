@@ -2,79 +2,15 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    
-    <title>Core Safe -安全書類作成支援システム-</title>
-    
-    <!-- ★修正: パスを相対パス(./)に変更 -->
-    <link rel="icon" href="./favicon.ico" />
-    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
-    <link rel="manifest" href="./manifest.json" />
-    <meta name="theme-color" content="#ffffff" />
-
+    <title>Core Safe</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-      /* --- Layout Definitions --- */
-      .print-page {
-        width: 210mm;
-        height: 297mm;
-        background-color: white;
-        position: relative;
-        overflow: hidden;
-        box-sizing: border-box;
-      }
-
-      @media screen {
-        .print-page {
-          margin: 40px auto;
-          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-          border: 1px solid #e5e7eb;
-        }
-      }
-
-      @media print {
-        @page {
-          size: A4 portrait;
-          margin: 0;
-        }
-        body {
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-          margin: 0;
-          padding: 0;
-          background-color: white;
-        }
-        
-        .print-page {
-          margin: 0;
-          box-shadow: none;
-          border: none;
-          page-break-after: always;
-          width: 210mm;
-          height: 297mm;
-        }
-        
-        .print-page:last-child {
-          page-break-after: auto;
-        }
-
-        .no-print {
-          display: none !important;
-        }
-      }
-
-      /* Fonts */
-      @import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol&display=swap');
-      .handwritten {
-        font-family: 'Kaisei Decol', serif;
-      }
-    </style>
-</head>
-<body class="bg-gray-50 text-gray-800 font-sans antialiased">
+  </head>
+  <body>
     <div id="root"></div>
-    <!-- ★修正: 相対パス(./)に変更 -->
     <script type="module" src="./src/index.tsx"></script>
-</body>
+  </body>
 </html>
