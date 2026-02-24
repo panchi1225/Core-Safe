@@ -89,7 +89,8 @@ const REMARK_TEMPLATES = [
 const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
   const [step, setStep] = useState(1);
   const [report, setReport] = useState<ReportData>(
-    initialData || { ...INITIAL_REPORT, endTime: "12:15" }
+    // ★修正: remarksを明示的に空文字で初期化
+    initialData || { ...INITIAL_REPORT, endTime: "12:15", remarks: "" }
   );
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);

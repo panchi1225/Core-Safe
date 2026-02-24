@@ -198,7 +198,7 @@ export interface ReportData {
   year: number;
   scenePhoto: string;
   situationPhoto: string;
-  remarks: string; // ★追加: 備考欄
+  remarks: string; // 備考欄
 }
 
 export const INITIAL_REPORT: ReportData = {
@@ -219,7 +219,7 @@ export const INITIAL_REPORT: ReportData = {
   year: new Date().getFullYear(),
   scenePhoto: "",
   situationPhoto: "",
-  remarks: "" // ★追加: 初期値
+  remarks: "" // ★ここを空文字に指定
 };
 
 // --- Disaster Council Report ---
