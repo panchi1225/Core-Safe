@@ -81,7 +81,14 @@ const isJapaneseHoliday = (date: Date): boolean => {
 
 // --- Main Wizard Component ---
 const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
-  const [report, setReport] = useState<SafetyPlanReportData>(initialData || INITIAL_SAFETY_PLAN_REPORT);
+  // 初期データに safetyGoals がない場合のフォールバックを追加
+  const [report, setReport] = useState<SafetyPlanReportData>(() => {
+    const base = initialData || INITIAL_SAFETY_PLAN_REPORT;
+    return {
+      ...base,
+      safetyGoals: base.safetyGoals || ["", "", ""]
+    };
+  });
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
   const [showPreview, setShowPreview] = useState(false);
@@ -355,7 +362,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                 <td className={`${borderThin} text-center`}>
                   {isPreview ? report.trainingLeader : (
                     <select className={selectBase} value={report.trainingLeader} onChange={(e)=>updateReport({trainingLeader: e.target.value})}>
-                      {/* ★修正: プレースホルダー追加 */}
                       <option value="">(選択)</option>
                       {masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}
                     </select>
@@ -369,7 +375,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                 <td className={`${borderThin} text-center`}>
                   {isPreview ? report.councilLeader : (
                     <select className={selectBase} value={report.councilLeader} onChange={(e)=>updateReport({councilLeader: e.target.value})}>
-                      {/* ★修正: プレースホルダー追加 */}
                       <option value="">(選択)</option>
                       {masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}
                     </select>
@@ -390,7 +395,36 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
          <table className="w-full h-full border-collapse table-fixed text-[10px]">
            <colgroup><col className="w-[35mm]" />{daysInMonth.map(d => <col key={d.date} />)}<col className="w-[10mm]" /></colgroup>
            <thead>
-             <tr className="h-[8mm]"><th className={`${borderThin} ${headerBg} font-normal`}>今月の安全衛生目標</th><th className={`${borderThin} ${headerBg}`} colSpan={daysInMonth.length}><div className="flex justify-around text-xs font-bold"><span>重機災害防止</span><span>重機転倒災害防止</span><span>第三者災害防止</span></div></th><th className={`${borderThin} ${headerBg} font-normal`} rowSpan={4}>備　考</th></tr>
+             {/* ★修正: 安全衛生目標の表示部分 */}
+             <tr className="h-[8mm]">
+               <th className={`${borderThin} ${headerBg} font-normal`}>今月の安全衛生目標</th>
+               <th className={`${borderThin} ${headerBg}`} colSpan={daysInMonth.length}>
+                 <div className="flex justify-around text-xs font-bold items-center h-full">
+                   {[0, 1, 2].map(idx => (
+                     <div key={idx} className="flex items-center min-w-[30%]">
+                       <span className="mr-1">{idx + 1}.</span>
+                       {isPreview ? (
+                         <span>{report.safetyGoals[idx]}</span>
+                       ) : (
+                         <select 
+                           className="bg-transparent outline-none appearance-none font-bold min-w-[150px] border-b border-gray-400 border-dotted"
+                           value={report.safetyGoals[idx]}
+                           onChange={(e) => {
+                             const newGoals = [...report.safetyGoals];
+                             newGoals[idx] = e.target.value;
+                             updateReport({ safetyGoals: newGoals });
+                           }}
+                         >
+                           <option value="">(選択)</option>
+                           {masterData.goals.map(g => <option key={g} value={g}>{g}</option>)}
+                         </select>
+                       )}
+                     </div>
+                   ))}
+                 </div>
+               </th>
+               <th className={`${borderThin} ${headerBg} font-normal`} rowSpan={4}>備　考</th>
+             </tr>
              <tr className="h-[5mm]"><th className={`${borderThin} bg-gray-50 font-normal`} rowSpan={2}>月日</th><th className={`${borderThin} font-normal text-center`} colSpan={daysInMonth.length}>{report.month}月</th></tr>
              <tr className="h-[5mm]">{daysInMonth.map(d => (<th key={d.date} className={`${borderThin} font-normal text-center ${d.colorClass} ${d.bgClass}`}>{d.date}</th>))}</tr>
              <tr className="h-[5mm]"><th className={`${borderThin} bg-gray-50 font-normal`}>工 程</th>{daysInMonth.map(d => (<th key={d.date} className={`${borderThin} font-normal text-center ${d.colorClass} ${d.bgClass}`}>{d.dayOfWeek}</th>))}</tr>
@@ -410,7 +444,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                           updateReport({ processRows: newRows });
                         }}
                       >
-                        {/* ★修正: プレースホルダー追加 (空文字) */}
                         <option value=""></option>
                         {masterData.jobTypes.map(job => <option key={job} value={job}>{job}</option>)}
                       </select>

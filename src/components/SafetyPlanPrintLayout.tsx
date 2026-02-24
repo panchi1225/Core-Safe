@@ -71,6 +71,9 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
     return Array.from({length: 5}).map((_, i) => baseSpan + (i < remainder ? 1 : 0));
   }, [daysInMonth.length]);
 
+  // ★追加: 安全目標のデフォルト値（古いデータ互換性のため）
+  const safetyGoals = data.safetyGoals || ["", "", ""];
+
   return (
     <div className="bg-white w-full h-full flex flex-col font-serif text-black p-[10mm]" style={{ width: '297mm', height: '210mm' }}>
       {/* HEADER */}
@@ -138,9 +141,15 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
            <thead>
              <tr className="h-[8mm]">
                <th className={`${borderThin} ${headerBg} font-normal`}>今月の安全衛生目標</th>
+               {/* ★修正: 目標の表示部分 */}
                <th className={`${borderThin} ${headerBg}`} colSpan={daysInMonth.length}>
-                  <div className="flex justify-around text-xs font-bold">
-                     <span>重機災害防止</span><span>重機転倒災害防止</span><span>第三者災害防止</span>
+                  <div className="flex justify-around text-xs font-bold items-center h-full">
+                     {safetyGoals.map((goal, idx) => (
+                        <div key={idx} className="flex items-center">
+                           <span className="mr-1">{idx + 1}.</span>
+                           <span>{goal}</span>
+                        </div>
+                     ))}
                   </div>
                </th>
                <th className={`${borderThin} ${headerBg} font-normal`} rowSpan={4}>備　考</th>

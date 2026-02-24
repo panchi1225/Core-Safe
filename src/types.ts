@@ -220,7 +220,7 @@ export interface ReportData {
   year: number;
   scenePhoto: string;
   situationPhoto: string;
-  remarks: string; // 備考欄
+  remarks: string;
 }
 
 export const INITIAL_REPORT: ReportData = {
@@ -241,7 +241,7 @@ export const INITIAL_REPORT: ReportData = {
   year: new Date().getFullYear(),
   scenePhoto: "",
   situationPhoto: "",
-  remarks: "" 
+  remarks: ""
 };
 
 // --- Disaster Council Report ---
@@ -306,6 +306,8 @@ export interface SafetyPlanReportData extends ReportData {
   inspectionItems: string[];
   safetyDuty: Record<number, string>;
   lastMonthReflection: string;
+  // ★追加: 安全衛生目標 (3つ固定)
+  safetyGoals: string[];
 }
 
 export const INITIAL_SAFETY_PLAN_REPORT: SafetyPlanReportData = {
@@ -326,7 +328,8 @@ export const INITIAL_SAFETY_PLAN_REPORT: SafetyPlanReportData = {
   countermeasures: Array(5).fill(""),
   inspectionItems: Array(5).fill(""),
   safetyDuty: {},
-  lastMonthReflection: ""
+  lastMonthReflection: "",
+  safetyGoals: ["", "", ""] // ★追加: 初期値は空文字3つ
 };
 
 // --- Newcomer Survey Report ---
@@ -348,12 +351,10 @@ export interface Qualifications {
   roller: boolean;
   asbestos: boolean;
   foreman: boolean;
-  // Licenses
   license_regular?: boolean;
   license_large?: boolean;
   license_large_special?: boolean;
   license_towing?: boolean;
-  // Other text
   otherText1: string;
   otherText2: string;
   otherText3: string;
