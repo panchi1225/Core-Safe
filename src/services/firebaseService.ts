@@ -12,12 +12,12 @@ import {
   getDoc,     
   writeBatch
 } from 'firebase/firestore';
-import { SavedDraft, MasterData, INITIAL_MASTER_DATA, EmployeeData } from '../types'; // EmployeeDataを追加
+import { SavedDraft, MasterData, INITIAL_MASTER_DATA, EmployeeData } from '../types';
 
 const DRAFTS_COLLECTION = 'drafts';
 const MASTER_COLLECTION = 'masterData';
 const MASTER_DOC_ID = 'general';
-const EMPLOYEES_COLLECTION = 'employees'; // ★追加
+const EMPLOYEES_COLLECTION = 'employees';
 
 // ■ データを全件取得する
 export const fetchDrafts = async (): Promise<SavedDraft[]> => {
@@ -78,14 +78,27 @@ export const saveDraft = async (
   }
 };
 
-// ■ マスタデータを取得する
+// ■ マスタデータを取得する (★修正: 訓練内容を強制上書きして返す)
 export const getMasterData = async (): Promise<MasterData> => {
   try {
     const docRef = doc(db, MASTER_COLLECTION, MASTER_DOC_ID);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      return docSnap.data() as MasterData;
+      const data = docSnap.data() as MasterData;
+      
+      // ★訓練内容(topics)を新しい初期値で強制上書き
+      // （※Firestoreには保存しないが、アプリ上では新しい値を使う）
+      // もしFirestoreも更新したい場合は、ここで saveMasterData を呼ぶことも可能ですが、
+      // 読み込みのたびに書き込むのは負荷が高いため、今回は「取得したデータに上書きして返す」だけに留めます。
+      // これにより、画面上では新しいリストが表示され、ユーザーが何か変更して保存したタイミングでFirestoreも更新されます。
+      
+      const mergedData = {
+        ...data,
+        topics: INITIAL_MASTER_DATA.topics // 強制上書き
+      };
+      
+      return mergedData;
     } else {
       return INITIAL_MASTER_DATA;
     }
@@ -168,7 +181,7 @@ export const fetchSafetyPlansByProject = async (projectName: string): Promise<Sa
   }
 };
 
-// --- ★以下、新規追加: 社員データ管理機能 ---
+// --- 社員データ管理機能 ---
 
 // ■ 社員データを全件取得する
 export const fetchEmployees = async (): Promise<EmployeeData[]> => {
@@ -177,11 +190,9 @@ export const fetchEmployees = async (): Promise<EmployeeData[]> => {
     const employees: EmployeeData[] = [];
     snapshot.forEach((doc) => {
       const data = doc.data();
-      // FirestoreのデータとIDを結合
       employees.push({ ...data, id: doc.id } as EmployeeData);
     });
     
-    // フリガナ順にソート（カナがない場合は空文字扱いで後ろへ）
     return employees.sort((a, b) => {
       const kanaA = (a.furiganaSei || "") + (a.furiganaMei || "");
       const kanaB = (b.furiganaSei || "") + (b.furiganaMei || "");
@@ -196,14 +207,9 @@ export const fetchEmployees = async (): Promise<EmployeeData[]> => {
 // ■ 社員データを保存する（新規・更新）
 export const saveEmployee = async (employee: EmployeeData): Promise<void> => {
   try {
-    // IDがなければ新規作成(timestamp)、あれば更新
     const id = employee.id || Date.now().toString();
     const docRef = doc(db, EMPLOYEES_COLLECTION, id);
-    
-    // undefinedがあるとFirestoreでエラーになるためnull変換
     const dataToSave = JSON.parse(JSON.stringify({ ...employee, id }, (k, v) => v === undefined ? null : v));
-    
-    // マージ保存（既存フィールドを維持しつつ更新）
     await setDoc(docRef, dataToSave, { merge: true });
   } catch (error) {
     console.error("社員データの保存失敗:", error);
