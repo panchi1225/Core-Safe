@@ -86,7 +86,10 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     const base = initialData || INITIAL_SAFETY_PLAN_REPORT;
     return {
       ...base,
-      safetyGoals: base.safetyGoals || ["", "", ""]
+      safetyGoals: base.safetyGoals || ["", "", ""],
+      predictions: Array.isArray(base.predictions?.[0]) ? base.predictions : Array(5).fill(null).map(() => ["", ""]),
+      countermeasures: Array.isArray(base.countermeasures?.[0]) ? base.countermeasures : Array(5).fill(null).map(() => ["", "", "", "", ""]),
+      inspectionItems: Array.isArray(base.inspectionItems?.[0]) ? base.inspectionItems : Array(5).fill(null).map(() => ["", "", ""]),
     };
   });
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
@@ -476,29 +479,71 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
               ))}
            </tbody>
            <tfoot>
-              <tr className="h-[10mm]">
+              <tr className="h-[12mm]">
                 <td className={`${borderThin} ${headerBg} text-center font-normal`}>予想される災害</td>
                 {bottomColSpans.map((span, i) => (
                   <td key={i} colSpan={span} className={`${borderThin} align-top p-0`}>
-                    {isPreview ? <div className="w-full h-full p-1 text-[9px] leading-tight">{report.predictions[i]}</div> : <select className="w-full h-full bg-transparent text-[9px] outline-none px-1 appearance-none" value={report.predictions[i] || ''} onChange={(e) => { const n = [...report.predictions]; n[i] = e.target.value; updateReport({predictions: n}); }}><option value="">-</option><option value="重機との接触事故">重機との接触事故</option><option value="ダンプトラックとの接触事故">ダンプトラックとの接触事故</option><option value="第三者との接触事故">第三者との接触事故</option><option value="墜落・転落">墜落・転落</option><option value="土砂崩壊">土砂崩壊</option></select>}
+                    <div className="flex flex-col h-full">
+                      {[0, 1].map(j => (
+                        <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0">
+                          {isPreview ? (
+                            <div className="w-full h-full px-1 text-[8px] leading-tight flex items-center">{(report.predictions[i] || [])[j]}</div>
+                          ) : (
+                            <select className="w-full h-full bg-transparent text-[8px] outline-none px-0.5 appearance-none" value={(report.predictions[i] || [])[j] || ''} onChange={(e) => { const n = report.predictions.map(a => [...(a || ["", ""])]); if (!n[i]) n[i] = ["", ""]; n[i][j] = e.target.value; updateReport({predictions: n}); }}>
+                              <option value="">-</option>
+                              {masterData.predictions.map(p => <option key={p} value={p}>{p}</option>)}
+                            </select>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </td>
+                ))}
+                <td className={`${borderThin}`}></td>
+              </tr>
+              <tr className="h-[25mm]">
+                <td className={`${borderThin} ${headerBg} text-center font-normal leading-tight`}>予想される災害<br/>への防止対策</td>
+                {bottomColSpans.map((span, i) => (
+                  <td key={i} colSpan={span} className={`${borderThin} align-top p-0`}>
+                    <div className="flex flex-col h-full">
+                      {[0, 1, 2, 3, 4].map(j => (
+                        <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0">
+                          {isPreview ? (
+                            <div className="w-full h-full px-1 text-[8px] leading-tight flex items-center">{(report.countermeasures[i] || [])[j]}</div>
+                          ) : (
+                            <select className="w-full h-full bg-transparent text-[8px] outline-none px-0.5 appearance-none" value={(report.countermeasures[i] || [])[j] || ''} onChange={(e) => { const n = report.countermeasures.map(a => [...(a || ["", "", "", "", ""])]); if (!n[i]) n[i] = ["", "", "", "", ""]; n[i][j] = e.target.value; updateReport({countermeasures: n}); }}>
+                              <option value="">-</option>
+                              {masterData.countermeasures.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </td>
                 ))}
                 <td className={`${borderThin}`}></td>
               </tr>
               <tr className="h-[15mm]">
-                <td className={`${borderThin} ${headerBg} text-center font-normal leading-tight`}>予想される災害<br/>への防止対策</td>
-                {bottomColSpans.map((span, i) => (
-                  <td key={i} colSpan={span} className={`${borderThin} align-top p-0`}>
-                    {isPreview ? <div className="w-full h-full p-1 text-[9px] leading-tight whitespace-pre-wrap">{report.countermeasures[i]}</div> : <textarea className="w-full h-full bg-transparent text-[9px] outline-none resize-none p-1 leading-tight" value={report.countermeasures[i] || ''} onChange={(e) => { const n = [...report.countermeasures]; n[i] = e.target.value; updateReport({countermeasures: n}); }} />}
-                  </td>
-                ))}
-                <td className={`${borderThin}`}></td>
-              </tr>
-              <tr className="h-[10mm]">
                 <td className={`${borderThin} ${headerBg} text-center font-normal leading-tight`}>重点点検項目</td>
                 {bottomColSpans.map((span, i) => (
                   <td key={i} colSpan={span} className={`${borderThin} align-top p-0`}>
-                    {isPreview ? <div className="w-full h-full p-1 text-[9px] leading-tight">{report.inspectionItems[i]}</div> : <input className="w-full h-full bg-transparent text-[9px] outline-none px-1" value={report.inspectionItems[i] || ''} onChange={(e) => { const n = [...report.inspectionItems]; n[i] = e.target.value; updateReport({inspectionItems: n}); }} />}
+                    <div className="flex flex-col h-full">
+                      {[0, 1, 2].map(j => (
+                        <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0">
+                          {isPreview ? (
+                            <div className="w-full h-full px-1 text-[8px] leading-tight flex items-center">{(report.inspectionItems[i] || [])[j] ? `${j + 1}. ${(report.inspectionItems[i] || [])[j]}` : ''}</div>
+                          ) : (
+                            <div className="flex items-center h-full">
+                              <span className="text-[8px] pl-0.5 shrink-0">{j + 1}.</span>
+                              <select className="w-full h-full bg-transparent text-[8px] outline-none px-0.5 appearance-none" value={(report.inspectionItems[i] || [])[j] || ''} onChange={(e) => { const n = report.inspectionItems.map(a => [...(a || ["", "", ""])]); if (!n[i]) n[i] = ["", "", ""]; n[i][j] = e.target.value; updateReport({inspectionItems: n}); }}>
+                                <option value="">-</option>
+                                {masterData.countermeasures.map(c => <option key={c} value={c}>{c}</option>)}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </td>
                 ))}
                 <td className={`${borderThin}`}></td>
@@ -507,16 +552,17 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                 <td className={`${borderThin} ${headerBg} text-center font-normal`}>安全当番</td>
                 {bottomColSpans.map((span, i) => (
                   <td key={i} colSpan={span} className={`${borderThin} p-0 text-center`}>
-                    {isPreview ? <div className="w-full h-full text-[9px] flex items-center justify-center">{report.safetyDuty[i]}</div> : <input className="w-full h-full text-[9px] text-center bg-transparent outline-none p-0" value={report.safetyDuty[i] || ''} onChange={(e) => updateReport({ safetyDuty: { ...report.safetyDuty, [i]: e.target.value }})} />}
+                    {isPreview ? (
+                      <div className="w-full h-full text-[9px] flex items-center justify-center">{report.safetyDuty[i]}</div>
+                    ) : (
+                      <select className="w-full h-full text-[9px] text-center bg-transparent outline-none appearance-none" value={report.safetyDuty[i] || ''} onChange={(e) => updateReport({ safetyDuty: { ...report.safetyDuty, [i]: e.target.value }})}>
+                        <option value="">-</option>
+                        {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    )}
                   </td>
                 ))}
                 <td className={`${borderThin}`}></td>
-              </tr>
-              <tr className="h-[10mm]">
-                <td className={`${borderThin} ${headerBg} text-center font-normal`}>前月の反省</td>
-                <td colSpan={daysInMonth.length + 1} className={`${borderThin} p-0`}>
-                  {isPreview ? <div className="w-full h-full p-1 text-[10px] leading-tight whitespace-pre-wrap">{report.lastMonthReflection}</div> : <textarea className="w-full h-full p-1 text-[10px] bg-transparent outline-none resize-none leading-tight" value={report.lastMonthReflection} onChange={(e) => updateReport({ lastMonthReflection: e.target.value })} />}
-                </td>
               </tr>
            </tfoot>
          </table>

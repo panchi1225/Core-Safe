@@ -211,27 +211,53 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
            <tfoot>
               <tr className="h-[12mm]">
                  <td className={`${borderThin} ${headerBg} text-center font-normal`}>予想される災害</td>
-                 {bottomColSpans.map((span, i) => <td key={i} colSpan={span} className={`${borderThin} align-top p-1 text-[9px]`}>{data.predictions[i]}</td>)}
+                 {bottomColSpans.map((span, i) => (
+                   <td key={i} colSpan={span} className={`${borderThin} align-top p-0 text-[8px]`}>
+                     <div className="flex flex-col h-full">
+                       {[0, 1].map(j => (
+                         <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0 px-1 flex items-center leading-tight">
+                           {(data.predictions[i] || [])[j]}
+                         </div>
+                       ))}
+                     </div>
+                   </td>
+                 ))}
                  <td className={`${borderThin}`}></td>
               </tr>
-              <tr className="h-[18mm]">
+              <tr className="h-[25mm]">
                  <td className={`${borderThin} ${headerBg} text-center font-normal leading-tight`}>予想される災害<br/>への防止対策</td>
-                 {bottomColSpans.map((span, i) => <td key={i} colSpan={span} className={`${borderThin} align-top p-1 text-[9px]`}>{data.countermeasures[i]}</td>)}
+                 {bottomColSpans.map((span, i) => (
+                   <td key={i} colSpan={span} className={`${borderThin} align-top p-0 text-[8px]`}>
+                     <div className="flex flex-col h-full">
+                       {[0, 1, 2, 3, 4].map(j => (
+                         <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0 px-1 flex items-center leading-tight">
+                           {(data.countermeasures[i] || [])[j]}
+                         </div>
+                       ))}
+                     </div>
+                   </td>
+                 ))}
                  <td className={`${borderThin}`}></td>
               </tr>
-              <tr className="h-[10mm]">
+              <tr className="h-[15mm]">
                  <td className={`${borderThin} ${headerBg} text-center font-normal leading-tight`}>重点点検項目</td>
-                 {bottomColSpans.map((span, i) => <td key={i} colSpan={span} className={`${borderThin} align-top p-1 text-[9px]`}>{data.inspectionItems[i]}</td>)}
+                 {bottomColSpans.map((span, i) => (
+                   <td key={i} colSpan={span} className={`${borderThin} align-top p-0 text-[8px]`}>
+                     <div className="flex flex-col h-full">
+                       {[0, 1, 2].map(j => (
+                         <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0 px-1 flex items-center leading-tight">
+                           {(data.inspectionItems[i] || [])[j] ? `${j + 1}. ${(data.inspectionItems[i] || [])[j]}` : ''}
+                         </div>
+                       ))}
+                     </div>
+                   </td>
+                 ))}
                  <td className={`${borderThin}`}></td>
               </tr>
               <tr className="h-[6mm]">
                  <td className={`${borderThin} ${headerBg} text-center font-normal`}>安全当番</td>
                  {bottomColSpans.map((span, i) => <td key={i} colSpan={span} className={`${borderThin} p-0 text-center text-[9px]`}>{data.safetyDuty[i]}</td>)}
                  <td className={`${borderThin}`}></td>
-              </tr>
-              <tr className="h-[10mm]">
-                 <td className={`${borderThin} ${headerBg} text-center font-normal`}>前月の反省</td>
-                 <td colSpan={daysInMonth.length + 1} className={`${borderThin} p-1 text-[10px]`}>{data.lastMonthReflection}</td>
               </tr>
            </tfoot>
          </table>
