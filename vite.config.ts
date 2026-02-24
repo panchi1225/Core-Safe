@@ -5,8 +5,8 @@ import { resolve } from 'path';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '');
     return {
-      // GitHub Pagesのリポジトリ名（大文字小文字を正確に）
-      base: "/Core-Safe/", 
+      // ★修正: ここを相対パス './' に変更します。これでどの階層でも動きます。
+      base: './', 
 
       plugins: [react()],
       
@@ -18,12 +18,11 @@ export default defineConfig(({ mode }) => {
       build: {
         outDir: 'dist',
         assetsDir: 'assets',
-        emptyOutDir: true, // ビルド前にdistを空にする（重要）
+        emptyOutDir: true,
       },
 
       resolve: {
         alias: {
-          // __dirname を使わず、process.cwd() を基準にする（安全）
           '@': resolve(process.cwd(), './src'), 
         }
       },
