@@ -285,12 +285,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   const handlePrint = () => {
     const prevTitle = document.title;
     document.title = `安全訓練_${report.project}_${report.month}月度`;
-    const style = document.createElement('style');
-    style.id = 'print-override';
-    style.textContent = '@media print { @page { size: auto; margin: 0; } }';
-    document.head.appendChild(style);
     window.print();
-    document.head.removeChild(style);
     document.title = prevTitle;
   };
   
@@ -539,8 +534,10 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <div className="hidden print:block">
          <PrintLayout data={report} />
          {selectedPlan && (
-            <div style={{ pageBreakBefore: 'always', width: '297mm', height: '210mm' }}>
-               <SafetyPlanPrintLayout data={selectedPlan} />
+            <div className="print-page" style={{ padding: 0, overflow: 'hidden' }}>
+               <div style={{ width: '210mm', transform: 'scale(0.707)', transformOrigin: 'top left' }}>
+                  <SafetyPlanPrintLayout data={selectedPlan} />
+               </div>
             </div>
          )}
       </div>
