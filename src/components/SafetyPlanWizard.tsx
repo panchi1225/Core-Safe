@@ -619,9 +619,9 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                       {[0, 1].map(j => (
                         <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0">
                           {isPreview ? (
-                            <div className="w-full h-full text-[8px] leading-tight flex items-center pl-[0.5em]">{(report.predictions[i] || [])[j]}</div>
+                            <div className={`w-full h-full text-[8px] leading-tight flex items-center ${span >= 5 ? 'pl-[1em]' : 'pl-[0.5em]'}`}>{(report.predictions[i] || [])[j]}</div>
                           ) : (
-                            <select className="w-full h-full bg-transparent text-[8px] outline-none appearance-none pl-[0.5em]" value={(report.predictions[i] || [])[j] || ''} onChange={(e) => { const n = report.predictions.map(a => [...(a || ["", ""])]); if (!n[i]) n[i] = ["", ""]; n[i][j] = e.target.value; updateReport({predictions: n}); }}>
+                            <select className={`w-full h-full bg-transparent text-[8px] outline-none appearance-none ${span >= 5 ? 'pl-[1em]' : 'pl-[0.5em]'}`} value={(report.predictions[i] || [])[j] || ''} onChange={(e) => { const n = report.predictions.map(a => [...(a || ["", ""])]); if (!n[i]) n[i] = ["", ""]; n[i][j] = e.target.value; updateReport({predictions: n}); }}>
                               <option value="">-</option>
                               {masterData.predictions.map(p => <option key={p} value={p}>{p}</option>)}
                             </select>
@@ -640,9 +640,9 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                       {[0, 1, 2, 3, 4].map(j => (
                         <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0">
                           {isPreview ? (
-                            <div className="w-full h-full text-[8px] leading-tight flex items-center pl-[0.5em]">{(report.countermeasures[i] || [])[j]}</div>
+                            <div className={`w-full h-full text-[8px] leading-tight flex items-center ${span >= 5 ? 'pl-[1em]' : 'pl-[0.5em]'}`}>{(report.countermeasures[i] || [])[j]}</div>
                           ) : (
-                            <select className="w-full h-full bg-transparent text-[8px] outline-none appearance-none pl-[0.5em]" value={(report.countermeasures[i] || [])[j] || ''} onChange={(e) => { const n = report.countermeasures.map(a => [...(a || ["", "", "", "", ""])]); if (!n[i]) n[i] = ["", "", "", "", ""]; n[i][j] = e.target.value; updateReport({countermeasures: n}); }}>
+                            <select className={`w-full h-full bg-transparent text-[8px] outline-none appearance-none ${span >= 5 ? 'pl-[1em]' : 'pl-[0.5em]'}`} value={(report.countermeasures[i] || [])[j] || ''} onChange={(e) => { const n = report.countermeasures.map(a => [...(a || ["", "", "", "", ""])]); if (!n[i]) n[i] = ["", "", "", "", ""]; n[i][j] = e.target.value; updateReport({countermeasures: n}); }}>
                               <option value="">-</option>
                               {masterData.countermeasures.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
@@ -661,11 +661,11 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                       {[0, 1, 2].map(j => (
                         <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0">
                           {isPreview ? (
-                            <div className="w-full h-full text-[8px] leading-tight flex items-center pl-[0.5em]">{(report.inspectionItems[i] || [])[j] ? `${j + 1}. ${(report.inspectionItems[i] || [])[j]}` : ''}</div>
+                            <div className={`w-full h-full text-[8px] leading-tight flex items-center ${span >= 5 ? 'pl-[1em]' : 'pl-[0.5em]'}`}>{(report.inspectionItems[i] || [])[j] ? `${j + 1}. ${(report.inspectionItems[i] || [])[j]}` : ''}</div>
                           ) : (
                             <div className="flex items-center h-full">
-                              <span className="text-[8px] shrink-0 pl-[0.5em]">{j + 1}.</span>
-                              <select className="w-full h-full bg-transparent text-[8px] outline-none appearance-none pl-[0.3em]" value={(report.inspectionItems[i] || [])[j] || ''} onChange={(e) => { const n = report.inspectionItems.map(a => [...(a || ["", "", ""])]); if (!n[i]) n[i] = ["", "", ""]; n[i][j] = e.target.value; updateReport({inspectionItems: n}); }}>
+                              <span className={`text-[8px] shrink-0 ${span >= 5 ? 'pl-[1em]' : 'pl-[0.5em]'}`}>{j + 1}.</span>
+                              <select className={`w-full h-full bg-transparent text-[8px] outline-none appearance-none ${span >= 5 ? 'pl-[0.5em]' : 'pl-[0.3em]'}`} value={(report.inspectionItems[i] || [])[j] || ''} onChange={(e) => { const n = report.inspectionItems.map(a => [...(a || ["", "", ""])]); if (!n[i]) n[i] = ["", "", ""]; n[i][j] = e.target.value; updateReport({inspectionItems: n}); }}>
                                 <option value="">-</option>
                                 {masterData.countermeasures.map(c => <option key={c} value={c}>{c}</option>)}
                               </select>
