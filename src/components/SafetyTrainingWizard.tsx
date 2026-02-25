@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MasterData, ReportData, WorkerSignature, INITIAL_REPORT, INITIAL_MASTER_DATA, SavedDraft, SafetyPlanReportData } from '../types';
-import { getMasterData, compressImage, saveDraft, fetchSafetyPlansByProject } from '../services/firebaseService';
+import { MasterData, ReportData, WorkerSignature, INITIAL_REPORT, INITIAL_MASTER_DATA } from '../types';
+import { getMasterData, compressImage, saveDraft } from '../services/firebaseService';
 import SignatureCanvas from './SignatureCanvas';
 import PrintLayout from './PrintLayout';
-import SafetyPlanPrintLayout from './SafetyPlanPrintLayout';
 
 interface Props {
   initialData?: ReportData;
@@ -121,10 +120,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
   });
 
   const [errors, setErrors] = useState<Record<string, boolean>>({});
-
-  const [planSelectionModal, setPlanSelectionModal] = useState(false);
-  const [availablePlans, setAvailablePlans] = useState<SavedDraft[]>([]);
-  const [selectedPlan, setSelectedPlan] = useState<SafetyPlanReportData | null>(null);
   
   useEffect(() => { 
     const loadMaster = async () => { 
@@ -263,44 +258,17 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       setHasUnsavedChanges(false); 
       setTimeout(() => setSaveStatus('idle'), 2000);
       
-      const plans = await fetchSafetyPlansByProject(report.project);
-      if (plans.length === 0) { 
-        alert(`工事名「${report.project}」の安全管理計画表が見つかりません。\n\nホーム画面に戻って、先に「安全管理計画表」を作成・保存してください。`); 
-        return; 
-      }
-      setAvailablePlans(plans); 
-      setPlanSelectionModal(true);
+      setShowPreview(true);
     } catch (e) { 
       alert("エラーが発生しました"); 
       setSaveStatus('idle'); 
     }
   };
-  
-  const confirmPlanSelection = (plan: SavedDraft) => { 
-    setSelectedPlan(plan.data as SafetyPlanReportData); 
-    setPlanSelectionModal(false); 
-    setShowPreview(true); 
-  };
-  
+   
   const handlePrint = () => {
     const prevTitle = document.title;
-    const planSection = document.getElementById('plan-print-section');
-    if (planSection) planSection.style.display = 'none';
     document.title = `安全訓練_${report.project}_${report.month}月度`;
     window.print();
-    if (planSection && selectedPlan) {
-      planSection.style.display = '';
-      const mainSection = document.getElementById('main-print-section');
-      if (mainSection) mainSection.style.display = 'none';
-      const style = document.createElement('style');
-      style.id = 'landscape-override';
-      style.textContent = '@media print { @page { size: landscape; margin: 0; } }';
-      document.head.appendChild(style);
-      document.title = `安全管理計画表_${report.project}_${report.month}月度`;
-      window.print();
-      document.head.removeChild(style);
-      if (mainSection) mainSection.style.display = '';
-    }
     document.title = prevTitle;
   };
   
@@ -478,34 +446,12 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="flex gap-4">
             <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
             <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
-            <span className="text-yellow-300 text-xs ml-2">※本文と計画表は別ファイルで出力されます</span>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
           <div className="bg-white shadow-2xl" style={{ width: '794px', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
             <PrintLayout data={report} />
           </div>
-          {selectedPlan && (
-            <div className="bg-white shadow-2xl" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
-               <SafetyPlanPrintLayout data={selectedPlan} />
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const renderPlanSelectionModal = () => {
-    if (!planSelectionModal) return null;
-    return (
-      <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-80 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 animate-fade-in">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">添付する安全管理計画表を選択</h3>
-          <p className="text-sm text-gray-600 mb-4">工事名「{report.project}」の計画表が見つかりました。</p>
-          <div className="space-y-3 mb-6 max-h-60 overflow-y-auto">
-             {availablePlans.map(plan => { const d = plan.data as SafetyPlanReportData; return ( <button key={plan.id} onClick={() => confirmPlanSelection(plan)} className="w-full text-left border rounded p-3 hover:bg-blue-50 transition-colors flex justify-between items-center"><div><div className="font-bold text-blue-800">{d.month}月度 計画表</div><div className="text-xs text-gray-500">更新: {new Date(plan.lastModified).toLocaleString('ja-JP')}</div></div><i className="fa-solid fa-chevron-right text-gray-400"></i></button> ) })}
-          </div>
-          <button onClick={() => setPlanSelectionModal(false)} className="w-full py-2 bg-gray-200 text-gray-700 rounded font-bold">キャンセル</button>
         </div>
       </div>
     );
@@ -534,7 +480,6 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
 
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}
-      {renderPlanSelectionModal()}
       
       <ConfirmationModal 
         isOpen={confirmModal.isOpen} 
@@ -548,16 +493,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       />
       
       <div className="hidden print:block">
-         <div id="main-print-section">
-            <PrintLayout data={report} />
-         </div>
-         {selectedPlan && (
-            <div id="plan-print-section">
-               <div className="print-page-landscape">
-                  <SafetyPlanPrintLayout data={selectedPlan} />
-               </div>
-            </div>
-         )}
+         <PrintLayout data={report} />
       </div>
     </>
   );

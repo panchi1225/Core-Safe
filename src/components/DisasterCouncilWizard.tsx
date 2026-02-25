@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MasterData, DisasterCouncilReportData, INITIAL_DISASTER_COUNCIL_REPORT, INITIAL_MASTER_DATA, SavedDraft, SafetyPlanReportData } from '../types';
-import { getMasterData, saveDraft, fetchSafetyPlansByProject } from '../services/firebaseService';
+import { MasterData, DisasterCouncilReportData, INITIAL_DISASTER_COUNCIL_REPORT, INITIAL_MASTER_DATA } from '../types';
+import { getMasterData, saveDraft } from '../services/firebaseService';
 import SignatureCanvas from './SignatureCanvas';
 import DisasterCouncilPrintLayout from './DisasterCouncilPrintLayout';
-import SafetyPlanPrintLayout from './SafetyPlanPrintLayout';
 
 interface Props {
   initialData?: any;
@@ -104,10 +103,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     leftButtonLabel: '', rightButtonLabel: '',
     leftButtonClass: '', rightButtonClass: ''
   });
-
-  const [planSelectionModal, setPlanSelectionModal] = useState(false);
-  const [availablePlans, setAvailablePlans] = useState<SavedDraft[]>([]);
-  const [selectedPlan, setSelectedPlan] = useState<SafetyPlanReportData | null>(null);
 
   useEffect(() => { 
     const loadMaster = async () => { 
@@ -281,34 +276,11 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       setHasUnsavedChanges(false); 
       setTimeout(() => setSaveStatus('idle'), 2000);
       
-      const plans = await fetchSafetyPlansByProject(report.project);
-      if (plans.length === 0) { alert(`工事名「${report.project}」の安全管理計画表が見つかりません。\n\nホーム画面に戻って、先に「安全管理計画表」を作成・保存してください。`); return; }
-      setAvailablePlans(plans); setPlanSelectionModal(true);
+      setShowPreview(true);
     } catch (e) { alert("エラーが発生しました"); setSaveStatus('idle'); }
   };
 
-  const confirmPlanSelection = (plan: SavedDraft) => { setSelectedPlan(plan.data as SafetyPlanReportData); setPlanSelectionModal(false); setShowPreview(true); };
-  const handlePrint = () => {
-    const prevTitle = document.title;
-    const planSection = document.getElementById('plan-print-section');
-    if (planSection) planSection.style.display = 'none';
-    document.title = `災害防止協議会_${report.project}_第${report.count}回`;
-    window.print();
-    if (planSection && selectedPlan) {
-      planSection.style.display = '';
-      const mainSection = document.getElementById('main-print-section');
-      if (mainSection) mainSection.style.display = 'none';
-      const style = document.createElement('style');
-      style.id = 'landscape-override';
-      style.textContent = '@media print { @page { size: landscape; margin: 0; } }';
-      document.head.appendChild(style);
-      document.title = `安全管理計画表_${report.project}_第${report.count}回`;
-      window.print();
-      document.head.removeChild(style);
-      if (mainSection) mainSection.style.display = '';
-    }
-    document.title = prevTitle;
-  };
+  const handlePrint = () => { const prevTitle = document.title; document.title = `災害防止協議会_${report.project}_第${report.count}回`; window.print(); document.title = prevTitle; };
   
   const handleHomeClick = () => { 
     if (hasUnsavedChanges) { 
@@ -503,22 +475,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
     </div>
   );
 
-  const renderPlanSelectionModal = () => {
-    if (!planSelectionModal) return null;
-    return (
-      <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-80 flex items-center justify-center p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 animate-fade-in">
-          <h3 className="text-lg font-bold text-gray-800 mb-4">添付する安全管理計画表を選択</h3>
-          <p className="text-sm text-gray-600 mb-4">工事名「{report.project}」の計画表が見つかりました。</p>
-          <div className="space-y-3 mb-6 max-h-60 overflow-y-auto">
-             {availablePlans.map(plan => { const d = plan.data as SafetyPlanReportData; return ( <button key={plan.id} onClick={() => confirmPlanSelection(plan)} className="w-full text-left border rounded p-3 hover:bg-blue-50 transition-colors flex justify-between items-center"><div><div className="font-bold text-blue-800">{d.month}月度 計画表</div><div className="text-xs text-gray-500">更新: {new Date(plan.lastModified).toLocaleString('ja-JP')}</div></div><i className="fa-solid fa-chevron-right text-gray-400"></i></button> ) })}
-          </div>
-          <button onClick={() => setPlanSelectionModal(false)} className="w-full py-2 bg-gray-200 text-gray-700 rounded font-bold">キャンセル</button>
-        </div>
-      </div>
-    );
-  };
-
   const renderPreviewModal = () => {
     if (!showPreview) return null;
     return (
@@ -528,18 +484,12 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           <div className="flex gap-4">
             <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
             <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
-            <span className="text-yellow-300 text-xs ml-2">※本文と計画表は別ファイルで出力されます</span>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
           <div className="bg-white shadow-2xl" style={{ width: '210mm', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
             <DisasterCouncilPrintLayout data={report} />
           </div>
-          {selectedPlan && (
-            <div className="bg-white shadow-2xl" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
-               <SafetyPlanPrintLayout data={selectedPlan} />
-            </div>
-          )}
         </div>
       </div>
     );
@@ -561,7 +511,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       <CompleteModal isOpen={showCompleteModal} onOk={() => { setShowCompleteModal(false); onBackToMenu(); }} />
       
       {showPreview && renderPreviewModal()}
-      {renderPlanSelectionModal()}
       
       <ConfirmationModal 
         isOpen={confirmModal.isOpen} 
@@ -575,16 +524,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       />
       
       <div className="hidden print:block">
-         <div id="main-print-section">
-            <DisasterCouncilPrintLayout data={report} />
-         </div>
-         {selectedPlan && (
-            <div id="plan-print-section">
-               <div className="print-page-landscape">
-                  <SafetyPlanPrintLayout data={selectedPlan} />
-               </div>
-            </div>
-         )}
+         <DisasterCouncilPrintLayout data={report} />
       </div>
     </>
   );
