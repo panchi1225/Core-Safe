@@ -183,7 +183,7 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
            <tbody>
               {data.processRows.map((row) => (
                 <tr key={row.id} className="h-[6mm]">
-                  <td className={`${borderThin} px-1 align-middle leading-none`}>
+                  <td className={`${borderThin} pl-[1em] pr-1 align-middle leading-none`}>
                      <div className="flex items-center">
                         <span className="text-[8px] transform -rotate-90 origin-center w-3 h-3 block whitespace-nowrap text-gray-500 mr-1">{row.category}</span>
                         <span className="font-bold text-[9px] truncate">{row.name}</span>

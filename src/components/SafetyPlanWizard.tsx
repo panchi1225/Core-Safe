@@ -591,10 +591,10 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                 <tr key={row.id} className={`h-[6mm] ${!isPreview && ganttMode !== 'idle' && ganttRowId === row.id ? 'bg-yellow-50' : ''}`}>
                   <td className={`${borderThin} px-0 align-middle`}>
                     {isPreview ? (
-                      <span className="w-full h-full flex items-center pl-1 font-bold text-[9px] truncate text-left">{row.name}</span>
+                      <span className="w-full h-full flex items-center pl-[1em] font-bold text-[9px] truncate text-left">{row.name}</span>
                     ) : (
                       <select
-                        className="w-full h-full bg-transparent text-[9px] outline-none appearance-none font-bold text-left pl-1 cursor-pointer"
+                        className="w-full h-full bg-transparent text-[9px] outline-none appearance-none font-bold text-left pl-[1em] cursor-pointer"
                         value={row.name}
                         onChange={(e) => {
                           const newRows = report.processRows.map(r => r.id === row.id ? { ...r, name: e.target.value } : r);
