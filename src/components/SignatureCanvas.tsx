@@ -7,6 +7,10 @@ interface Props {
   keepOpenOnSave?: boolean;
 }
 
+// 全端末で統一する固定キャンバスサイズ（iPadサイズ基準）
+const FIXED_CANVAS_WIDTH = 2000;
+const FIXED_CANVAS_HEIGHT = 1440;
+
 const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, keepOpenOnSave = false }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -17,33 +21,16 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
   
   // Pen Only Mode state
   const [usePenMode, setUsePenMode] = useState(false);
-  
-  // Canvas dimensions state
-  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
-  // Orientation state
-  const [isPortrait, setIsPortrait] = useState(false);
+  // モーダルを開いた瞬間の向きを保持（モーダル中は変更しない）
+  const [lockedPortrait, setLockedPortrait] = useState(false);
 
-  // ★修正: 縦横判定 + モーダル中はviewport固定でズーム防止
+  // モーダルを開いた瞬間に向きを固定
   useEffect(() => {
-    const checkOrientation = () => {
-      setIsPortrait(window.innerHeight > window.innerWidth);
-    };
-    checkOrientation();
-
-    const mediaQuery = window.matchMedia("(orientation: portrait)");
-    const handleChange = () => {
-      // 回転後のサイズ確定を待ってから判定
-      setTimeout(checkOrientation, 100);
-    };
-    mediaQuery.addEventListener("change", handleChange);
-    window.addEventListener('resize', checkOrientation);
-
-    return () => {
-      mediaQuery.removeEventListener("change", handleChange);
-      window.removeEventListener('resize', checkOrientation);
-    };
-  }, []);
+    if (isModalOpen) {
+      setLockedPortrait(window.innerHeight > window.innerWidth);
+    }
+  }, [isModalOpen]);
 
   // モーダル表示中はviewportを固定してピンチズーム・拡大を防止
   useEffect(() => {
@@ -62,44 +49,24 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
     };
   }, [isModalOpen]);
 
-  // Handle resizing of the canvas when modal opens or window resizes
+  // キャンバスは固定サイズなのでモーダルが開いたらすぐセット
   useEffect(() => {
-    if (!isModalOpen || !containerRef.current) return;
-
-    // Wait for the layout to settle
+    if (!isModalOpen) return;
     const timer = setTimeout(() => {
-      const updateSize = () => {
-        if (containerRef.current) {
-          const dpr = window.devicePixelRatio || 1;
-          const width = Math.floor(containerRef.current.clientWidth * dpr);
-          const height = Math.floor(containerRef.current.clientHeight * dpr);
-          
-          if (width > 0 && height > 0) {
-            setCanvasSize({ width, height });
-          }
+      // キャンバスの描画コンテキストを初期化
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.lineWidth = lineWidth * 2;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = '#000';
         }
-      };
-      updateSize();
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [isModalOpen, isPortrait]); // isPortraitが変わったときもサイズ再計算
-
-  // Update canvas context properties
-  useEffect(() => {
-    if (!isModalOpen || canvasSize.width === 0) return;
-    
-    const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.lineWidth = lineWidth;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.strokeStyle = '#000';
       }
-    }
-  }, [canvasSize, isModalOpen, lineWidth]);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [isModalOpen, lineWidth]);
 
   /**
    * getPos:
@@ -116,7 +83,7 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
     const dx = cx - rect.left;
     const dy = cy - rect.top;
 
-    if (isPortrait) {
+    if (lockedPortrait) {
       // 縦持ち(UIは90度回転)時のマッピング
       return {
         x: (dy / rect.height) * canvas.width,
@@ -222,8 +189,8 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
     );
   }
 
-  // ★修正: 縦向き(isPortrait)のときだけ回転クラスを適用、横向き時は全画面フィット
-  const modalContainerClass = isPortrait
+  // ★修正: モーダルを開いた瞬間の向きで固定（モーダル中は切り替わらない）
+  const modalContainerClass = lockedPortrait
     ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100dvh] h-[100dvw] rotate-90 origin-center"
     : "fixed inset-0 w-full h-full";
 
@@ -337,30 +304,28 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
                     </div>
                 </div>
                 
-                {canvasSize.width > 0 && (
-                    <canvas
-                        ref={canvasRef}
-                        width={canvasSize.width}
-                        height={canvasSize.height}
-                        style={{ 
-                            width: '100%', 
-                            height: '100%', 
-                            touchAction: 'none',
-                            userSelect: 'none',
-                            WebkitUserSelect: 'none',
-                            WebkitTouchCallout: 'none',
-                            msTouchAction: 'none',
-                        } as React.CSSProperties}
-                        className="absolute inset-0 z-10 cursor-crosshair block touch-none select-none"
-                        onPointerDown={handlePointerDown}
-                        onPointerMove={handlePointerMove}
-                        onPointerUp={handlePointerUp}
-                        onPointerLeave={handlePointerUp}
-                        onContextMenu={(e) => e.preventDefault()}
-                        onDoubleClick={(e) => e.preventDefault()}
-                        onTouchStart={(e) => e.preventDefault()}
-                    />
-                )}
+                <canvas
+                    ref={canvasRef}
+                    width={FIXED_CANVAS_WIDTH}
+                    height={FIXED_CANVAS_HEIGHT}
+                    style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        touchAction: 'none',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none',
+                        WebkitTouchCallout: 'none',
+                        msTouchAction: 'none',
+                    } as React.CSSProperties}
+                    className="absolute inset-0 z-10 cursor-crosshair block touch-none select-none"
+                    onPointerDown={handlePointerDown}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerLeave={handlePointerUp}
+                    onContextMenu={(e) => e.preventDefault()}
+                    onDoubleClick={(e) => e.preventDefault()}
+                    onTouchStart={(e) => e.preventDefault()}
+                />
              </div>
         </div>
 
