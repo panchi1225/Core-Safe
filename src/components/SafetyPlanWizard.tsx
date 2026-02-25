@@ -485,7 +485,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                ) : (
                  <select className={`outline-none bg-transparent appearance-none min-w-[200px] ${!report.location ? 'bg-red-50' : ''}`} value={report.location} onChange={(e)=>updateReport({location: e.target.value})}>
                    <option value="">選択してください</option>
-                   {masterData.locations.map(p => <option key={p} value={p}>{p}</option>)}
+                   {masterData.workplaces.map(p => <option key={p} value={p}>{p}</option>)}
                  </select>
                )}
              </div>
