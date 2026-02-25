@@ -93,11 +93,23 @@ export const getMasterData = async (): Promise<MasterData> => {
       // 読み込みのたびに書き込むのは負荷が高いため、今回は「取得したデータに上書きして返す」だけに留めます。
       // これにより、画面上では新しいリストが表示され、ユーザーが何か変更して保存したタイミングでFirestoreも更新されます。
       
-      const mergedData = {
-        ...data,
-        topics: INITIAL_MASTER_DATA.topics // 強制上書き
+      const mergedData: MasterData = {
+        projects: data.projects || INITIAL_MASTER_DATA.projects,
+        workplaces: data.workplaces || INITIAL_MASTER_DATA.workplaces,
+        contractors: data.contractors || INITIAL_MASTER_DATA.contractors,
+        supervisors: data.supervisors || INITIAL_MASTER_DATA.supervisors,
+        locations: data.locations || INITIAL_MASTER_DATA.locations,
+        roles: data.roles || INITIAL_MASTER_DATA.roles,
+        topics: INITIAL_MASTER_DATA.topics,
+        jobTypes: data.jobTypes || INITIAL_MASTER_DATA.jobTypes,
+        goals: data.goals || INITIAL_MASTER_DATA.goals,
+        predictions: data.predictions || INITIAL_MASTER_DATA.predictions,
+        countermeasures: data.countermeasures || INITIAL_MASTER_DATA.countermeasures,
+        subcontractors: data.subcontractors || INITIAL_MASTER_DATA.subcontractors,
+        processes: data.processes || INITIAL_MASTER_DATA.processes,
+        cautions: data.cautions || INITIAL_MASTER_DATA.cautions,
       };
-      
+
       return mergedData;
     } else {
       return INITIAL_MASTER_DATA;
