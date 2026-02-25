@@ -22,16 +22,6 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
   // Pen Only Mode state
   const [usePenMode, setUsePenMode] = useState(false);
 
-  // モーダルを開いた瞬間の向きを保持（モーダル中は変更しない）
-  const [lockedPortrait, setLockedPortrait] = useState(false);
-
-  // モーダルを開いた瞬間に向きを固定
-  useEffect(() => {
-    if (isModalOpen) {
-      setLockedPortrait(window.innerHeight > window.innerWidth);
-    }
-  }, [isModalOpen]);
-
   // モーダル表示中はviewportを固定してピンチズーム・拡大を防止
   useEffect(() => {
     if (!isModalOpen) return;
@@ -49,11 +39,10 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
     };
   }, [isModalOpen]);
 
-  // キャンバスは固定サイズなのでモーダルが開いたらすぐセット
+  // キャンバスの描画コンテキストを初期化
   useEffect(() => {
     if (!isModalOpen) return;
     const timer = setTimeout(() => {
-      // キャンバスの描画コンテキストを初期化
       const canvas = canvasRef.current;
       if (canvas) {
         const ctx = canvas.getContext('2d');
@@ -68,34 +57,18 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
     return () => clearTimeout(timer);
   }, [isModalOpen, lineWidth]);
 
-  /**
-   * getPos:
-   * マウス・タッチ座標をCanvas内のローカル座標（ピクセル単位）に変換します。
-   */
   const getPos = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     
     const rect = canvas.getBoundingClientRect();
-    const cx = e.clientX;
-    const cy = e.clientY;
+    const dx = e.clientX - rect.left;
+    const dy = e.clientY - rect.top;
 
-    const dx = cx - rect.left;
-    const dy = cy - rect.top;
-
-    if (lockedPortrait) {
-      // 縦持ち(UIは90度回転)時のマッピング
-      return {
-        x: (dy / rect.height) * canvas.width,
-        y: (1 - (dx / rect.width)) * canvas.height
-      };
-    } else {
-      // 通常時 (横持ち時は回転しないのでそのまま)
-      return {
-        x: (dx / rect.width) * canvas.width,
-        y: (dy / rect.height) * canvas.height
-      };
-    }
+    return {
+      x: (dx / rect.width) * canvas.width,
+      y: (dy / rect.height) * canvas.height
+    };
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -189,11 +162,6 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
     );
   }
 
-  // ★修正: モーダルを開いた瞬間の向きで固定（モーダル中は切り替わらない）
-  const modalContainerClass = lockedPortrait
-    ? "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100dvh] h-[100dvw] rotate-90 origin-center"
-    : "fixed inset-0 w-full h-full";
-
   return (
     <div 
       className="fixed inset-0 z-[100] bg-gray-900 bg-opacity-95 select-none touch-none" 
@@ -213,7 +181,7 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
         MozUserSelect: 'none',
       } as React.CSSProperties}
     >
-      <div className={`${modalContainerClass} bg-white flex flex-col overflow-hidden shadow-2xl relative select-none`}>
+      <div className="fixed inset-0 w-full h-full bg-white flex flex-col overflow-hidden shadow-2xl relative select-none">
         
         {saveSuccess && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[60] bg-gray-800 bg-opacity-90 text-white px-8 py-6 rounded-xl shadow-2xl animate-fade-in flex flex-col items-center backdrop-blur-sm pointer-events-none">
