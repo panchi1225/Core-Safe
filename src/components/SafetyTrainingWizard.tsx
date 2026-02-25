@@ -377,14 +377,14 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
         <div className="space-y-3">
            <div className="flex items-center gap-2">
              <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(3)</span>
-             <select className={`flex-1 p-2 border rounded bg-white text-black outline-none text-sm appearance-none ${getErrorClass('topic')}`} value={report.topic} onChange={(e) => updateReport('topic', e.target.value)}>
+             <select className={`flex-1 min-w-0 p-2 border rounded bg-white text-black outline-none text-sm appearance-none ${getErrorClass('topic')}`} value={report.topic} onChange={(e) => updateReport('topic', e.target.value)}>
                <option value="">選択してください</option>
                {masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}
              </select>
            </div>
            <div className="flex items-center gap-2">
              <span className="font-bold text-sm text-gray-700 w-8 shrink-0 flex justify-center bg-white rounded-full h-6 items-center border border-gray-200 shadow-sm">(4)</span>
-             <select className={`flex-1 p-2 border rounded bg-white text-black outline-none text-sm appearance-none ${getErrorClass('caution')}`} value={report.caution} onChange={(e) => updateReport('caution', e.target.value)}>
+             <select className={`flex-1 min-w-0 p-2 border rounded bg-white text-black outline-none text-sm appearance-none ${getErrorClass('caution')}`} value={report.caution} onChange={(e) => updateReport('caution', e.target.value)}>
                <option value="">選択してください</option>
                {masterData.topics.map(g => <option key={g} value={g}>{g}</option>)}
              </select>
