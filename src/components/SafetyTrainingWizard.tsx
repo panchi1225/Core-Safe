@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MasterData, ReportData, WorkerSignature, INITIAL_REPORT, INITIAL_MASTER_DATA, SavedDraft, SafetyPlanReportData } from '../types';
 import { getMasterData, compressImage, saveDraft, fetchSafetyPlansByProject } from '../services/firebaseService';
 import SignatureCanvas from './SignatureCanvas';
@@ -93,6 +93,8 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     initialData || { ...INITIAL_REPORT, endTime: "12:15", remarks: "" }
   );
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
+  const initialYearRef = useRef<number>(report.year);
+  const initialMonthRef = useRef<number>(report.month);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
   const [showPreview, setShowPreview] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -210,10 +212,16 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       return;
     }
 
+    let currentDraftId = draftId;
+    if (currentDraftId && (report.year !== initialYearRef.current || report.month !== initialMonthRef.current)) {
+      currentDraftId = null;
+    }
     setSaveStatus('saving'); 
     try { 
-      const newId = await saveDraft(draftId, 'SAFETY_TRAINING', report); 
+      const newId = await saveDraft(currentDraftId, 'SAFETY_TRAINING', report); 
       setDraftId(newId); 
+      initialYearRef.current = report.year;
+      initialMonthRef.current = report.month;
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
       
@@ -241,10 +249,16 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       return;
     }
 
+    let currentDraftId = draftId;
+    if (currentDraftId && (report.year !== initialYearRef.current || report.month !== initialMonthRef.current)) {
+      currentDraftId = null;
+    }
     setSaveStatus('saving');
     try {
-      const newId = await saveDraft(draftId, 'SAFETY_TRAINING', report); 
+      const newId = await saveDraft(currentDraftId, 'SAFETY_TRAINING', report); 
       setDraftId(newId); 
+      initialYearRef.current = report.year;
+      initialMonthRef.current = report.month;
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
       setTimeout(() => setSaveStatus('idle'), 2000);

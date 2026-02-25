@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MasterData, DisasterCouncilReportData, INITIAL_DISASTER_COUNCIL_REPORT, INITIAL_MASTER_DATA, SavedDraft, SafetyPlanReportData } from '../types';
 import { getMasterData, saveDraft, fetchSafetyPlansByProject } from '../services/firebaseService';
 import SignatureCanvas from './SignatureCanvas';
@@ -77,6 +77,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const [step, setStep] = useState(1);
   const [report, setReport] = useState<DisasterCouncilReportData>(initialData || INITIAL_DISASTER_COUNCIL_REPORT);
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
+  const initialYearRef = useRef<number>(report.year);
+  const initialMonthRef = useRef<number>(report.month);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
   const [showPreview, setShowPreview] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -199,10 +201,16 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       return;
     }
 
+    let currentDraftId = draftId;
+    if (currentDraftId && (report.year !== initialYearRef.current || report.month !== initialMonthRef.current)) {
+      currentDraftId = null;
+    }
     setSaveStatus('saving'); 
     try { 
-      const newId = await saveDraft(draftId, 'DISASTER_COUNCIL', report); 
+      const newId = await saveDraft(currentDraftId, 'DISASTER_COUNCIL', report); 
       setDraftId(newId); 
+      initialYearRef.current = report.year;
+      initialMonthRef.current = report.month;
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
       
@@ -259,10 +267,16 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       return;
     }
 
+    let currentDraftId = draftId;
+    if (currentDraftId && (report.year !== initialYearRef.current || report.month !== initialMonthRef.current)) {
+      currentDraftId = null;
+    }
     setSaveStatus('saving');
     try {
-      const newId = await saveDraft(draftId, 'DISASTER_COUNCIL', report); 
+      const newId = await saveDraft(currentDraftId, 'DISASTER_COUNCIL', report); 
       setDraftId(newId); 
+      initialYearRef.current = report.year;
+      initialMonthRef.current = report.month;
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
       setTimeout(() => setSaveStatus('idle'), 2000);
