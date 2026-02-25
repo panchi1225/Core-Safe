@@ -351,12 +351,14 @@ const EmployeeEditForm: React.FC<{
 const LABEL_MAP: Record<string, string> = { 
   projects: "工事名", contractors: "会社名", supervisors: "現場責任者", locations: "場所", workplaces: "作業所名",
   roles: "役職", topics: "安全訓練内容", jobTypes: "工種", goals: "安全衛生目標", predictions: "予想災害", countermeasures: "防止対策",
-  processes: "作業工程", cautions: "注意事項"
+  processes: "作業工程", cautions: "注意事項",
+  // --- 安全衛生日誌用マスタ ---
+  machines: "主要機械", materials: "搬出入資機材", preparations: "段取り資材等"
 };
 
 const MASTER_GROUPS = { 
   BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
-  TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures'] 
+  TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures', 'machines', 'materials', 'preparations'] 
 };
 
 type TabType = 'BASIC' | 'TRAINING' | 'EMPLOYEES';

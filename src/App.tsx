@@ -4,11 +4,12 @@ import SafetyTrainingWizard from './components/SafetyTrainingWizard';
 import DisasterCouncilWizard from './components/DisasterCouncilWizard';
 import SafetyPlanWizard from './components/SafetyPlanWizard';
 import NewcomerSurveyWizard from './components/NewcomerSurveyWizard';
+import DailySafetyWizard from './components/DailySafetyWizard';
 import MasterSettings from './components/MasterSettings';
 
 // Firebase機能
 import { fetchDrafts, removeDraft, getMasterData } from './services/firebaseService'; 
-import { SavedDraft, ReportData, DisasterCouncilReportData, ReportTypeString, NewcomerSurveyReportData, MasterData, INITIAL_MASTER_DATA } from './types';
+import { SavedDraft, ReportData, DisasterCouncilReportData, ReportTypeString, NewcomerSurveyReportData, DailySafetyReportData, MasterData, INITIAL_MASTER_DATA } from './types';
 
 // --- 確認用モーダル ---
 interface ConfirmModalProps {
@@ -198,15 +199,15 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, url, masterD
   );
 };
 
-// SAFETY_DIARY を追加するために型を拡張
-type ViewState = 'HOME' | ReportTypeString | 'SETTINGS' | 'SAFETY_DIARY';
+// ViewState 型: 'HOME' | すべてのReportTypeString | 'SETTINGS'
+type ViewState = 'HOME' | ReportTypeString | 'SETTINGS';
 
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('HOME');
   
   // Selection Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedReportType, setSelectedReportType] = useState<ReportTypeString | 'SAFETY_DIARY' | null>(null);
+  const [selectedReportType, setSelectedReportType] = useState<ReportTypeString | null>(null);
   const [drafts, setDrafts] = useState<SavedDraft[]>([]);
   const [selectedDraftProject, setSelectedDraftProject] = useState<string | null>(null);
   
@@ -283,13 +284,7 @@ const App: React.FC = () => {
   }, [isModalOpen]);
 
   // Handlers
-  const openSelectionModal = (type: ReportTypeString | 'SAFETY_DIARY') => {
-    // 安全衛生日誌の場合はアラートを表示して終了
-    if (type === 'SAFETY_DIARY') {
-      alert("この機能は現在開発中です。\n今後のアップデートをお待ちください。");
-      return;
-    }
-
+  const openSelectionModal = (type: ReportTypeString) => {
     setSelectedReportType(type);
     setIsModalOpen(true);
   };
@@ -374,6 +369,16 @@ const App: React.FC = () => {
   if (currentView === 'NEWCOMER_SURVEY') {
     return (
       <NewcomerSurveyWizard
+        initialData={wizardInitialData}
+        initialDraftId={wizardDraftId}
+        onBackToMenu={() => setCurrentView('HOME')}
+      />
+    );
+  }
+
+  if (currentView === 'DAILY_SAFETY') {
+    return (
+      <DailySafetyWizard
         initialData={wizardInitialData}
         initialDraftId={wizardDraftId}
         onBackToMenu={() => setCurrentView('HOME')}
@@ -505,6 +510,7 @@ const App: React.FC = () => {
                             {draft.type === 'SAFETY_TRAINING' ? `${(draft.data as ReportData).month}月度` : 
                              draft.type === 'DISASTER_COUNCIL' ? `第${(draft.data as DisasterCouncilReportData).count}回` :
                              draft.type === 'NEWCOMER_SURVEY' ? ((draft.data as NewcomerSurveyReportData).name || '氏名未入力') :
+                             draft.type === 'DAILY_SAFETY' ? `${(draft.data as DailySafetyReportData).workDate} 分` :
                              `${(draft.data as any).month}月度 計画表`}
                           </div>
                           <div className="text-xs text-gray-500 mt-1 pl-7">
@@ -552,7 +558,7 @@ const App: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Card 0: Safety Health Diary (Pink, Top) */}
           <button 
-            onClick={() => openSelectionModal('SAFETY_DIARY')}
+            onClick={() => openSelectionModal('DAILY_SAFETY')}
             className="flex flex-col items-center p-8 bg-white rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-t-4 border-pink-500 group"
           >
             <div className="w-20 h-20 bg-pink-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-pink-100 transition-colors">
@@ -640,7 +646,7 @@ const App: React.FC = () => {
         <div>&copy; 2026 Matsuura Construction App</div>
         <div className="mt-1 flex items-center justify-center gap-2">
           <span>Core Safe</span>
-          <span>Ver.1.5.6</span>
+          <span>Ver.1.6.2</span>
         </div>
       </footer>
 
