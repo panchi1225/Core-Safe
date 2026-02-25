@@ -282,11 +282,16 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     setShowPreview(true); 
   };
   
-  const handlePrint = () => { 
-    const prevTitle = document.title; 
-    document.title = `安全訓練_${report.project}_${report.month}月度`; 
-    window.print(); 
-    document.title = prevTitle; 
+  const handlePrint = () => {
+    const prevTitle = document.title;
+    document.title = `安全訓練_${report.project}_${report.month}月度`;
+    const style = document.createElement('style');
+    style.id = 'print-override';
+    style.textContent = '@media print { @page { size: auto; margin: 0; } }';
+    document.head.appendChild(style);
+    window.print();
+    document.head.removeChild(style);
+    document.title = prevTitle;
   };
   
   // ホームへ戻る際のモーダル
@@ -534,10 +539,8 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <div className="hidden print:block">
          <PrintLayout data={report} />
          {selectedPlan && (
-            <div className="print-page" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
-               <div style={{ width: '297mm', height: '210mm', transform: 'rotate(90deg) translateX(0) translateY(-297mm) scale(0.707)', transformOrigin: 'top left' }}>
-                  <SafetyPlanPrintLayout data={selectedPlan} />
-               </div>
+            <div style={{ pageBreakBefore: 'always', width: '297mm', height: '210mm' }}>
+               <SafetyPlanPrintLayout data={selectedPlan} />
             </div>
          )}
       </div>

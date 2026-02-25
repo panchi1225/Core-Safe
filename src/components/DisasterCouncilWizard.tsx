@@ -288,7 +288,17 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   };
 
   const confirmPlanSelection = (plan: SavedDraft) => { setSelectedPlan(plan.data as SafetyPlanReportData); setPlanSelectionModal(false); setShowPreview(true); };
-  const handlePrint = () => { const prevTitle = document.title; document.title = `災害防止協議会_${report.project}_第${report.count}回`; window.print(); document.title = prevTitle; };
+  const handlePrint = () => {
+    const prevTitle = document.title;
+    document.title = `災害防止協議会_${report.project}_第${report.count}回`;
+    const style = document.createElement('style');
+    style.id = 'print-override';
+    style.textContent = '@media print { @page { size: auto; margin: 0; } }';
+    document.head.appendChild(style);
+    window.print();
+    document.head.removeChild(style);
+    document.title = prevTitle;
+  };
   
   const handleHomeClick = () => { 
     if (hasUnsavedChanges) { 
@@ -556,10 +566,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       <div className="hidden print:block">
          <DisasterCouncilPrintLayout data={report} />
          {selectedPlan && (
-            <div className="print-page" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
-               <div style={{ width: '297mm', height: '210mm', transform: 'rotate(90deg) translateX(0) translateY(-297mm) scale(0.707)', transformOrigin: 'top left' }}>
-                  <SafetyPlanPrintLayout data={selectedPlan} />
-               </div>
+            <div style={{ pageBreakBefore: 'always', width: '297mm', height: '210mm' }}>
+               <SafetyPlanPrintLayout data={selectedPlan} />
             </div>
          )}
       </div>
