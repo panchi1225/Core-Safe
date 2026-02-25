@@ -602,7 +602,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">安全管理計画表</h3>
             <p className="text-xs text-gray-500 text-center">
-              安全管理計画表を作成します。報告書に自動添付。
+              安全管理計画表を作成します。報告書に自動添付。<br />※PCでの作成推奨
             </p>
           </button>
 
