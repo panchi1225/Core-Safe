@@ -50,6 +50,14 @@
         .print-page:last-child {
           page-break-after: auto;
         }
+        /* 横向きページ（安全管理計画表添付用） */
+        .print-page-landscape {
+          width: 297mm;
+          height: 210mm;
+          page-break-before: always;
+          margin: 0;
+          overflow: hidden;
+        }
       }
     </style>
   </head>
