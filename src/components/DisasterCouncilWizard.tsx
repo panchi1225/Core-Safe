@@ -515,7 +515,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
             <DisasterCouncilPrintLayout data={report} />
           </div>
           {selectedPlan && (
-            <div className="bg-white shadow-2xl" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
+            <div className="bg-white shadow-2xl" style={{ width: '297mm', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
                <SafetyPlanPrintLayout data={selectedPlan} />
             </div>
           )}

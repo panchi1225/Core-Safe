@@ -470,7 +470,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             <PrintLayout data={report} />
           </div>
           {selectedPlan && (
-            <div className="bg-white shadow-2xl" style={{ width: '1123px', height: '794px', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
+            <div className="bg-white shadow-2xl" style={{ width: '297mm', transform: `scale(${previewScale * 0.7})`, transformOrigin: 'top center' }}>
                <SafetyPlanPrintLayout data={selectedPlan} />
             </div>
           )}
@@ -535,8 +535,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
          <PrintLayout data={report} />
          {selectedPlan && (
             <>
-               <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }}></div>
-               <div style={{ width: '297mm', height: '210mm', transform: 'rotate(90deg) translate(0, -210mm)', transformOrigin: 'top left', position: 'absolute', overflow: 'hidden' }}>
+               <div className="print-page-landscape" style={{ pageBreakBefore: 'always', breakBefore: 'page', width: '297mm', height: '210mm' }}>
                   <SafetyPlanPrintLayout data={selectedPlan} />
                </div>
             </>
