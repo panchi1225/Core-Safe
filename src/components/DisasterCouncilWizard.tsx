@@ -288,7 +288,25 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   };
 
   const confirmPlanSelection = (plan: SavedDraft) => { setSelectedPlan(plan.data as SafetyPlanReportData); setPlanSelectionModal(false); setShowPreview(true); };
-  const handlePrint = () => { const prevTitle = document.title; document.title = `災害防止協議会_${report.project}_第${report.count}回`; window.print(); document.title = prevTitle; };
+  const handlePrint = () => {
+    const prevTitle = document.title;
+    document.title = `災害防止協議会_${report.project}_第${report.count}回`;
+    const inner = document.getElementById('plan-print-inner');
+    if (inner) {
+      inner.style.transform = 'rotate(-90deg) translate(-210mm, 0)';
+      inner.style.transformOrigin = 'top left';
+      inner.style.width = '210mm';
+      inner.style.height = '297mm';
+    }
+    window.print();
+    if (inner) {
+      inner.style.transform = '';
+      inner.style.transformOrigin = '';
+      inner.style.width = '297mm';
+      inner.style.height = '210mm';
+    }
+    document.title = prevTitle;
+  };
   
   const handleHomeClick = () => { 
     if (hasUnsavedChanges) { 
@@ -556,8 +574,8 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       <div className="hidden print:block">
          <DisasterCouncilPrintLayout data={report} />
          {selectedPlan && (
-            <div className="print-page" style={{ padding: 0, overflow: 'hidden' }}>
-               <div style={{ width: '210mm', transform: 'scale(0.707)', transformOrigin: 'top left' }}>
+            <div id="plan-print-outer" className="print-page" style={{ padding: 0, overflow: 'hidden' }}>
+               <div id="plan-print-inner" style={{ width: '297mm', height: '210mm' }}>
                   <SafetyPlanPrintLayout data={selectedPlan} />
                </div>
             </div>
