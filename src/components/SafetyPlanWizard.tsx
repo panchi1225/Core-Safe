@@ -66,6 +66,32 @@ const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen
   );
 };
 
+// --- Firebase保存用：ネスト配列 ↔ 文字列配列 変換 ---
+const SEPARATOR = '|||';
+
+const flattenNestedArrays = (report: SafetyPlanReportData): any => {
+  return {
+    ...report,
+    predictions: report.predictions.map(arr => Array.isArray(arr) ? arr.join(SEPARATOR) : arr),
+    countermeasures: report.countermeasures.map(arr => Array.isArray(arr) ? arr.join(SEPARATOR) : arr),
+    inspectionItems: report.inspectionItems.map(arr => Array.isArray(arr) ? arr.join(SEPARATOR) : arr),
+  };
+};
+
+const restoreNestedArrays = (data: any): any => {
+  return {
+    ...data,
+    predictions: Array.isArray(data.predictions)
+      ? data.predictions.map((v: any) => typeof v === 'string' ? v.split(SEPARATOR) : v)
+      : Array(5).fill(null).map(() => ['', '']),
+    countermeasures: Array.isArray(data.countermeasures)
+      ? data.countermeasures.map((v: any) => typeof v === 'string' ? v.split(SEPARATOR) : v)
+      : Array(5).fill(null).map(() => ['', '', '', '', '']),
+    inspectionItems: Array.isArray(data.inspectionItems)
+      ? data.inspectionItems.map((v: any) => typeof v === 'string' ? v.split(SEPARATOR) : v)
+      : Array(5).fill(null).map(() => ['', '', '']),
+  };
+};
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
 // --- Helpers for Holidays ---
@@ -83,7 +109,8 @@ const isJapaneseHoliday = (date: Date): boolean => {
 const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
   // 初期データに safetyGoals がない場合のフォールバックを追加
   const [report, setReport] = useState<SafetyPlanReportData>(() => {
-    const base = initialData || INITIAL_SAFETY_PLAN_REPORT;
+    const raw = initialData || INITIAL_SAFETY_PLAN_REPORT;
+    const base = initialData ? restoreNestedArrays(raw) : raw;
     return {
       ...base,
       safetyGoals: base.safetyGoals || ["", "", ""],
@@ -232,7 +259,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     }
     setSaveStatus('saving'); 
     try { 
-      const newId = await saveDraft(draftId, 'SAFETY_PLAN', report); 
+      const newId = await saveDraft(draftId, 'SAFETY_PLAN', flattenNestedArrays(report));
       setDraftId(newId); 
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
@@ -250,7 +277,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     if (!report.project || !report.location) { alert("工事名と作業所を選択してください。"); return; }
     setSaveStatus('saving'); 
     try { 
-      const newId = await saveDraft(draftId, 'SAFETY_PLAN', report); 
+      const newId = await saveDraft(draftId, 'SAFETY_PLAN', flattenNestedArrays(report));
       setDraftId(newId); 
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
