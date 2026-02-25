@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   MasterData, SafetyPlanReportData, INITIAL_SAFETY_PLAN_REPORT, INITIAL_MASTER_DATA 
 } from '../types';
@@ -120,6 +120,8 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     };
   });
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
+  const initialYearRef = useRef<number>(report.year);
+  const initialMonthRef = useRef<number>(report.month);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
   const [showPreview, setShowPreview] = useState(false);
   const [ganttMode, setGanttMode] = useState<'idle' | 'selectStart' | 'selectEnd'>('idle');
@@ -257,10 +259,16 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
       alert("工事名と作業所を選択してください。");
       return;
     }
+    let currentDraftId = draftId;
+    if (currentDraftId && (report.year !== initialYearRef.current || report.month !== initialMonthRef.current)) {
+      currentDraftId = null;
+    }
     setSaveStatus('saving'); 
     try { 
-      const newId = await saveDraft(draftId, 'SAFETY_PLAN', flattenNestedArrays(report));
+      const newId = await saveDraft(currentDraftId, 'SAFETY_PLAN', flattenNestedArrays(report));
       setDraftId(newId); 
+      initialYearRef.current = report.year;
+      initialMonthRef.current = report.month;
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
       
@@ -275,10 +283,16 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   
   const handlePrint = async () => { 
     if (!report.project || !report.location) { alert("工事名と作業所を選択してください。"); return; }
+    let currentDraftId = draftId;
+    if (currentDraftId && (report.year !== initialYearRef.current || report.month !== initialMonthRef.current)) {
+      currentDraftId = null;
+    }
     setSaveStatus('saving'); 
     try { 
-      const newId = await saveDraft(draftId, 'SAFETY_PLAN', flattenNestedArrays(report));
+      const newId = await saveDraft(currentDraftId, 'SAFETY_PLAN', flattenNestedArrays(report));
       setDraftId(newId); 
+      initialYearRef.current = report.year;
+      initialMonthRef.current = report.month;
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
       setTimeout(() => setSaveStatus('idle'), 2000); 
@@ -452,7 +466,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     return day >= originalBar.startDay && day <= originalBar.endDay;
   };
 
-  const borderOuter = "border-2 border-black"; const borderThin = "border border-gray-500"; const headerBg = "bg-cyan-100"; const inputBase = "w-full h-full bg-transparent outline-none text-center font-serif"; const selectBase = "w-full h-full bg-transparent outline-none text-center appearance-none font-serif text-center-last";
+  const borderOuter = "border-2 border-black"; const borderThin = "border border-black"; const headerBg = "bg-cyan-100"; const inputBase = "w-full h-full bg-transparent outline-none text-center font-serif"; const selectBase = "w-full h-full bg-transparent outline-none text-center appearance-none font-serif text-center-last";
 
   const renderReportSheet = (isPreview: boolean = false) => (
     <div className="p-[5mm] pt-[15mm] w-full h-full flex flex-col font-serif justify-start">
@@ -617,7 +631,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                   <td key={i} colSpan={span} className={`${borderThin} align-top p-0`}>
                     <div className="flex flex-col h-full">
                       {[0, 1].map(j => (
-                        <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0">
+                        <div key={j} className="flex-1">
                           {isPreview ? (
                             <div className={`w-full h-full text-[8px] leading-tight flex items-center ${span >= 5 ? 'pl-[1em]' : 'pl-[0.5em]'}`}>{(report.predictions[i] || [])[j]}</div>
                           ) : (
@@ -638,7 +652,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                   <td key={i} colSpan={span} className={`${borderThin} align-top p-0`}>
                     <div className="flex flex-col h-full">
                       {[0, 1, 2, 3, 4].map(j => (
-                        <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0">
+                        <div key={j} className="flex-1">
                           {isPreview ? (
                             <div className={`w-full h-full text-[8px] leading-tight flex items-center ${span >= 5 ? 'pl-[1em]' : 'pl-[0.5em]'}`}>{(report.countermeasures[i] || [])[j]}</div>
                           ) : (
@@ -659,7 +673,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                   <td key={i} colSpan={span} className={`${borderThin} align-top p-0`}>
                     <div className="flex flex-col h-full">
                       {[0, 1, 2].map(j => (
-                        <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0">
+                        <div key={j} className="flex-1">
                           {isPreview ? (
                             <div className={`w-full h-full text-[8px] leading-tight flex items-center ${span >= 5 ? 'pl-[1em]' : 'pl-[0.5em]'}`}>{(report.inspectionItems[i] || [])[j] ? `${j + 1}. ${(report.inspectionItems[i] || [])[j]}` : ''}</div>
                           ) : (
