@@ -114,6 +114,11 @@ function createEmptyWorkEntry(): WorkEntry {
 }
 
 // ============================
+// 安全衛生指示事項の固定数
+// ============================
+const SAFETY_INSTRUCTIONS_COUNT = 7;
+
+// ============================
 // メインコンポーネント
 // ============================
 const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
@@ -123,7 +128,15 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   // --- レポートデータ ---
   const [report, setReport] = useState<DailySafetyReportData>(() => {
     if (initialData) {
-      return initialData;
+      // 【修正4】一時保存データから復元時、safetyInstructions を7個に正規化
+      const restored = { ...initialData };
+      const si = restored.safetyInstructions || [];
+      // 7個未満なら空文字で埋め、7個を超えていれば切り詰め
+      restored.safetyInstructions = Array.from(
+        { length: SAFETY_INSTRUCTIONS_COUNT },
+        (_, i) => si[i] || ''
+      );
+      return restored;
     }
     // 初期値: 作業エントリが空なら1つ追加
     const init = { ...INITIAL_DAILY_SAFETY_REPORT };
@@ -136,9 +149,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     if (init.preparationEntries.length === 0) {
       init.preparationEntries = [''];
     }
-    if (init.safetyInstructions.length === 0) {
-      init.safetyInstructions = [''];
-    }
+    // 【修正4】安全衛生指示事項は7個の空文字配列で初期化
+    init.safetyInstructions = Array(SAFETY_INSTRUCTIONS_COUNT).fill('');
     return init;
   });
 
@@ -188,6 +200,18 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   const isInitializingRef = useRef(false);
 
   // ============================
+  // 【修正3】一時保存データから復元した際にdiagramLoadedを設定
+  // ============================
+  useEffect(() => {
+    if (initialData) {
+      // annotatedDiagramUrl または baseDiagramUrl があれば配置図を復元可能
+      if (initialData.annotatedDiagramUrl || initialData.baseDiagramUrl) {
+        setDiagramLoaded(true);
+      }
+    }
+  }, [initialData]);
+
+  // ============================
   // マスタデータ読み込み
   // ============================
   useEffect(() => {
@@ -225,21 +249,28 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   );
 
   // ============================
-  // 打合せ日変更時の曜日自動更新
+  // 【修正1】打合せ日変更時に作業日を翌営業日に連動 + 曜日自動更新
   // ============================
   const handleMeetingDateChange = (dateStr: string) => {
-    const d = new Date(dateStr + 'T00:00:00');
+    const meetingDate = new Date(dateStr + 'T00:00:00');
+    // getNextBusinessDay で翌営業日（土日祝を飛ばす）を取得
+    const nextBizDate = getNextBusinessDay(meetingDate);
+    const nextBizDateStr = nextBizDate.toISOString().split('T')[0];
+
     setReport((prev) => ({
       ...prev,
       meetingDate: dateStr,
-      meetingDayOfWeek: getJapaneseDayOfWeek(d),
+      meetingDayOfWeek: getJapaneseDayOfWeek(meetingDate),
+      // 作業日を翌営業日に自動設定
+      workDate: nextBizDateStr,
+      workDayOfWeek: getJapaneseDayOfWeek(nextBizDate),
     }));
     setHasUnsavedChanges(true);
     setSaveStatus('idle');
   };
 
   // ============================
-  // 作業日変更時の曜日自動更新
+  // 作業日変更時の曜日自動更新（手動変更も可能なまま）
   // ============================
   const handleWorkDateChange = (dateStr: string) => {
     const d = new Date(dateStr + 'T00:00:00');
@@ -315,7 +346,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     setSaveStatus('idle');
   };
 
-  const addListEntry = (field: 'materialEntries' | 'preparationEntries' | 'safetyInstructions') => {
+  const addListEntry = (field: 'materialEntries' | 'preparationEntries') => {
     setReport((prev) => ({
       ...prev,
       [field]: [...prev[field], ''],
@@ -325,7 +356,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   const removeListEntry = (
-    field: 'materialEntries' | 'preparationEntries' | 'safetyInstructions',
+    field: 'materialEntries' | 'preparationEntries',
     index: number
   ) => {
     setReport((prev) => {
@@ -353,9 +384,24 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       hasError = true;
     }
 
+    // 【修正4】安全衛生指示事項: 7個のうち最低1つ以上選択必須
+    const hasAtLeastOneSafetyInstruction = report.safetyInstructions.some((s) => s !== '');
+    if (!hasAtLeastOneSafetyInstruction) {
+      newErrors.safetyInstructions = true;
+      hasError = true;
+    }
+
     if (hasError) {
       setErrors(newErrors);
-      alert('未入力の必須項目があります。\n赤枠の項目を確認してください。');
+      if (newErrors.safetyInstructions && !newErrors.project && !newErrors.meetingConductor) {
+        // 安全衛生指示事項のみエラーの場合
+        alert('安全衛生指示事項を1つ以上選択してください。');
+      } else if (newErrors.safetyInstructions) {
+        // 他のエラーと合わせて表示
+        alert('未入力の必須項目があります。\n赤枠の項目を確認してください。\n\n安全衛生指示事項を1つ以上選択してください。');
+      } else {
+        alert('未入力の必須項目があります。\n赤枠の項目を確認してください。');
+      }
       return false;
     }
 
@@ -378,7 +424,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // 保存処理
+  // 【修正3】一時保存処理 — キャンバス内容を annotatedDiagramUrl に確実に保存
   // ============================
   const handleSave = async () => {
     if (!report.project) {
@@ -386,9 +432,22 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       return;
     }
 
+    // STEP2でキャンバスが存在する場合は、キャンバス内容を画像化して保存
+    let updatedReport = { ...report };
+    const fc = fabricCanvasRef.current;
+    if (fc) {
+      const dataUrl = fc.toDataURL({
+        format: 'jpeg',
+        quality: 0.8,
+        multiplier: 1,
+      });
+      updatedReport = { ...updatedReport, annotatedDiagramUrl: dataUrl };
+      setReport(updatedReport);
+    }
+
     setSaveStatus('saving');
     try {
-      const newId = await saveDraft(draftId, 'DAILY_SAFETY', report);
+      const newId = await saveDraft(draftId, 'DAILY_SAFETY', updatedReport);
       setDraftId(newId);
       setSaveStatus('saved');
       setHasUnsavedChanges(false);
@@ -432,7 +491,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     errors[field] ? 'border-red-500 bg-red-50' : 'border-gray-300';
 
   // ============================
-  // STEP2: Fabric.js キャンバス初期化
+  // 【修正2・修正3】STEP2: Fabric.js キャンバス初期化
+  // 配置図画像をキャンバスにフィットさせ、中央配置＋アスペクト比維持
+  // 一時保存データからの復元にも対応
   // ============================
   useEffect(() => {
     // STEP2のときのみキャンバスを初期化
@@ -456,19 +517,23 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       return;
     }
 
-    // コンテナ幅を取得
-    const containerWidth = canvasContainerRef.current?.clientWidth || 800;
-    const maxWidth = Math.min(containerWidth, 800);
-
-    // 背景画像から適切なサイズを決定
-    const bgSrc = report.baseDiagramUrl;
+    // 【修正3】復元ロジック: annotatedDiagramUrl > baseDiagramUrl の優先順
+    // annotatedDiagramUrl がある場合はそちらを背景として使用（書き込み済み画像）
+    // なければ baseDiagramUrl を使用
+    const bgSrc = report.annotatedDiagramUrl || report.baseDiagramUrl;
     if (!bgSrc) {
       isInitializingRef.current = false;
       return;
     }
 
+    // コンテナ幅を取得
+    const containerWidth = canvasContainerRef.current?.clientWidth || 800;
+    // 【修正2】PC: 最大800px、スマホ: 画面幅 - padding
+    const maxWidth = Math.min(containerWidth, 800);
+
     const img = new Image();
     img.onload = () => {
+      // 【修正2】画像のアスペクト比に基づいてキャンバスサイズを決定
       const aspectRatio = img.height / img.width;
       const canvasWidth = maxWidth;
       const canvasHeight = Math.round(canvasWidth * aspectRatio);
@@ -489,12 +554,25 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       brush.width = penWidth;
       fc.freeDrawingBrush = brush;
 
-      // 背景画像を設定
+      // 【修正2】背景画像をキャンバスにフィットさせて中央配置
       FabricImage.fromURL(bgSrc).then((fabricImg) => {
-        const scaleX = canvasWidth / (fabricImg.width || 1);
-        const scaleY = canvasHeight / (fabricImg.height || 1);
-        fabricImg.scaleX = scaleX;
-        fabricImg.scaleY = scaleY;
+        const imgW = fabricImg.width || 1;
+        const imgH = fabricImg.height || 1;
+
+        // アスペクト比を維持してキャンバスにフィットするスケールを計算
+        const scaleX = canvasWidth / imgW;
+        const scaleY = canvasHeight / imgH;
+        const scale = Math.min(scaleX, scaleY);
+
+        fabricImg.scaleX = scale;
+        fabricImg.scaleY = scale;
+
+        // 中央配置のためのオフセット計算
+        const scaledW = imgW * scale;
+        const scaledH = imgH * scale;
+        fabricImg.left = (canvasWidth - scaledW) / 2;
+        fabricImg.top = (canvasHeight - scaledH) / 2;
+
         fc.backgroundImage = fabricImg;
         fc.renderAll();
 
@@ -524,7 +602,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       isInitializingRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, diagramLoaded, report.baseDiagramUrl]);
+  }, [step, diagramLoaded, report.baseDiagramUrl, report.annotatedDiagramUrl]);
 
   // ============================
   // STEP2: ペンの色・太さ変更時にブラシを更新
@@ -557,7 +635,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   // STEP2: 前回の配置図を使用
   // ============================
   const handleUsePreviousDiagram = () => {
-    if (report.baseDiagramUrl) {
+    if (report.baseDiagramUrl || report.annotatedDiagramUrl) {
       setDiagramLoaded(true);
     } else {
       alert('保存済みの配置図がありません。新しい配置図をアップロードしてください。');
@@ -595,7 +673,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // STEP2: キャンバスを画像として書き出し＆保存
+  // 【修正3】STEP2: キャンバスを画像として書き出し＆保存
   // ============================
   const handleSaveCanvas = async () => {
     if (!report.project) {
@@ -606,28 +684,18 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     const fc = fabricCanvasRef.current;
     if (!fc) {
       // キャンバスなしの場合は通常保存
-      setSaveStatus('saving');
-      try {
-        const newId = await saveDraft(draftId, 'DAILY_SAFETY', report);
-        setDraftId(newId);
-        setSaveStatus('saved');
-        setHasUnsavedChanges(false);
-        setShowCompleteModal(true);
-      } catch (e) {
-        console.error(e);
-        alert('保存に失敗しました');
-        setSaveStatus('idle');
-      }
+      await handleSave();
       return;
     }
 
-    // キャンバスの内容を画像として書き出し
+    // キャンバスの内容（背景画像＋書き込み）を1枚の画像としてdata URL化
     const dataUrl = fc.toDataURL({
       format: 'jpeg',
       quality: 0.8,
       multiplier: 1,
     });
 
+    // annotatedDiagramUrl に保存し、baseDiagramUrl も保持
     const updatedReport = { ...report, annotatedDiagramUrl: dataUrl };
     setReport(updatedReport);
 
@@ -896,15 +964,20 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </button>
       </div>
 
-      {/* (8) 安全衛生指示事項 */}
+      {/* (8) 安全衛生指示事項 — 【修正4】7個固定表示、追加/削除ボタンなし */}
       <div>
         <label className="block text-sm font-bold text-gray-700 mb-2">
-          安全衛生指示事項（任意）
+          安全衛生指示事項 <span className="text-red-500 text-xs">*1つ以上選択必須</span>
         </label>
         {report.safetyInstructions.map((val, idx) => (
           <div key={idx} className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-bold text-gray-500 w-6 text-right shrink-0">
+              {idx + 1}.
+            </span>
             <select
-              className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
+              className={`flex-1 p-2 border rounded bg-white text-black outline-none appearance-none text-sm ${
+                errors.safetyInstructions ? 'border-red-500 bg-red-50' : 'border-gray-300'
+              }`}
               value={val}
               onChange={(e) => updateListEntry('safetyInstructions', idx, e.target.value)}
             >
@@ -915,21 +988,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                 </option>
               ))}
             </select>
-            <button
-              onClick={() => removeListEntry('safetyInstructions', idx)}
-              className="text-gray-400 hover:text-red-500 p-1 transition-colors shrink-0"
-              title="削除"
-            >
-              <i className="fa-solid fa-xmark"></i>
-            </button>
           </div>
         ))}
-        <button
-          onClick={() => addListEntry('safetyInstructions')}
-          className="text-sm text-pink-600 font-bold hover:underline"
-        >
-          <i className="fa-solid fa-plus mr-1"></i>追加
-        </button>
       </div>
     </div>
   );
@@ -937,149 +997,154 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   // ============================
   // STEP2 レンダリング
   // ============================
-  const renderStep2 = () => (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-800 border-l-4 border-pink-500 pl-3">
-        STEP 2: 配置図・略図
-      </h2>
+  const renderStep2 = () => {
+    // 【修正3】配置図の有無を判定（annotatedDiagramUrl または baseDiagramUrl）
+    const hasDiagram = !!(report.annotatedDiagramUrl || report.baseDiagramUrl);
 
-      {/* 配置図アップロードエリア */}
-      <div className="bg-pink-50 border border-pink-200 rounded-lg p-4 space-y-3">
-        <p className="text-sm font-bold text-gray-700">
-          <i className="fa-solid fa-image mr-2 text-pink-500"></i>
-          配置図を選択してください
-        </p>
+    return (
+      <div className="space-y-6">
+        <h2 className="text-xl font-bold text-gray-800 border-l-4 border-pink-500 pl-3">
+          STEP 2: 配置図・略図
+        </h2>
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* 新しい配置図をアップロード */}
-          <label className="flex-1 cursor-pointer">
-            <div className="py-3 px-4 bg-pink-600 text-white rounded-lg font-bold text-center hover:bg-pink-700 transition-colors text-sm">
-              <i className="fa-solid fa-upload mr-2"></i>
-              新しい配置図をアップロード
-            </div>
-            <input
-              type="file"
-              accept="image/jpeg,image/png"
-              className="hidden"
-              onChange={handleDiagramUpload}
-            />
-          </label>
-
-          {/* 前回の配置図を使用 */}
-          <button
-            onClick={handleUsePreviousDiagram}
-            className={`flex-1 py-3 px-4 rounded-lg font-bold text-center text-sm transition-colors ${
-              report.baseDiagramUrl
-                ? 'bg-gray-600 text-white hover:bg-gray-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-            disabled={!report.baseDiagramUrl}
-          >
-            <i className="fa-solid fa-rotate-left mr-2"></i>
-            前回の配置図を使用
-          </button>
-        </div>
-      </div>
-
-      {/* 書き込みキャンバス */}
-      {diagramLoaded && report.baseDiagramUrl ? (
-        <>
-          {/* ツールバー */}
-          <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-            <div className="flex flex-wrap items-center gap-3">
-              {/* ペンの色選択 */}
-              <div className="flex items-center gap-1">
-                <span className="text-xs font-bold text-gray-500 mr-1">色:</span>
-                {[
-                  { color: '#ff0000', label: '赤' },
-                  { color: '#0000ff', label: '青' },
-                  { color: '#000000', label: '黒' },
-                  { color: '#008000', label: '緑' },
-                ].map((item) => (
-                  <button
-                    key={item.color}
-                    onClick={() => setPenColor(item.color)}
-                    className={`w-8 h-8 rounded-full border-2 transition-all ${
-                      penColor === item.color
-                        ? 'border-gray-800 scale-110 shadow-md'
-                        : 'border-gray-300 hover:border-gray-500'
-                    }`}
-                    style={{ backgroundColor: item.color }}
-                    title={item.label}
-                  />
-                ))}
-              </div>
-
-              {/* 区切り線 */}
-              <div className="w-px h-8 bg-gray-200 hidden sm:block"></div>
-
-              {/* ペンの太さ */}
-              <div className="flex items-center gap-1">
-                <span className="text-xs font-bold text-gray-500 mr-1">太さ:</span>
-                {[
-                  { width: 2, label: '細' },
-                  { width: 4, label: '中' },
-                  { width: 8, label: '太' },
-                ].map((item) => (
-                  <button
-                    key={item.width}
-                    onClick={() => setPenWidth(item.width)}
-                    className={`px-3 py-1 rounded text-xs font-bold transition-colors ${
-                      penWidth === item.width
-                        ? 'bg-pink-600 text-white'
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* 区切り線 */}
-              <div className="w-px h-8 bg-gray-200 hidden sm:block"></div>
-
-              {/* 元に戻す・全消去 */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleUndo}
-                  className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold hover:bg-yellow-200 transition-colors"
-                >
-                  <i className="fa-solid fa-rotate-left mr-1"></i>戻す
-                </button>
-                <button
-                  onClick={handleClearAll}
-                  className="px-3 py-1 bg-red-100 text-red-600 rounded text-xs font-bold hover:bg-red-200 transition-colors"
-                >
-                  <i className="fa-solid fa-eraser mr-1"></i>全消去
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* キャンバス */}
-          <div
-            ref={canvasContainerRef}
-            className="w-full flex justify-center"
-            style={{ maxWidth: '800px', margin: '0 auto' }}
-          >
-            <canvas
-              ref={canvasElRef}
-              className="border border-gray-300 rounded-lg shadow-sm touch-none"
-              style={{ width: '100%', height: 'auto' }}
-            />
-          </div>
-        </>
-      ) : (
-        /* 配置図未選択時のプレースホルダー */
-        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
-          <i className="fa-solid fa-map text-5xl text-gray-300 mb-4 block"></i>
-          <p className="text-gray-400 font-bold text-sm">
-            配置図をアップロードまたは選択してください
+        {/* 配置図アップロードエリア */}
+        <div className="bg-pink-50 border border-pink-200 rounded-lg p-4 space-y-3">
+          <p className="text-sm font-bold text-gray-700">
+            <i className="fa-solid fa-image mr-2 text-pink-500"></i>
+            配置図を選択してください
           </p>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* 新しい配置図をアップロード */}
+            <label className="flex-1 cursor-pointer">
+              <div className="py-3 px-4 bg-pink-600 text-white rounded-lg font-bold text-center hover:bg-pink-700 transition-colors text-sm">
+                <i className="fa-solid fa-upload mr-2"></i>
+                新しい配置図をアップロード
+              </div>
+              <input
+                type="file"
+                accept="image/jpeg,image/png"
+                className="hidden"
+                onChange={handleDiagramUpload}
+              />
+            </label>
+
+            {/* 前回の配置図を使用 */}
+            <button
+              onClick={handleUsePreviousDiagram}
+              className={`flex-1 py-3 px-4 rounded-lg font-bold text-center text-sm transition-colors ${
+                hasDiagram
+                  ? 'bg-gray-600 text-white hover:bg-gray-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+              disabled={!hasDiagram}
+            >
+              <i className="fa-solid fa-rotate-left mr-2"></i>
+              前回の配置図を使用
+            </button>
+          </div>
         </div>
-      )}
-    </div>
-  );
+
+        {/* 書き込みキャンバス */}
+        {diagramLoaded && hasDiagram ? (
+          <>
+            {/* ツールバー */}
+            <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* ペンの色選択 */}
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-bold text-gray-500 mr-1">色:</span>
+                  {[
+                    { color: '#ff0000', label: '赤' },
+                    { color: '#0000ff', label: '青' },
+                    { color: '#000000', label: '黒' },
+                    { color: '#008000', label: '緑' },
+                  ].map((item) => (
+                    <button
+                      key={item.color}
+                      onClick={() => setPenColor(item.color)}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                        penColor === item.color
+                          ? 'border-gray-800 scale-110 shadow-md'
+                          : 'border-gray-300 hover:border-gray-500'
+                      }`}
+                      style={{ backgroundColor: item.color }}
+                      title={item.label}
+                    />
+                  ))}
+                </div>
+
+                {/* 区切り線 */}
+                <div className="w-px h-8 bg-gray-200 hidden sm:block"></div>
+
+                {/* ペンの太さ */}
+                <div className="flex items-center gap-1">
+                  <span className="text-xs font-bold text-gray-500 mr-1">太さ:</span>
+                  {[
+                    { width: 2, label: '細' },
+                    { width: 4, label: '中' },
+                    { width: 8, label: '太' },
+                  ].map((item) => (
+                    <button
+                      key={item.width}
+                      onClick={() => setPenWidth(item.width)}
+                      className={`px-3 py-1 rounded text-xs font-bold transition-colors ${
+                        penWidth === item.width
+                          ? 'bg-pink-600 text-white'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 区切り線 */}
+                <div className="w-px h-8 bg-gray-200 hidden sm:block"></div>
+
+                {/* 元に戻す・全消去 */}
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleUndo}
+                    className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded text-xs font-bold hover:bg-yellow-200 transition-colors"
+                  >
+                    <i className="fa-solid fa-rotate-left mr-1"></i>戻す
+                  </button>
+                  <button
+                    onClick={handleClearAll}
+                    className="px-3 py-1 bg-red-100 text-red-600 rounded text-xs font-bold hover:bg-red-200 transition-colors"
+                  >
+                    <i className="fa-solid fa-eraser mr-1"></i>全消去
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* キャンバス */}
+            <div
+              ref={canvasContainerRef}
+              className="w-full flex justify-center"
+              style={{ maxWidth: '800px', margin: '0 auto' }}
+            >
+              <canvas
+                ref={canvasElRef}
+                className="border border-gray-300 rounded-lg shadow-sm touch-none"
+                style={{ width: '100%', height: 'auto' }}
+              />
+            </div>
+          </>
+        ) : (
+          /* 配置図未選択時のプレースホルダー */
+          <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
+            <i className="fa-solid fa-map text-5xl text-gray-300 mb-4 block"></i>
+            <p className="text-gray-400 font-bold text-sm">
+              配置図をアップロードまたは選択してください
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   // ============================
   // STEP3〜5 プレースホルダー
@@ -1096,12 +1161,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       </div>
     </div>
   );
-
-  // ============================
-  // 丸数字ヘルパー
-  // ============================
-  // (番号を ①②③... 形式で表示)
-  // ============================
 
   // ============================
   // メインレンダリング
