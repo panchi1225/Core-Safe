@@ -119,21 +119,19 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
     if (canvasRef.current && hasSignature) {
       const canvas = canvasRef.current;
       
-      const sourceX = 0;
-      const sourceY = canvas.height * 0.25; 
-      const sourceWidth = canvas.width;
-      const sourceHeight = canvas.height * 0.5; 
+      const outputWidth = 2000;
+      const outputHeight = 720;
 
       const outputCanvas = document.createElement('canvas');
-      outputCanvas.width = sourceWidth;
-      outputCanvas.height = sourceHeight;
+      outputCanvas.width = outputWidth;
+      outputCanvas.height = outputHeight;
 
       const ctx = outputCanvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(
             canvas, 
-            sourceX, sourceY, sourceWidth, sourceHeight, 
-            0, 0, outputCanvas.width, outputCanvas.height
+            0, 0, canvas.width, canvas.height, 
+            0, 0, outputWidth, outputHeight
         );
         onSave(outputCanvas.toDataURL('image/png'));
       }
@@ -252,24 +250,14 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
                ref={containerRef} 
                className="flex-1 min-h-0 w-full bg-white border-2 border-gray-300 shadow-inner rounded-xl overflow-hidden touch-none relative select-none"
              >
-                <div className="absolute inset-0 flex flex-col pointer-events-none select-none">
-                    <div className="h-[25%] w-full bg-gray-100 opacity-60 border-b-2 border-dashed border-gray-400 flex items-end justify-center pb-1">
-                       <span className="text-[10px] sm:text-xs text-gray-500 font-bold tracking-widest">枠外（記入不可。表示されません！）</span>
-                    </div>
-
-                    <div className="h-[50%] w-full flex items-center justify-center bg-transparent">
-                        {!hasSignature && (
-                            <div className="text-center text-gray-200">
-                                <span className="text-4xl sm:text-6xl font-bold mb-2 block">署名エリア</span>
-                                <span className="text-xs sm:text-lg font-bold">点線の中に大きく記入してください</span>
-                                <div className="sm:hidden text-red-300 text-[10px] mt-1 font-bold">※必ずフルネームで記入してください</div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="h-[25%] w-full bg-gray-100 opacity-60 border-t-2 border-dashed border-gray-400 flex items-start justify-center pt-1">
-                       <span className="text-[10px] sm:text-xs text-gray-500 font-bold tracking-widest">枠外（記入不可。表示されません！）</span>
-                    </div>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+                    {!hasSignature && (
+                        <div className="text-center text-gray-200">
+                            <span className="text-4xl sm:text-6xl font-bold mb-2 block">署名エリア</span>
+                            <span className="text-xs sm:text-lg font-bold">大きく記入してください</span>
+                            <div className="sm:hidden text-red-300 text-[10px] mt-1 font-bold">※必ずフルネームで記入してください</div>
+                        </div>
+                    )}
                 </div>
                 
                 <canvas
