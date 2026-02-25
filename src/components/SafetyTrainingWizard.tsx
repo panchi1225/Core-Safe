@@ -534,12 +534,11 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
       <div className="hidden print:block">
          <PrintLayout data={report} />
          {selectedPlan && (
-            <>
-               <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }}></div>
-               <div style={{ width: '297mm', height: '210mm', transform: 'rotate(90deg) translate(0, -210mm)', transformOrigin: 'top left', position: 'absolute', overflow: 'hidden' }}>
+            <div style={{ pageBreakBefore: 'always', breakBefore: 'page', width: '210mm', height: '297mm', overflow: 'hidden', position: 'relative' }}>
+               <div style={{ transform: 'scale(0.707)', transformOrigin: 'top left', width: '297mm' }}>
                   <SafetyPlanPrintLayout data={selectedPlan} />
                </div>
-            </>
+            </div>
          )}
       </div>
     </>
