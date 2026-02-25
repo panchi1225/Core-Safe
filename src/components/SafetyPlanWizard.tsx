@@ -335,29 +335,18 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
 
     // 通常の新規作成フロー
     if (ganttMode === 'idle') {
-      setGanttMode('selectStart');
-      setGanttRowId(rowId);
-      setGanttStartDay(null);
-      setGanttMessage(`「${row?.name || '工程'}」の開始日をタップしてください`);
-    } else if (ganttMode === 'selectStart') {
-      if (ganttRowId !== rowId) {
-        const newRow = report.processRows.find(r => r.id === rowId);
-        setGanttRowId(rowId);
-        setGanttStartDay(null);
-        setGanttMessage(`「${newRow?.name || '工程'}」の開始日をタップしてください`);
-        return;
-      }
-      setGanttStartDay(day);
+      // 1タップ目 = 開始日確定 → 即座に終了日選択モードへ
       setGanttMode('selectEnd');
+      setGanttRowId(rowId);
+      setGanttStartDay(day);
       setGanttMessage(`終了日をタップしてください（開始日: ${day}日）`);
     } else if (ganttMode === 'selectEnd') {
       if (ganttRowId !== rowId) {
-        const newRow = report.processRows.find(r => r.id === rowId);
-        setGanttMode('selectStart');
+        // 別の行をタップ → その行で開始日として扱う
         setGanttRowId(rowId);
-        setGanttStartDay(null);
+        setGanttStartDay(day);
         setEditingBarInfo(null);
-        setGanttMessage(`「${newRow?.name || '工程'}」の開始日をタップしてください`);
+        setGanttMessage(`終了日をタップしてください（開始日: ${day}日）`);
         return;
       }
       if (ganttStartDay !== null) {
