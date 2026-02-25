@@ -535,8 +535,10 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, on
          <PrintLayout data={report} />
          {selectedPlan && (
             <>
-               <div className="print-page-landscape" style={{ pageBreakBefore: 'always', breakBefore: 'page', width: '297mm', height: '210mm' }}>
-                  <SafetyPlanPrintLayout data={selectedPlan} />
+               <div className="print-page" style={{ overflow: 'hidden' }}>
+                  <div style={{ width: '297mm', height: '210mm', transform: 'scale(0.707)', transformOrigin: 'top left' }}>
+                     <SafetyPlanPrintLayout data={selectedPlan} />
+                  </div>
                </div>
             </>
          )}
