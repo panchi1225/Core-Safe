@@ -551,7 +551,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
       </div>
       <div className="flex-1 flex flex-col border-2 border-black overflow-hidden relative">
          <table className="w-full h-full border-collapse table-fixed text-[10px]">
-           <colgroup><col className="w-[35mm]" />{daysInMonth.map(d => <col key={d.date} />)}<col className="w-[10mm]" /></colgroup>
+           <colgroup><col className="w-[35mm]" />{daysInMonth.map(d => <col key={d.date} />)}</colgroup>
            <thead>
              {/* ★修正: 安全衛生目標の表示部分 */}
              <tr className="h-[8mm]">
@@ -582,7 +582,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                  </div>
                </th>
              </tr>
-             <tr className="h-[5mm]"><th className={`${borderThin} bg-gray-50 font-normal`} rowSpan={2}>月日</th><th className={`${borderThin} font-normal text-center`} colSpan={daysInMonth.length + 1}>{report.month}月</th></tr>
+             <tr className="h-[5mm]"><th className={`${borderThin} bg-gray-50 font-normal`} rowSpan={2}>月日</th><th className={`${borderThin} font-normal text-center`} colSpan={daysInMonth.length}>{report.month}月</th></tr>
              <tr className="h-[5mm]">{daysInMonth.map(d => (<th key={d.date} className={`${borderThin} font-normal text-center ${d.colorClass} ${d.bgClass}`}>{d.date}</th>))}</tr>
              <tr className="h-[5mm]"><th className={`${borderThin} bg-gray-50 font-normal`}>工 程</th>{daysInMonth.map(d => (<th key={d.date} className={`${borderThin} font-normal text-center ${d.colorClass} ${d.bgClass}`}>{d.dayOfWeek}</th>))}</tr>
            </thead>
