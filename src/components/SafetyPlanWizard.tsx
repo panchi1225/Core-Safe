@@ -452,7 +452,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     return day >= originalBar.startDay && day <= originalBar.endDay;
   };
 
-  const borderOuter = "border-2 border-black"; const borderThin = "border border-black"; const headerBg = "bg-cyan-100"; const inputBase = "w-full h-full bg-transparent outline-none text-center font-serif"; const selectBase = "w-full h-full bg-transparent outline-none text-center appearance-none font-serif text-center-last";
+  const borderOuter = "border-2 border-black"; const borderInner = "border border-gray-400"; const headerBg = "bg-cyan-100"; const inputBase = "w-full h-full bg-transparent outline-none text-center font-serif"; const selectBase = "w-full h-full bg-transparent outline-none text-center appearance-none font-serif text-center-last";
 
   const renderReportSheet = (isPreview: boolean = false) => (
     <div className="p-[5mm] pt-[10mm] w-full h-full flex flex-col font-serif justify-start">
@@ -725,7 +725,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
           </div>
         </header>
         
-        <div className={`${ganttMode !== 'idle' ? (editingBarInfo ? 'bg-orange-500' : 'bg-blue-600') : 'bg-gray-500'} text-white px-4 py-2 flex items-center justify-between shadow-md`}>
+        <div className={`${ganttMode !== 'idle' ? (editingBarInfo ? 'bg-orange-500' : 'bg-blue-600') : 'bg-gray-500'} text-white px-4 py-2 flex items-center justify-between shadow-md sticky top-[56px] z-20`}>
           <div className="flex items-center gap-2">
             <i className={`fa-solid ${ganttMode !== 'idle' ? 'fa-pencil' : 'fa-circle-info'}`}></i>
             <span className="font-bold text-sm">
