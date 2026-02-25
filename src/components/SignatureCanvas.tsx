@@ -24,31 +24,32 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
   // Orientation state
   const [isPortrait, setIsPortrait] = useState(false);
 
-  // ★修正: 縦横判定をより確実な matchMedia に変更
+  // ★修正: 署名モーダルが開いている間は常に縦判定を維持し回転を無視する
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(orientation: portrait)");
-    
-    const updateOrientation = () => {
-      setIsPortrait(mediaQuery.matches);
-    };
-
-    // 初期チェック
-    updateOrientation();
-
-    // 向きの変更を監視
-    mediaQuery.addEventListener("change", updateOrientation);
-    
-    // 念のためresizeイベントでもチェック（キーボード開閉対策など）
-    const handleResize = () => {
+    // 初期判定のみ行い、モーダル表示中は変更しない
+    if (!isModalOpen) {
+      const checkOrientation = () => {
         setIsPortrait(window.innerHeight > window.innerWidth);
-    };
-    window.addEventListener('resize', handleResize);
+      };
+      checkOrientation();
+      window.addEventListener('resize', checkOrientation);
+      return () => window.removeEventListener('resize', checkOrientation);
+    }
 
+    // モーダル表示中: viewportを固定してズーム・回転の影響を遮断
+    const originalViewport = document.querySelector('meta[name="viewport"]')?.getAttribute('content') || '';
+    const metaViewport = document.querySelector('meta[name="viewport"]');
+    if (metaViewport) {
+      metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+    }
+
+    // 回転イベントを完全に無視（isPortraitを変更しない）
     return () => {
-        mediaQuery.removeEventListener("change", updateOrientation);
-        window.removeEventListener('resize', handleResize);
+      if (metaViewport) {
+        metaViewport.setAttribute('content', originalViewport);
+      }
     };
-  }, []);
+  }, [isModalOpen]);
 
   // Handle resizing of the canvas when modal opens or window resizes
   useEffect(() => {
@@ -219,7 +220,20 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
     <div 
       className="fixed inset-0 z-[100] bg-gray-900 bg-opacity-95 select-none touch-none" 
       onContextMenu={(e) => e.preventDefault()}
-      style={{ WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
+      onDoubleClick={(e) => e.preventDefault()}
+      onTouchEnd={(e) => {
+        if ((e.target as HTMLElement).tagName === 'CANVAS') {
+          e.preventDefault();
+        }
+      }}
+      style={{ 
+        WebkitUserSelect: 'none', 
+        WebkitTouchCallout: 'none',
+        touchAction: 'none',
+        userSelect: 'none',
+        msUserSelect: 'none',
+        MozUserSelect: 'none',
+      } as React.CSSProperties}
     >
       <div className={`${modalContainerClass} bg-white flex flex-col overflow-hidden shadow-2xl relative select-none`}>
         
@@ -323,14 +337,17 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
                             touchAction: 'none',
                             userSelect: 'none',
                             WebkitUserSelect: 'none',
-                            WebkitTouchCallout: 'none'
-                        }}
+                            WebkitTouchCallout: 'none',
+                            msTouchAction: 'none',
+                        } as React.CSSProperties}
                         className="absolute inset-0 z-10 cursor-crosshair block touch-none select-none"
                         onPointerDown={handlePointerDown}
                         onPointerMove={handlePointerMove}
                         onPointerUp={handlePointerUp}
                         onPointerLeave={handlePointerUp}
                         onContextMenu={(e) => e.preventDefault()}
+                        onDoubleClick={(e) => e.preventDefault()}
+                        onTouchStart={(e) => e.preventDefault()}
                     />
                 )}
              </div>
