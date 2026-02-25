@@ -36,7 +36,7 @@ interface Props {
 const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
   // Styles
   const borderOuter = "border-2 border-black";
-  const borderThin = "border border-gray-400";
+  const borderThin = "border border-gray-500";
   const headerBg = "bg-cyan-100";
 
   // Calculations
@@ -206,8 +206,7 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
                    <td key={i} colSpan={span} className={`${borderThin} align-top p-0 text-[8px]`}>
                      <div className="flex flex-col h-full">
                        {[0, 1].map(j => (
-                         <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0 flex items-center leading-tight pl-[0.5em]">
-                           {(data.predictions[i] || [])[j]}
+                         <div key={j} className={`flex-1 border-b border-gray-300 last:border-b-0 flex items-center leading-tight ${span >= 5 ? 'pl-[1em]' : 'pl-[0.5em]'}`}>                           {(data.predictions[i] || [])[j]}
                          </div>
                        ))}
                      </div>
@@ -220,8 +219,7 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
                    <td key={i} colSpan={span} className={`${borderThin} align-top p-0 text-[8px]`}>
                      <div className="flex flex-col h-full">
                        {[0, 1, 2, 3, 4].map(j => (
-                         <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0 flex items-center leading-tight pl-[0.5em]">
-                           {(data.countermeasures[i] || [])[j]}
+                         <div key={j} className={`flex-1 border-b border-gray-300 last:border-b-0 flex items-center leading-tight ${span >= 5 ? 'pl-[1em]' : 'pl-[0.5em]'}`}>                           {(data.countermeasures[i] || [])[j]}
                          </div>
                        ))}
                      </div>
@@ -234,8 +232,7 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
                    <td key={i} colSpan={span} className={`${borderThin} align-top p-0 text-[8px]`}>
                      <div className="flex flex-col h-full">
                        {[0, 1, 2].map(j => (
-                         <div key={j} className="flex-1 border-b border-gray-300 last:border-b-0 flex items-center leading-tight pl-[0.5em]">
-                           {(data.inspectionItems[i] || [])[j] ? `${j + 1}. ${(data.inspectionItems[i] || [])[j]}` : ''}
+                         <div key={j} className={`flex-1 border-b border-gray-300 last:border-b-0 flex items-center leading-tight ${span >= 5 ? 'pl-[1em]' : 'pl-[0.5em]'}`}>                           {(data.inspectionItems[i] || [])[j] ? `${j + 1}. ${(data.inspectionItems[i] || [])[j]}` : ''}
                          </div>
                        ))}
                      </div>

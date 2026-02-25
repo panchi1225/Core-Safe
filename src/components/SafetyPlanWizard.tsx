@@ -452,7 +452,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
     return day >= originalBar.startDay && day <= originalBar.endDay;
   };
 
-  const borderOuter = "border-2 border-black"; const borderThin = "border border-gray-400"; const headerBg = "bg-cyan-100"; const inputBase = "w-full h-full bg-transparent outline-none text-center font-serif"; const selectBase = "w-full h-full bg-transparent outline-none text-center appearance-none font-serif text-center-last";
+  const borderOuter = "border-2 border-black"; const borderThin = "border border-gray-500";
 
   const renderReportSheet = (isPreview: boolean = false) => (
     <div className="p-[5mm] pt-[15mm] w-full h-full flex flex-col font-serif justify-start">
