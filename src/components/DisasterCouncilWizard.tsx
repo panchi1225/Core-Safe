@@ -558,7 +558,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
          {selectedPlan && (
             <>
                <div style={{ pageBreakBefore: 'always', breakBefore: 'page' }}></div>
-               <div style={{ width: '297mm', height: '210mm', transform: 'rotate(90deg) translate(0, -210mm)', transformOrigin: 'top left', position: 'absolute', overflow: 'hidden' }}>
+               <div style={{ width: '297mm', height: '210mm', overflow: 'hidden' }}>
                   <SafetyPlanPrintLayout data={selectedPlan} />
                </div>
             </>
