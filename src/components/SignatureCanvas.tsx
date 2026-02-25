@@ -24,29 +24,40 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
   // Orientation state
   const [isPortrait, setIsPortrait] = useState(false);
 
-  // ★修正: 署名モーダルが開いている間は常に縦判定を維持し回転を無視する
+  // ★修正: 縦横判定 + モーダル中はviewport固定でズーム防止
   useEffect(() => {
-    // 初期判定のみ行い、モーダル表示中は変更しない
-    if (!isModalOpen) {
-      const checkOrientation = () => {
-        setIsPortrait(window.innerHeight > window.innerWidth);
-      };
-      checkOrientation();
-      window.addEventListener('resize', checkOrientation);
-      return () => window.removeEventListener('resize', checkOrientation);
-    }
+    const checkOrientation = () => {
+      setIsPortrait(window.innerHeight > window.innerWidth);
+    };
+    checkOrientation();
 
-    // モーダル表示中: viewportを固定してズーム・回転の影響を遮断
-    const originalViewport = document.querySelector('meta[name="viewport"]')?.getAttribute('content') || '';
+    const mediaQuery = window.matchMedia("(orientation: portrait)");
+    const handleChange = () => {
+      // 回転後のサイズ確定を待ってから判定
+      setTimeout(checkOrientation, 100);
+    };
+    mediaQuery.addEventListener("change", handleChange);
+    window.addEventListener('resize', checkOrientation);
+
+    return () => {
+      mediaQuery.removeEventListener("change", handleChange);
+      window.removeEventListener('resize', checkOrientation);
+    };
+  }, []);
+
+  // モーダル表示中はviewportを固定してピンチズーム・拡大を防止
+  useEffect(() => {
+    if (!isModalOpen) return;
+
     const metaViewport = document.querySelector('meta[name="viewport"]');
+    const originalContent = metaViewport?.getAttribute('content') || '';
     if (metaViewport) {
       metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
     }
 
-    // 回転イベントを完全に無視（isPortraitを変更しない）
     return () => {
       if (metaViewport) {
-        metaViewport.setAttribute('content', originalViewport);
+        metaViewport.setAttribute('content', originalContent);
       }
     };
   }, [isModalOpen]);
