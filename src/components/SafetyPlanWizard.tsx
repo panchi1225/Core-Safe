@@ -1,5 +1,3 @@
-確認して
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   MasterData, SafetyPlanReportData, INITIAL_SAFETY_PLAN_REPORT, INITIAL_MASTER_DATA 
