@@ -461,8 +461,8 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
            <div className="flex items-end mb-4 pl-4">
              <span className="text-xl">令和</span>
              {isPreview ? <span className="text-xl mx-1 font-bold">{report.year - 2018}</span> : <select className="w-12 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.year - 2018} onChange={(e)=>updateReport({year: 2018 + parseInt(e.target.value||'0')})}>{Array.from({length: 30}, (_, i) => i + 1).map(y => (<option key={y} value={y}>{y}</option>))}</select>}
-             <span className="text-xl mr-4">年</span>
-             {isPreview ? <span className="text-xl mx-1 font-bold">{report.month}</span> : <select className="w-10 text-center text-xl border-b border-black outline-none mx-1 bg-transparent appearance-none" value={report.month} onChange={(e)=>updateReport({month: parseInt(e.target.value||'0')})}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}</option>))}</select>}
+             <span className="text-xl mr-1">年</span>
+             {isPreview ? <span className="text-xl font-bold">{report.month}</span> : <select className="w-10 text-center text-xl border-b border-black outline-none bg-transparent appearance-none" value={report.month} onChange={(e)=>updateReport({month: parseInt(e.target.value||'0')})}>{Array.from({length: 12}, (_, i) => i + 1).map(m => (<option key={m} value={m}>{m}</option>))}</select>}
              <span className="text-xl mr-2">月度</span>
              <h1 className="text-3xl font-bold border-b-2 border-black ml-4 px-2 tracking-widest">工事施工安全管理計画表</h1>
            </div>
@@ -493,18 +493,17 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
         </div>
         <div className="w-[115mm] h-full flex flex-col justify-end">
           <div className="flex justify-end items-center mb-0.5 text-[10px]">
-            <span>（作成日：</span>
+            <span>作成日：</span>
             {isPreview ? <span className="ml-1">{report.createdDate.replace(/-/g, '/')}</span> : <input type="date" className="bg-transparent text-[10px] w-auto text-left font-serif ml-1" value={report.createdDate} onChange={(e)=>updateReport({createdDate: e.target.value})} />}
             <span className="ml-2">作成者：</span>
             {isPreview ? (
-              <span className="w-20 text-[10px] inline-block text-center">{report.author}</span>
+              <span className="text-[10px] inline-block text-left">{report.author}</span>
             ) : (
-              <select className="border-b border-black outline-none bg-transparent w-20 text-[10px]" value={report.author} onChange={(e)=>updateReport({author: e.target.value})}>
+              <select className="border-b border-black outline-none bg-transparent w-20 text-[10px] text-left" value={report.author} onChange={(e)=>updateReport({author: e.target.value})}>
                 <option value="">(選択)</option>
                 {masterData.supervisors.map(s=><option key={s} value={s}>{s}</option>)}
               </select>
             )}
-            <span>）</span>
           </div>
           <table className={`w-full ${borderOuter} text-[10px] border-collapse`}>
             <colgroup>
@@ -546,7 +545,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                 <td className={`${borderThin} text-center`}>{isPreview ? (report.patrolDate ? report.patrolDate.replace(/-/g, '/') : '') : <input type="date" className={inputBase} value={report.patrolDate} onChange={(e)=>updateReport({patrolDate: e.target.value})} />}</td>
                 <td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td>
               </tr>
-              <tr><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td><td className={`${borderThin} bg-gray-100`}></td></tr>
             </tbody>
           </table>
         </div>

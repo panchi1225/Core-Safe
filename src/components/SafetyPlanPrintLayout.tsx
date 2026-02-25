@@ -101,7 +101,7 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
       <div className="flex justify-between items-start mb-2 h-[38mm]">
         <div className="flex-1 flex flex-col justify-center pb-2 h-full">
            <div className="flex items-end mb-4 pl-4">
-              <span className="text-xl">令和 {data.year - 2018} 年 {data.month} 月度</span>
+              <span className="text-xl">令和{data.year - 2018}年{data.month}月度</span>
               <h1 className="text-3xl font-bold border-b-2 border-black ml-4 px-2 tracking-widest">工事施工安全管理計画表</h1>
            </div>
            <div className="flex flex-col gap-1 pl-4 text-sm">
@@ -110,7 +110,7 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
            </div>
         </div>
         <div className="w-[100mm] h-full flex flex-col justify-end">
-           <div className="text-[10px] text-right mb-0.5">（作成日：{data.createdDate}）</div>
+           <div className="text-[10px] text-right mb-0.5">作成日：{data.createdDate}　作成者：{data.author}</div>
            <table className={`w-full ${borderOuter} text-[10px] border-collapse`}>
              <colgroup><col className="w-[15%]" /><col className="w-[25%]" /><col className="w-[35%]" /><col className="w-[25%]" /></colgroup>
              <thead>
@@ -139,12 +139,6 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
                  <td className={`${borderThin} text-center`}>{data.patrolDate}</td>
                  <td className={`${borderThin} bg-gray-100`}></td>
                  <td className={`${borderThin} bg-gray-100`}></td>
-               </tr>
-               <tr>
-                 <td className={`${borderThin} bg-gray-100`}></td>
-                 <td className={`${borderThin} bg-gray-100`}></td>
-                 <td className={`${borderThin} text-center`}>作成者</td>
-                 <td className={`${borderThin} text-center`}>{data.author}</td>
                </tr>
              </tbody>
            </table>
