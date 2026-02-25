@@ -290,20 +290,22 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
   const confirmPlanSelection = (plan: SavedDraft) => { setSelectedPlan(plan.data as SafetyPlanReportData); setPlanSelectionModal(false); setShowPreview(true); };
   const handlePrint = () => {
     const prevTitle = document.title;
+    const planSection = document.getElementById('plan-print-section');
+    if (planSection) planSection.style.display = 'none';
     document.title = `災害防止協議会_${report.project}_第${report.count}回`;
-    const inner = document.getElementById('plan-print-inner');
-    if (inner) {
-      inner.style.transform = 'rotate(-90deg) translate(-210mm, 0)';
-      inner.style.transformOrigin = 'top left';
-      inner.style.width = '210mm';
-      inner.style.height = '297mm';
-    }
     window.print();
-    if (inner) {
-      inner.style.transform = '';
-      inner.style.transformOrigin = '';
-      inner.style.width = '297mm';
-      inner.style.height = '210mm';
+    if (planSection && selectedPlan) {
+      planSection.style.display = '';
+      const mainSection = document.getElementById('main-print-section');
+      if (mainSection) mainSection.style.display = 'none';
+      const style = document.createElement('style');
+      style.id = 'landscape-override';
+      style.textContent = '@media print { @page { size: landscape; margin: 0; } }';
+      document.head.appendChild(style);
+      document.title = `安全管理計画表_${report.project}_第${report.count}回`;
+      window.print();
+      document.head.removeChild(style);
+      if (mainSection) mainSection.style.display = '';
     }
     document.title = prevTitle;
   };
@@ -526,6 +528,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
           <div className="flex gap-4">
             <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
             <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
+            <span className="text-yellow-300 text-xs ml-2">※本文と計画表は別ファイルで出力されます</span>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
@@ -572,10 +575,12 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, o
       />
       
       <div className="hidden print:block">
-         <DisasterCouncilPrintLayout data={report} />
+         <div id="main-print-section">
+            <DisasterCouncilPrintLayout data={report} />
+         </div>
          {selectedPlan && (
-            <div id="plan-print-outer" className="print-page" style={{ padding: 0, overflow: 'hidden' }}>
-               <div id="plan-print-inner" style={{ width: '297mm', height: '210mm' }}>
+            <div id="plan-print-section">
+               <div className="print-page-landscape">
                   <SafetyPlanPrintLayout data={selectedPlan} />
                </div>
             </div>
