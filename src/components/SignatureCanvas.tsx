@@ -7,9 +7,9 @@ interface Props {
   keepOpenOnSave?: boolean;
 }
 
-// 全端末で統一する固定キャンバスサイズ（iPadサイズ基準）
-const FIXED_CANVAS_WIDTH = 2000;
-const FIXED_CANVAS_HEIGHT = 1440;
+// 全端末で統一する固定キャンバスサイズ
+const FIXED_CANVAS_WIDTH = 1500;
+const FIXED_CANVAS_HEIGHT = 720;
 
 const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, keepOpenOnSave = false }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -21,6 +21,15 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
   
   // Pen Only Mode state
   const [usePenMode, setUsePenMode] = useState(false);
+
+  // 縦横判定
+  const [isPortrait, setIsPortrait] = useState(window.innerHeight > window.innerWidth);
+
+  useEffect(() => {
+    const checkOrientation = () => setIsPortrait(window.innerHeight > window.innerWidth);
+    window.addEventListener('resize', checkOrientation);
+    return () => window.removeEventListener('resize', checkOrientation);
+  }, []);
 
   // モーダル表示中はviewportを固定してピンチズーム・拡大を防止
   useEffect(() => {
@@ -119,7 +128,7 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
     if (canvasRef.current && hasSignature) {
       const canvas = canvasRef.current;
       
-      const outputWidth = 2000;
+      const outputWidth = 1500;
       const outputHeight = 720;
 
       const outputCanvas = document.createElement('canvas');
@@ -245,10 +254,10 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
             </div>
         </div>
 
-        <div className="flex-1 min-h-0 bg-gray-50 p-2 sm:p-4 pb-8 sm:pb-8 flex flex-col select-none">
+        <div className={`flex-1 min-h-0 bg-gray-50 p-2 sm:p-4 pb-8 sm:pb-8 flex flex-col select-none ${isPortrait ? 'items-center justify-center' : ''}`}>
              <div 
                ref={containerRef} 
-               className="flex-1 min-h-0 w-full bg-white border-2 border-gray-300 shadow-inner rounded-xl overflow-hidden touch-none relative select-none"
+               className={`min-h-0 w-full bg-white border-2 border-gray-300 shadow-inner rounded-xl overflow-hidden touch-none relative select-none ${isPortrait ? 'h-[50%]' : 'flex-1'}`}
              >
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
                     {!hasSignature && (
