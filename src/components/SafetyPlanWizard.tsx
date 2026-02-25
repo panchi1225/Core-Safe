@@ -455,7 +455,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const borderOuter = "border-2 border-black"; const borderThin = "border border-gray-400"; const headerBg = "bg-cyan-100"; const inputBase = "w-full h-full bg-transparent outline-none text-center font-serif"; const selectBase = "w-full h-full bg-transparent outline-none text-center appearance-none font-serif text-center-last";
 
   const renderReportSheet = (isPreview: boolean = false) => (
-    <div className="p-[5mm] pt-[10mm] w-full h-full flex flex-col font-serif justify-start">
+    <div className="p-[5mm] pt-[15mm] w-full h-full flex flex-col font-serif justify-start">
       <div className="flex justify-between items-start mb-1 h-[32mm]">
         <div className="flex-1 flex flex-col justify-center pb-2 h-full">
            <div className="flex items-end mb-4 pl-4">
@@ -559,7 +559,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                <th className={`${borderThin} ${headerBg}`} colSpan={daysInMonth.length}>
                  <div className="flex justify-around text-xs font-bold items-center h-full">
                    {[0, 1, 2].map(idx => (
-                     <div key={idx} className="flex items-center min-w-[30%]">
+                     <div key={idx} className="flex items-center justify-center min-w-[30%]">
                        <span className="mr-1">{idx + 1}.</span>
                        {isPreview ? (
                          <span>{report.safetyGoals[idx]}</span>
@@ -581,7 +581,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                    ))}
                  </div>
                </th>
-               <th className={`${borderThin} ${headerBg} font-normal`} rowSpan={4}>備　考</th>
              </tr>
              <tr className="h-[5mm]"><th className={`${borderThin} bg-gray-50 font-normal`} rowSpan={2}>月日</th><th className={`${borderThin} font-normal text-center`} colSpan={daysInMonth.length}>{report.month}月</th></tr>
              <tr className="h-[5mm]">{daysInMonth.map(d => (<th key={d.date} className={`${borderThin} font-normal text-center ${d.colorClass} ${d.bgClass}`}>{d.date}</th>))}</tr>
@@ -608,7 +607,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                     )}
                   </td>
                   {daysInMonth.map(d => { const active = isCellActive(row.id, d.date); const isDraft = isCellInDraft(row.id, d.date); const isStart = isCellInRange(row.id, d.date); const isEditing = isCellEditing(row.id, d.date); return (<td key={d.date} className={`${borderThin} p-0 relative ${isPreview ? '' : 'cursor-pointer hover:bg-yellow-100'} ${d.bgClass} ${isStart ? 'bg-green-200' : ''}`} onClick={() => !isPreview && handleCellClick(row.id, d.date)}>{active && !isEditing && <div className="absolute inset-y-[30%] left-0 right-0 bg-blue-600"></div>}{isEditing && <div className="absolute inset-y-[30%] left-0 right-0 bg-green-500 opacity-70"></div>}{isDraft && <div className="absolute inset-y-[30%] left-0 right-0 bg-green-400 opacity-70"></div>}</td>); })}
-                  <td className={`${borderThin}`}></td>
                 </tr>
               ))}
            </tbody>
@@ -633,7 +631,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                     </div>
                   </td>
                 ))}
-                <td className={`${borderThin}`}></td>
               </tr>
               <tr className="h-[25mm]">
                 <td className={`${borderThin} ${headerBg} text-center font-normal leading-tight`}>予想される災害<br/>への防止対策</td>
@@ -655,7 +652,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                     </div>
                   </td>
                 ))}
-                <td className={`${borderThin}`}></td>
               </tr>
               <tr className="h-[15mm]">
                 <td className={`${borderThin} ${headerBg} text-center font-normal leading-tight`}>重点点検項目</td>
@@ -680,7 +676,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                     </div>
                   </td>
                 ))}
-                <td className={`${borderThin}`}></td>
               </tr>
               <tr className="h-[6mm]">
                 <td className={`${borderThin} ${headerBg} text-center font-normal`}>安全当番</td>
@@ -696,7 +691,6 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
                     )}
                   </td>
                 ))}
-                <td className={`${borderThin}`}></td>
               </tr>
            </tfoot>
          </table>

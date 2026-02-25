@@ -96,7 +96,7 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
   const safetyGoals = data.safetyGoals || ["", "", ""];
 
   return (
-    <div className="bg-white w-full h-full flex flex-col font-serif text-black p-[10mm]" style={{ width: '297mm', height: '210mm' }}>
+    <div className="bg-white w-full h-full flex flex-col font-serif text-black px-[10mm] pt-[15mm] pb-[5mm]" style={{ width: '297mm', height: '210mm' }}>
       {/* HEADER */}
       <div className="flex justify-between items-start mb-2 h-[38mm]">
         <div className="flex-1 flex flex-col justify-center pb-2 h-full">
@@ -151,7 +151,6 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
            <colgroup>
               <col className="w-[35mm]" />
               {daysInMonth.map(d => <col key={d.date} />)}
-              <col className="w-[10mm]" />
            </colgroup>
            <thead>
              <tr className="h-[8mm]">
@@ -160,14 +159,13 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
                <th className={`${borderThin} ${headerBg}`} colSpan={daysInMonth.length}>
                   <div className="flex justify-around text-xs font-bold items-center h-full">
                      {safetyGoals.map((goal, idx) => (
-                        <div key={idx} className="flex items-center">
+                        <div key={idx} className="flex items-center justify-center">
                            <span className="mr-1">{idx + 1}.</span>
                            <span>{goal}</span>
                         </div>
                      ))}
                   </div>
                </th>
-               <th className={`${borderThin} ${headerBg} font-normal`} rowSpan={4}>備　考</th>
              </tr>
              <tr className="h-[5mm]">
                <th className={`${borderThin} bg-gray-50 font-normal`}>月</th>
@@ -195,11 +193,10 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
                     const active = row.bars.some(b => d.date >= b.startDay && d.date <= b.endDay);
                     return <td key={d.date} className={`${borderThin} p-0 relative ${d.bgClass}`}>{active && <div className="absolute inset-y-[30%] left-0 right-0 bg-blue-600"></div>}</td>;
                   })}
-                  <td className={`${borderThin}`}></td>
                 </tr>
               ))}
               {Array.from({length: Math.max(0, 12 - data.processRows.length)}).map((_, i) => (
-                 <tr key={`fill-${i}`} className="h-[6mm]"><td className={`${borderThin}`}></td>{daysInMonth.map(d => <td key={d.date} className={`${borderThin} ${d.bgClass}`}></td>)}<td className={`${borderThin}`}></td></tr>
+                 <tr key={`fill-${i}`} className="h-[6mm]"><td className={`${borderThin}`}></td>{daysInMonth.map(d => <td key={d.date} className={`${borderThin} ${d.bgClass}`}></td>)}</tr>
               ))}
            </tbody>
            <tfoot>
