@@ -54,7 +54,7 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
       let bgClass = "";
       if (isSun || isHol) {
          colorClass = "text-red-600";
-         bgClass = "bg-red-50";
+         bgClass = "bg-blue-50";
       } else if (isSat) {
          colorClass = "text-blue-600";
          bgClass = "bg-blue-50";
