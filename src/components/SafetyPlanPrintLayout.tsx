@@ -54,10 +54,10 @@ const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
       let bgClass = "";
       if (isSun || isHol) {
          colorClass = "text-red-600";
-         bgClass = "bg-blue-50";
+         bgClass = "bg-sunday";
       } else if (isSat) {
          colorClass = "text-blue-600";
-         bgClass = "bg-blue-50";
+         bgClass = "bg-saturday";
       }
       days.push({ date: i, dayOfWeek: WEEKDAYS[getDay(current)], colorClass, bgClass });
     }
