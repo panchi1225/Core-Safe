@@ -202,6 +202,30 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, url, masterD
 // ViewState 型: 'HOME' | すべてのReportTypeString | 'SETTINGS'
 type ViewState = 'HOME' | ReportTypeString | 'SETTINGS';
 
+// ============================
+// 【修正3】安全衛生日誌ドラフトから月を抽出するヘルパー関数
+// workDate → meetingDate → lastModified の優先順で月を取得
+// ============================
+function extractMonthFromDiary(draft: SavedDraft): number {
+  const data = draft.data as DailySafetyReportData;
+  // workDate を優先
+  if (data.workDate) {
+    const d = new Date(data.workDate + 'T00:00:00');
+    if (!isNaN(d.getTime())) return d.getMonth() + 1;
+  }
+  // meetingDate を次に使用
+  if (data.meetingDate) {
+    const d = new Date(data.meetingDate + 'T00:00:00');
+    if (!isNaN(d.getTime())) return d.getMonth() + 1;
+  }
+  // どちらもなければ lastModified から取得
+  if (draft.lastModified) {
+    const d = new Date(draft.lastModified);
+    if (!isNaN(d.getTime())) return d.getMonth() + 1;
+  }
+  return 0; // 取得不可
+}
+
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('HOME');
   
@@ -233,6 +257,11 @@ const App: React.FC = () => {
   // Data to pass to Wizard
   const [wizardInitialData, setWizardInitialData] = useState<any>(undefined);
   const [wizardDraftId, setWizardDraftId] = useState<string | null>(null);
+
+  // 【修正3】安全衛生日誌モーダルの3階層ナビゲーション用state
+  const [diarySelectionStep, setDiarySelectionStep] = useState<'project' | 'month' | 'date'>('project');
+  const [selectedDiaryProject, setSelectedDiaryProject] = useState<string | null>(null);
+  const [selectedDiaryMonth, setSelectedDiaryMonth] = useState<number | null>(null);
 
   // URLパラメータ判定（QRコードからのアクセス時）
   useEffect(() => {
@@ -280,6 +309,10 @@ const App: React.FC = () => {
       
       loadDrafts();
       setSelectedDraftProject(null);
+      // 【修正3】モーダルが開くたびに安全衛生日誌用stateもリセット
+      setDiarySelectionStep('project');
+      setSelectedDiaryProject(null);
+      setSelectedDiaryMonth(null);
     }
   }, [isModalOpen]);
 
@@ -289,19 +322,27 @@ const App: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  // 【修正3】モーダルを閉じる際に安全衛生日誌用stateもリセット
+  const closeSelectionModal = () => {
+    setIsModalOpen(false);
+    setDiarySelectionStep('project');
+    setSelectedDiaryProject(null);
+    setSelectedDiaryMonth(null);
+  };
+
   const handleStartNew = () => {
     if (!selectedReportType) return;
     setWizardInitialData(undefined);
     setWizardDraftId(null);
     setCurrentView(selectedReportType as ViewState);
-    setIsModalOpen(false);
+    closeSelectionModal();
   };
 
   const handleResumeDraft = (draft: SavedDraft) => {
     setWizardInitialData(draft.data);
     setWizardDraftId(draft.id);
     setCurrentView(draft.type as ViewState);
-    setIsModalOpen(false);
+    closeSelectionModal();
   };
 
   const handleDeleteDraft = (id: string) => {
@@ -314,13 +355,32 @@ const App: React.FC = () => {
           const newDrafts = await fetchDrafts();
           setDrafts(newDrafts);
           
-          if (selectedDraftProject && selectedReportType) {
-             const remaining = newDrafts.filter(d => 
-                 d.type === selectedReportType && (d.data.project || '名称未設定') === selectedDraftProject
-             );
-             if (remaining.length === 0) {
-                 setSelectedDraftProject(null);
-             }
+          // 【修正3】安全衛生日誌の場合は3階層用のstateで残データチェック
+          if (selectedReportType === 'DAILY_SAFETY' && selectedDiaryProject) {
+            const remainingForProject = newDrafts.filter(d =>
+              d.type === 'DAILY_SAFETY' && (d.data.project || '名称未設定') === selectedDiaryProject
+            );
+            if (remainingForProject.length === 0) {
+              // このプロジェクトのデータがなくなったら階層1に戻る
+              setDiarySelectionStep('project');
+              setSelectedDiaryProject(null);
+              setSelectedDiaryMonth(null);
+            } else if (selectedDiaryMonth) {
+              // 選択中の月のデータがなくなったら階層2に戻る
+              const remainingForMonth = remainingForProject.filter(d => extractMonthFromDiary(d) === selectedDiaryMonth);
+              if (remainingForMonth.length === 0) {
+                setDiarySelectionStep('month');
+                setSelectedDiaryMonth(null);
+              }
+            }
+          } else if (selectedDraftProject && selectedReportType) {
+            // 他の帳票の場合は既存ロジック
+            const remaining = newDrafts.filter(d => 
+              d.type === selectedReportType && (d.data.project || '名称未設定') === selectedDraftProject
+            );
+            if (remaining.length === 0) {
+              setSelectedDraftProject(null);
+            }
           }
           setConfirmModal(prev => ({ ...prev, isOpen: false }));
         } catch (error) {
@@ -408,6 +468,260 @@ const App: React.FC = () => {
       return acc;
     }, {} as Record<string, SavedDraft[]>);
 
+    // ============================
+    // 【修正3】安全衛生日誌専用の3階層モーダルレンダリング
+    // ============================
+    if (selectedReportType === 'DAILY_SAFETY') {
+      return (
+        <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
+            {/* ヘッダー */}
+            <div className="bg-pink-600 text-white p-4 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-3">
+                {/* 戻るボタン: 階層2以降で表示 */}
+                {diarySelectionStep !== 'project' && (
+                  <button
+                    onClick={() => {
+                      if (diarySelectionStep === 'date') {
+                        setDiarySelectionStep('month');
+                        setSelectedDiaryMonth(null);
+                      } else if (diarySelectionStep === 'month') {
+                        setDiarySelectionStep('project');
+                        setSelectedDiaryProject(null);
+                      }
+                    }}
+                    className="mr-1 text-pink-200 hover:text-white"
+                  >
+                    <i className="fa-solid fa-arrow-left"></i>
+                  </button>
+                )}
+                <h3 className="font-bold text-lg">
+                  {diarySelectionStep === 'project' && '安全衛生日誌'}
+                  {diarySelectionStep === 'month' && '対象月の選択'}
+                  {diarySelectionStep === 'date' && '対象データの選択'}
+                </h3>
+              </div>
+              <button onClick={closeSelectionModal} className="text-pink-200 hover:text-white">
+                <i className="fa-solid fa-xmark text-xl"></i>
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto custom-scrollbar">
+              {isLoading ? (
+                <div className="flex justify-center items-center py-10">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-600"></div>
+                  <span className="ml-3 text-gray-500">データを読み込み中...</span>
+                </div>
+              ) : (
+                <>
+                  {/* ============================
+                      階層1: 現場名選択
+                      ============================ */}
+                  {diarySelectionStep === 'project' && (
+                    <>
+                      <div className="mb-8 space-y-3">
+                        <button
+                          onClick={handleStartNew}
+                          className="w-full py-4 bg-pink-600 text-white rounded-lg font-bold shadow-md hover:bg-pink-700 flex items-center justify-center gap-2 transition-transform transform hover:scale-[1.01]"
+                        >
+                          <i className="fa-solid fa-file-circle-plus text-xl"></i>
+                          新規作成
+                        </button>
+                      </div>
+
+                      <div className="border-t pt-4">
+                        <h4 className="text-gray-500 text-sm font-bold mb-3 uppercase tracking-wide">一時保存データから再開</h4>
+
+                        {Object.keys(draftsByProject).length === 0 ? (
+                          <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
+                            保存されたデータはありません
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {Object.entries(draftsByProject).map(([projectName, projectDrafts]) => (
+                              <button
+                                key={projectName}
+                                onClick={() => {
+                                  setSelectedDiaryProject(projectName);
+                                  setDiarySelectionStep('month');
+                                }}
+                                className="w-full text-left border rounded-lg p-4 hover:bg-pink-50 transition-colors flex justify-between items-center group shadow-sm"
+                              >
+                                <div>
+                                  <div className="font-bold text-gray-800 text-sm mb-1">{projectName}</div>
+                                  <div className="text-xs text-gray-500">
+                                    <i className="fa-regular fa-folder-open mr-1"></i>
+                                    {projectDrafts.length} 件のデータ
+                                  </div>
+                                </div>
+                                <i className="fa-solid fa-chevron-right text-gray-300 group-hover:text-pink-400"></i>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {/* ============================
+                      階層2: 対象月選択
+                      ============================ */}
+                  {diarySelectionStep === 'month' && selectedDiaryProject && (
+                    <>
+                      {/* 選択中の現場名 */}
+                      <div className="bg-pink-50 p-3 rounded border border-pink-200 text-sm text-pink-800 mb-4 font-bold">
+                        <i className="fa-solid fa-building mr-2"></i>
+                        {selectedDiaryProject}
+                      </div>
+
+                      <h4 className="text-gray-500 text-sm font-bold mb-3 uppercase tracking-wide">対象月を選択</h4>
+
+                      {(() => {
+                        // 選択した現場名のドラフトを取得
+                        const projectDrafts = draftsByProject[selectedDiaryProject] || [];
+                        // 月を抽出してユニーク化・降順ソート
+                        const monthSet = new Set<number>();
+                        projectDrafts.forEach(draft => {
+                          const month = extractMonthFromDiary(draft);
+                          if (month > 0) monthSet.add(month);
+                        });
+                        const months = Array.from(monthSet).sort((a, b) => b - a);
+
+                        if (months.length === 0) {
+                          return (
+                            <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
+                              対象データがありません
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="space-y-3">
+                            {months.map(month => {
+                              // この月のデータ件数
+                              const count = projectDrafts.filter(d => extractMonthFromDiary(d) === month).length;
+                              return (
+                                <button
+                                  key={month}
+                                  onClick={() => {
+                                    setSelectedDiaryMonth(month);
+                                    setDiarySelectionStep('date');
+                                  }}
+                                  className="w-full text-left border rounded-lg p-4 hover:bg-pink-50 transition-colors flex justify-between items-center group shadow-sm"
+                                >
+                                  <div>
+                                    <div className="font-bold text-gray-800 text-lg">
+                                      <i className="fa-regular fa-calendar mr-2 text-pink-500"></i>
+                                      {month}月
+                                    </div>
+                                    <div className="text-xs text-gray-500 ml-7">
+                                      {count} 件のデータ
+                                    </div>
+                                  </div>
+                                  <i className="fa-solid fa-chevron-right text-gray-300 group-hover:text-pink-400"></i>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </>
+                  )}
+
+                  {/* ============================
+                      階層3: 日付選択
+                      ============================ */}
+                  {diarySelectionStep === 'date' && selectedDiaryProject && selectedDiaryMonth && (
+                    <>
+                      {/* 選択中の現場名と月 */}
+                      <div className="bg-pink-50 p-3 rounded border border-pink-200 text-sm text-pink-800 mb-4 font-bold">
+                        <i className="fa-solid fa-building mr-2"></i>
+                        {selectedDiaryProject}
+                        <span className="ml-3 text-pink-600">
+                          <i className="fa-regular fa-calendar mr-1"></i>
+                          {selectedDiaryMonth}月
+                        </span>
+                      </div>
+
+                      <h4 className="text-gray-500 text-sm font-bold mb-2 uppercase tracking-wide">対象データを選択</h4>
+
+                      {(() => {
+                        // 選択した現場名 + 月のドラフトを取得し、日付降順でソート
+                        const projectDrafts = draftsByProject[selectedDiaryProject] || [];
+                        const monthDrafts = projectDrafts
+                          .filter(d => extractMonthFromDiary(d) === selectedDiaryMonth)
+                          .sort((a, b) => {
+                            // workDate で降順ソート
+                            const dateA = (a.data as DailySafetyReportData).workDate || (a.data as DailySafetyReportData).meetingDate || '';
+                            const dateB = (b.data as DailySafetyReportData).workDate || (b.data as DailySafetyReportData).meetingDate || '';
+                            return dateB.localeCompare(dateA);
+                          });
+
+                        if (monthDrafts.length === 0) {
+                          return (
+                            <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
+                              対象データがありません
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="space-y-3">
+                            {monthDrafts.map(draft => {
+                              const data = draft.data as DailySafetyReportData;
+                              // 表示用の日付（MM/DD形式）
+                              const dateStr = data.workDate || data.meetingDate || '';
+                              let displayDate = '';
+                              if (dateStr) {
+                                const d = new Date(dateStr + 'T00:00:00');
+                                if (!isNaN(d.getTime())) {
+                                  displayDate = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+                                }
+                              }
+                              if (!displayDate) {
+                                displayDate = '日付不明';
+                              }
+
+                              return (
+                                <div key={draft.id} className="border rounded-lg p-3 hover:bg-pink-50 transition-colors flex justify-between items-center group bg-white shadow-sm">
+                                  <div className="cursor-pointer flex-1" onClick={() => handleResumeDraft(draft)}>
+                                    <div className="font-bold text-pink-800 text-lg">
+                                      <i className="fa-regular fa-calendar-check mr-2"></i>
+                                      {displayDate} 分
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1 pl-7">
+                                      最終更新: {new Date(draft.lastModified).toLocaleString('ja-JP')}
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteDraft(draft.id);
+                                    }}
+                                    className="ml-3 p-3 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors"
+                                    title="削除"
+                                  >
+                                    <i className="fa-solid fa-trash"></i>
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })()}
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ============================
+    // 安全衛生日誌以外の帳票は従来のモーダル（変更なし）
+    // ============================
     return (
       <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-80 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]">
@@ -426,7 +740,7 @@ const App: React.FC = () => {
                 {selectedDraftProject ? '対象データの選択' : '作成方法の選択'}
               </h3>
             </div>
-            <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-white">
+            <button onClick={closeSelectionModal} className="text-gray-400 hover:text-white">
               <i className="fa-solid fa-xmark text-xl"></i>
             </button>
           </div>
@@ -510,7 +824,6 @@ const App: React.FC = () => {
                             {draft.type === 'SAFETY_TRAINING' ? `${(draft.data as ReportData).month}月度` : 
                              draft.type === 'DISASTER_COUNCIL' ? `第${(draft.data as DisasterCouncilReportData).count}回` :
                              draft.type === 'NEWCOMER_SURVEY' ? ((draft.data as NewcomerSurveyReportData).name || '氏名未入力') :
-                             draft.type === 'DAILY_SAFETY' ? `${(draft.data as DailySafetyReportData).workDate} 分` :
                              `${(draft.data as any).month}月度 計画表`}
                           </div>
                           <div className="text-xs text-gray-500 mt-1 pl-7">
@@ -646,7 +959,7 @@ const App: React.FC = () => {
         <div>&copy; 2026 Matsuura Construction App</div>
         <div className="mt-1 flex items-center justify-center gap-2">
           <span>Core Safe</span>
-          <span>Ver.1.7.3</span>
+          <span>Ver.1.7.4</span>
         </div>
       </footer>
 

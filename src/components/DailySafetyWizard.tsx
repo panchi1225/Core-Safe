@@ -100,14 +100,15 @@ const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen
 };
 
 // ============================
-// 保存済み配置図選択モーダル
+// 【修正1】保存済み配置図選択モーダル
+// 削除確認をインライン表示に変更（z-index問題を解消）
 // ============================
 interface DiagramPickerModalProps {
   isOpen: boolean;
   images: DiagramImage[];
   isLoading: boolean;
   onSelect: (image: DiagramImage) => void;
-  onDelete: (image: DiagramImage) => void;
+  onDelete: (imageId: string) => Promise<void>;
   onClose: () => void;
 }
 
@@ -119,6 +120,19 @@ const DiagramPickerModal: React.FC<DiagramPickerModalProps> = ({
   onDelete,
   onClose,
 }) => {
+  // 【修正1】削除対象のIDをモーダル内stateで管理
+  const [deletingDiagramId, setDeletingDiagramId] = useState<string | null>(null);
+  // 削除処理中フラグ
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // モーダルが閉じた時にリセット
+  useEffect(() => {
+    if (!isOpen) {
+      setDeletingDiagramId(null);
+      setIsDeleting(false);
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   // 日時フォーマットヘルパー
@@ -130,6 +144,20 @@ const DiagramPickerModal: React.FC<DiagramPickerModalProps> = ({
     const hh = String(d.getHours()).padStart(2, '0');
     const min = String(d.getMinutes()).padStart(2, '0');
     return `${yyyy}/${mm}/${dd} ${hh}:${min}`;
+  };
+
+  // 【修正1】インライン削除確認の「はい」ボタン処理
+  const handleConfirmDelete = async (id: string) => {
+    setIsDeleting(true);
+    try {
+      await onDelete(id);
+    } catch (err) {
+      console.error('配置図の削除に失敗:', err);
+      alert('配置図の削除に失敗しました。');
+    } finally {
+      setDeletingDiagramId(null);
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -173,38 +201,66 @@ const DiagramPickerModal: React.FC<DiagramPickerModalProps> = ({
                   key={img.id}
                   className="border border-gray-200 rounded-lg p-3 hover:border-pink-300 hover:shadow-md transition-all bg-gray-50"
                 >
-                  {/* サムネイル画像 */}
-                  <div className="flex justify-center mb-2">
-                    <img
-                      src={img.imageDataUrl}
-                      alt={img.fileName}
-                      className="w-24 h-24 object-cover rounded border border-gray-200 bg-white"
-                    />
-                  </div>
-                  {/* ファイル名 */}
-                  <p className="text-xs text-gray-700 font-bold truncate text-center mb-1" title={img.fileName}>
-                    {img.fileName}
-                  </p>
-                  {/* アップロード日時 */}
-                  <p className="text-[10px] text-gray-400 text-center mb-2">
-                    {formatDate(img.createdAt)}
-                  </p>
-                  {/* 操作ボタン */}
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => onSelect(img)}
-                      className="flex-1 py-2 bg-pink-600 text-white rounded font-bold text-xs hover:bg-pink-700 transition-colors"
-                    >
-                      <i className="fa-solid fa-check mr-1"></i>選択
-                    </button>
-                    <button
-                      onClick={() => onDelete(img)}
-                      className="px-3 py-2 bg-gray-200 text-gray-500 rounded font-bold text-xs hover:bg-red-100 hover:text-red-600 transition-colors"
-                      title="削除"
-                    >
-                      <i className="fa-solid fa-trash"></i>
-                    </button>
-                  </div>
+                  {/* 【修正1】削除確認中はインライン確認UIを表示 */}
+                  {deletingDiagramId === img.id ? (
+                    <div className="flex flex-col items-center justify-center py-4">
+                      <p className="text-sm font-bold text-red-600 mb-3">
+                        <i className="fa-solid fa-triangle-exclamation mr-1"></i>
+                        削除しますか？
+                      </p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleConfirmDelete(img.id)}
+                          disabled={isDeleting}
+                          className="px-4 py-2 bg-red-600 text-white rounded font-bold text-xs hover:bg-red-700 transition-colors disabled:opacity-50"
+                        >
+                          {isDeleting ? '削除中...' : 'はい'}
+                        </button>
+                        <button
+                          onClick={() => setDeletingDiagramId(null)}
+                          disabled={isDeleting}
+                          className="px-4 py-2 bg-gray-200 text-gray-600 rounded font-bold text-xs hover:bg-gray-300 transition-colors disabled:opacity-50"
+                        >
+                          いいえ
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* サムネイル画像 */}
+                      <div className="flex justify-center mb-2">
+                        <img
+                          src={img.imageDataUrl}
+                          alt={img.fileName}
+                          className="w-24 h-24 object-cover rounded border border-gray-200 bg-white"
+                        />
+                      </div>
+                      {/* ファイル名 */}
+                      <p className="text-xs text-gray-700 font-bold truncate text-center mb-1" title={img.fileName}>
+                        {img.fileName}
+                      </p>
+                      {/* アップロード日時 */}
+                      <p className="text-[10px] text-gray-400 text-center mb-2">
+                        {formatDate(img.createdAt)}
+                      </p>
+                      {/* 操作ボタン */}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => onSelect(img)}
+                          className="flex-1 py-2 bg-pink-600 text-white rounded font-bold text-xs hover:bg-pink-700 transition-colors"
+                        >
+                          <i className="fa-solid fa-check mr-1"></i>選択
+                        </button>
+                        <button
+                          onClick={() => setDeletingDiagramId(img.id)}
+                          className="px-3 py-2 bg-gray-200 text-gray-500 rounded font-bold text-xs hover:bg-red-100 hover:text-red-600 transition-colors"
+                          title="削除"
+                        >
+                          <i className="fa-solid fa-trash"></i>
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -251,6 +307,17 @@ function createEmptyWorkEntry(): WorkEntry {
 // 安全衛生指示事項の固定数
 // ============================
 const SAFETY_INSTRUCTIONS_COUNT = 7;
+
+// ============================
+// 【修正2】Firestoreサイズ制限エラー判定ヘルパー
+// ============================
+function isFirestoreSizeError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const msg = error.message || '';
+    return msg.includes('exceeds the maximum allowed size') || msg.includes('INVALID_ARGUMENT');
+  }
+  return false;
+}
 
 // ============================
 // メインコンポーネント
@@ -581,7 +648,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // 一時保存処理
+  // 【修正2】一時保存処理 — サイズエラーメッセージ改善
   // ============================
   const handleSave = async () => {
     if (!report.project) {
@@ -608,7 +675,12 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       setShowCompleteModal(true);
     } catch (e) {
       console.error(e);
-      alert('保存に失敗しました');
+      // 【修正2】Firestoreサイズ制限エラーを判定して適切なメッセージを表示
+      if (isFirestoreSizeError(e)) {
+        alert('配置図の画像サイズが大きすぎます。より小さい画像を使用してください。');
+      } else {
+        alert('保存に失敗しました');
+      }
       setSaveStatus('idle');
     }
   };
@@ -823,9 +895,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // STEP2: 配置図アップロード処理
-  // 新しい画像アップロード時は currentDiagramSrc を更新してキャンバスを再初期化
-  // さらに compressDiagramImage で圧縮して Firestore に元画像として保存
+  // 【修正2】STEP2: 配置図アップロード処理
+  // saveDiagramImage のエラーメッセージ改善
   // ============================
   const handleDiagramUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0]) return;
@@ -849,7 +920,11 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           console.log('[配置図元画像保存] 完了 - 工事名:', report.project, 'ファイル名:', file.name);
         } catch (saveErr) {
           console.error('[配置図元画像保存] 失敗:', saveErr);
-          // 元画像の保存に失敗してもキャンバス表示は続行する
+          // 【修正2】Firestoreサイズ制限エラーの場合は専用メッセージを表示
+          if (isFirestoreSizeError(saveErr)) {
+            alert('配置図の画像サイズが大きすぎます。より小さい画像を使用してください。');
+          }
+          // それ以外のエラーはキャンバス表示を続行する（ログのみ）
         }
       }
     } catch (err) {
@@ -906,34 +981,17 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // STEP2: 保存済み配置図モーダルから画像を削除
+  // 【修正1】STEP2: 保存済み配置図モーダルから画像を削除
+  // ConfirmationModalを使わず、モーダル内のインライン確認UIで処理する
+  // DiagramPickerModal の onDelete に渡すコールバック
   // ============================
-  const handleDeleteDiagramImage = (image: DiagramImage) => {
-    setConfirmModal({
-      isOpen: true,
-      message: 'この配置図を削除しますか？',
-      leftButtonLabel: '削除する',
-      leftButtonClass: 'px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700',
-      onLeftButtonClick: async () => {
-        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
-        try {
-          await removeDiagramImage(image.id);
-          // リストを再読み込み
-          if (report.project) {
-            const updatedImages = await fetchDiagramImages(report.project);
-            setDiagramImages(updatedImages);
-          }
-        } catch (err) {
-          console.error('配置図の削除に失敗:', err);
-          alert('配置図の削除に失敗しました。');
-        }
-      },
-      rightButtonLabel: 'キャンセル',
-      rightButtonClass: 'px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300',
-      onRightButtonClick: () => {
-        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
-      },
-    });
+  const handleDeleteDiagramImage = async (imageId: string): Promise<void> => {
+    await removeDiagramImage(imageId);
+    // リストを再読み込み
+    if (report.project) {
+      const updatedImages = await fetchDiagramImages(report.project);
+      setDiagramImages(updatedImages);
+    }
   };
 
   // ============================
@@ -988,9 +1046,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // STEP2: キャンバスを画像として書き出し＆保存
-  // canvas.toDataURL で png 形式で書き出し
-  // currentDiagramSrc は更新しない（キャンバスの再初期化を防ぐ）
+  // 【修正2】STEP2: キャンバスを画像として書き出し＆保存
+  // saveDraft のサイズエラーメッセージ改善
   // ============================
   const handleSaveCanvas = async () => {
     if (!report.project) {
@@ -1022,7 +1079,12 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       setShowCompleteModal(true);
     } catch (e) {
       console.error(e);
-      alert('保存に失敗しました');
+      // 【修正2】Firestoreサイズ制限エラーを判定して適切なメッセージを表示
+      if (isFirestoreSizeError(e)) {
+        alert('配置図の画像サイズが大きすぎます。より小さい画像を使用してください。');
+      } else {
+        alert('保存に失敗しました');
+      }
       setSaveStatus('idle');
     }
   };
@@ -1577,7 +1639,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         }}
       />
 
-      {/* 確認モーダル */}
+      {/* 確認モーダル（作業削除・ホームに戻る等で使用。配置図削除には使用しない） */}
       <ConfirmationModal
         isOpen={confirmModal.isOpen}
         message={confirmModal.message}
@@ -1589,7 +1651,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         rightButtonClass={confirmModal.rightButtonClass}
       />
 
-      {/* 保存済み配置図選択モーダル */}
+      {/* 【修正1】保存済み配置図選択モーダル — インライン削除確認UI搭載 */}
       <DiagramPickerModal
         isOpen={showDiagramPicker}
         images={diagramImages}
