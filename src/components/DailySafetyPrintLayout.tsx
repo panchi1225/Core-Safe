@@ -77,16 +77,17 @@ const RIGHT_CHECKLIST_KEYS: (keyof Step5InspectionChecklist)[] = ['falling', 'de
 
 // ============================
 // 共通スタイル定数（フォントサイズ・余白基準に準拠）
+// 【修正】フォントサイズ・padding を仕様に合わせて拡大
 // ============================
 const B = '1px solid black'; // 罫線
 
-/** 通常データセル: 7px、padding 2px 3px */
+/** 【修正】通常データセル: 8.5px、padding 3px 4px */
 const CELL: React.CSSProperties = {
   border: B,
-  padding: '2px 3px',
+  padding: '3px 4px',
   verticalAlign: 'middle',
   lineHeight: 1.3,
-  fontSize: '7px',
+  fontSize: '8.5px',
   whiteSpace: 'nowrap' as const,
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -99,13 +100,14 @@ const CELL_WRAP: React.CSSProperties = {
   wordBreak: 'break-all' as const,
 };
 
-/** テーブルヘッダーセル: 7.5px太字、padding 2px 3px */
+/** 【修正】テーブルヘッダーセル: 9px太字、padding 2px 4px */
 const TH: React.CSSProperties = {
   ...CELL,
-  fontSize: '7.5px',
+  fontSize: '9px',
   fontWeight: 'bold',
   textAlign: 'center' as const,
   backgroundColor: 'transparent',
+  padding: '2px 4px',
 };
 
 /** 折り返し可能ヘッダーセル */
@@ -199,7 +201,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
     });
   });
 
-  // 10行まで空行で埋める
+  // 【修正】10行まで空行で埋める
   while (workRows.length < WORK_ROWS) {
     workRows.push({
       workContent: '',
@@ -226,7 +228,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
     });
   };
 
-  // --- 点検チェックリスト1列分のレンダリング ---
+  // --- 【修正】点検チェックリスト1列分のレンダリング（フォント・行高拡大） ---
   const renderChecklistColumn = (keys: (keyof Step5InspectionChecklist)[]) => {
     const rows: React.ReactNode[] = [];
     keys.forEach((key) => {
@@ -236,18 +238,18 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
         ? getVisibleItems(data.step5InspectionChecklist[key] || [])
         : [];
 
-      // 大分類ヘッダー行
+      // 【修正】大分類ヘッダー行: 7.5px太字、height 13px
       rows.push(
         <tr key={`hdr-${key}`}>
           <td
             colSpan={2}
             style={{
               border: B,
-              padding: '1px 2px',
+              padding: '2px 3px',
               fontWeight: 'bold',
-              fontSize: '6.5px',
+              fontSize: '7.5px',
               textAlign: 'left' as const,
-              height: '10px',
+              height: '13px',
               lineHeight: 1.2,
             }}
           >
@@ -256,17 +258,17 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
         </tr>
       );
 
-      // 小項目行
+      // 【修正】小項目行: 項目名6.5px、評価値7px、height 13px
       items.forEach((item, idx) => {
         rows.push(
           <tr key={`${key}-${idx}`}>
             <td
               style={{
                 border: B,
-                padding: '1px 2px',
-                fontSize: '6px',
+                padding: '2px 3px',
+                fontSize: '6.5px',
                 textAlign: 'left' as const,
-                height: '10px',
+                height: '13px',
                 lineHeight: 1.2,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -278,11 +280,11 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
             <td
               style={{
                 border: B,
-                padding: '1px 2px',
-                fontSize: '6.5px',
+                padding: '2px 3px',
+                fontSize: '7px',
                 textAlign: 'center' as const,
-                width: '16px',
-                height: '10px',
+                width: '20px',
+                height: '13px',
                 lineHeight: 1.2,
               }}
             >
@@ -298,7 +300,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   return (
     <>
       {/* ============================
-          印刷用CSS
+          印刷用CSS（変更なし）
           ============================ */}
       <style>{`
         @media print {
@@ -322,6 +324,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
       {/* ============================
           帳票本体（A4横 297mm × 210mm）
+          【修正】基本フォントサイズを8.5pxに拡大
           ============================ */}
       <div
         className="daily-safety-print-layout"
@@ -331,7 +334,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
           padding: '4mm',
           background: 'white',
           fontFamily: 'sans-serif',
-          fontSize: '7px',
+          fontSize: '8.5px',
           color: 'black',
           boxSizing: 'border-box',
           overflow: 'hidden',
@@ -341,17 +344,18 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
       >
         {/* ==================================================================
             第1段: ヘッダー（タイトル + 所長確認欄）
+            【修正】タイトル16px、所長確認ラベル8px太字、空白セル高さ18mm
             ================================================================== */}
         <table style={{ ...TABLE_BASE, tableLayout: 'auto', marginBottom: '1px' }}>
           <tbody>
             <tr>
               {/* 左側空白 */}
               <td style={{ width: '28mm', padding: 0 }}>&nbsp;</td>
-              {/* 中央: タイトル */}
+              {/* 中央: タイトル 【修正】16px */}
               <td
                 style={{
                   textAlign: 'center' as const,
-                  fontSize: '14px',
+                  fontSize: '16px',
                   fontWeight: 'bold',
                   padding: '2px 0',
                   verticalAlign: 'middle',
@@ -369,10 +373,11 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                 >
                   <tbody>
                     <tr>
+                      {/* 【修正】所長確認ラベル: 8px太字 */}
                       <td
                         style={{
                           border: B,
-                          fontSize: '7px',
+                          fontSize: '8px',
                           fontWeight: 'bold',
                           textAlign: 'center' as const,
                           padding: '1px',
@@ -384,10 +389,11 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       </td>
                     </tr>
                     <tr>
+                      {/* 【修正】空白セル高さ: 18mm */}
                       <td
                         style={{
                           border: B,
-                          height: '16mm',
+                          height: '18mm',
                           verticalAlign: 'middle',
                           textAlign: 'center' as const,
                         }}
@@ -404,22 +410,23 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
         {/* ==================================================================
             第2段: 基本情報行
+            【修正】全セル9.5px、行高18px
             ================================================================== */}
-        <table style={{ ...TABLE_BASE, marginBottom: '1px', fontSize: '8px' }}>
+        <table style={{ ...TABLE_BASE, marginBottom: '1px', fontSize: '9.5px' }}>
           <tbody>
             <tr>
-              <td style={{ ...TH, fontSize: '8px', width: '7%' }}>工事名</td>
-              <td style={{ ...CELL, fontSize: '8px', width: '35%' }}>{data.project || ''}</td>
-              <td style={{ ...TH, fontSize: '8px', width: '7%' }}>打合せ日</td>
-              <td style={{ ...CELL, fontSize: '8px', width: '15%' }}>
+              <td style={{ ...TH, fontSize: '9.5px', width: '7%', height: '18px' }}>工事名</td>
+              <td style={{ ...CELL, fontSize: '9.5px', width: '35%', height: '18px' }}>{data.project || ''}</td>
+              <td style={{ ...TH, fontSize: '9.5px', width: '7%', height: '18px' }}>打合せ日</td>
+              <td style={{ ...CELL, fontSize: '9.5px', width: '15%', height: '18px' }}>
                 {data.meetingDate || ''}{data.meetingDate ? getDayOfWeekLabel(data.meetingDate) : ''}
               </td>
-              <td style={{ ...TH, fontSize: '8px', width: '6%' }}>作業日</td>
-              <td style={{ ...CELL, fontSize: '8px', width: '15%' }}>
+              <td style={{ ...TH, fontSize: '9.5px', width: '6%', height: '18px' }}>作業日</td>
+              <td style={{ ...CELL, fontSize: '9.5px', width: '15%', height: '18px' }}>
                 {data.workDate || ''}{data.workDate ? getDayOfWeekLabel(data.workDate) : ''}
               </td>
-              <td style={{ ...TH, fontSize: '8px', width: '7%' }}>打合せ者</td>
-              <td style={{ ...CELL, fontSize: '8px', width: '8%' }}>{data.meetingConductor || ''}</td>
+              <td style={{ ...TH, fontSize: '9.5px', width: '7%', height: '18px' }}>打合せ者</td>
+              <td style={{ ...CELL, fontSize: '9.5px', width: '8%', height: '18px' }}>{data.meetingConductor || ''}</td>
             </tr>
           </tbody>
         </table>
@@ -434,56 +441,61 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                   左セル（55%）: 作業内容テーブル
                   ==================================== */}
               <td style={{ width: '55%', verticalAlign: 'top', padding: 0 }}>
-                {/* 作業内容テーブル */}
+                {/* 【修正】作業内容テーブル: ヘッダー9px太字、データ8.5px、全行height 19px */}
                 <table style={{ ...TABLE_BASE }}>
                   <thead>
                     <tr>
-                      <th style={{ ...TH, width: '35%' }}>作業箇所・作業内容</th>
-                      <th style={{ ...TH, width: '18%' }}>会社名</th>
-                      <th style={{ ...TH, width: '9%', whiteSpace: 'normal' as const, lineHeight: 1.1 }}>
+                      <th style={{ ...TH, width: '35%', fontSize: '9px', height: '19px' }}>作業箇所・作業内容</th>
+                      <th style={{ ...TH, width: '18%', fontSize: '9px', height: '19px' }}>会社名</th>
+                      <th style={{ ...TH, width: '9%', fontSize: '9px', height: '19px', whiteSpace: 'normal' as const, lineHeight: 1.1 }}>
                         人数<br />(予定)
                       </th>
-                      <th style={{ ...TH, width: '9%', whiteSpace: 'normal' as const, lineHeight: 1.1 }}>
+                      <th style={{ ...TH, width: '9%', fontSize: '9px', height: '19px', whiteSpace: 'normal' as const, lineHeight: 1.1 }}>
                         人数<br />(実施)
                       </th>
-                      <th style={{ ...TH, width: '29%' }}>主要機械</th>
+                      <th style={{ ...TH, width: '29%', fontSize: '9px', height: '19px' }}>主要機械</th>
                     </tr>
                   </thead>
                   <tbody>
                     {workRows.map((row, idx) => {
                       const isAdd = row.isAdditional;
+                      const isEmpty = !row.workContent && !row.company && !row.plannedWorkers && !row.actualWorkers && !row.machine;
                       // 追加作業は全セル赤字、通常行は実施人数のみ赤字
+                      // 【修正】height 19px固定、fontSize 8.5px
                       const baseCellStyle: React.CSSProperties = {
                         ...CELL,
-                        height: '14px',
+                        fontSize: '8.5px',
+                        height: '19px',
                         ...(isAdd ? RED : {}),
                       };
                       const actualCellStyle: React.CSSProperties = {
                         ...CELL,
-                        height: '14px',
+                        fontSize: '8.5px',
+                        height: '19px',
                         textAlign: 'center' as const,
                         ...RED, // 実施人数は常に赤字
                       };
                       return (
                         <tr key={idx}>
-                          <td style={baseCellStyle}>{row.workContent}</td>
-                          <td style={baseCellStyle}>{row.company}</td>
+                          {/* 【修正】空行のセルに \u00A0 を入れて高さ・枠線を維持 */}
+                          <td style={baseCellStyle}>{row.workContent || '\u00A0'}</td>
+                          <td style={baseCellStyle}>{row.company || '\u00A0'}</td>
                           <td style={{ ...baseCellStyle, textAlign: 'center' as const }}>
-                            {isAdd ? '' : row.plannedWorkers}
+                            {isAdd ? '\u00A0' : (row.plannedWorkers || '\u00A0')}
                           </td>
-                          <td style={actualCellStyle}>{row.actualWorkers}</td>
-                          <td style={baseCellStyle}>{row.machine}</td>
+                          <td style={actualCellStyle}>{row.actualWorkers || '\u00A0'}</td>
+                          <td style={baseCellStyle}>{row.machine || '\u00A0'}</td>
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
 
-                {/* 本日の作業人員数 */}
+                {/* 【修正】本日の作業人員数: height 18px */}
                 <table style={{ ...TABLE_BASE }}>
                   <tbody>
                     <tr>
-                      <td style={{ ...TH, textAlign: 'left' as const, height: '14px' }}>
+                      <td style={{ ...TH, textAlign: 'left' as const, height: '18px', fontSize: '9px' }}>
                         本日の作業人員数
                       </td>
                       <td
@@ -491,7 +503,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           ...CELL,
                           textAlign: 'center' as const,
                           fontWeight: 'bold',
-                          height: '14px',
+                          height: '18px',
+                          fontSize: '9px',
                           ...RED,
                         }}
                       >
@@ -506,18 +519,18 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                   右セル（45%）: 3セクション縦並び
                   ==================================== */}
               <td style={{ width: '45%', verticalAlign: 'top', padding: 0 }}>
-                {/* --- 搬出入資機材・段取り資材等（2行） --- */}
+                {/* --- 【修正】搬出入資機材・段取り資材等: 8.5px、height 17px --- */}
                 <table style={{ ...TABLE_BASE }}>
                   <tbody>
                     <tr>
-                      <td style={{ ...TH, width: '30%', height: '14px' }}>搬出入資機材</td>
-                      <td style={{ ...CELL_WRAP, height: '14px' }}>
+                      <td style={{ ...TH, width: '30%', height: '17px', fontSize: '9px' }}>搬出入資機材</td>
+                      <td style={{ ...CELL_WRAP, height: '17px', fontSize: '8.5px' }}>
                         {(data.materialEntries || []).filter((m) => m).join(', ')}
                       </td>
                     </tr>
                     <tr>
-                      <td style={{ ...TH, width: '30%', height: '14px' }}>段取り資材等</td>
-                      <td style={{ ...CELL_WRAP, height: '14px' }}>
+                      <td style={{ ...TH, width: '30%', height: '17px', fontSize: '9px' }}>段取り資材等</td>
+                      <td style={{ ...CELL_WRAP, height: '17px', fontSize: '8.5px' }}>
                         {(data.preparationEntries || []).filter((p) => p).join(', ')}
                       </td>
                     </tr>
@@ -528,7 +541,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                 <table style={{ ...TABLE_BASE }}>
                   <tbody>
                     <tr>
-                      {/* 安全衛生指示事項（左55%） */}
+                      {/* 【修正】安全衛生指示事項（左55%）: ヘッダー9px太字、項目8.5px、height 17px */}
                       <td style={{ width: '55%', verticalAlign: 'top', padding: 0, border: B }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
                           <thead>
@@ -536,11 +549,11 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                               <th
                                 style={{
                                   border: B,
-                                  padding: '2px 3px',
+                                  padding: '2px 4px',
                                   fontWeight: 'bold',
-                                  fontSize: '7.5px',
+                                  fontSize: '9px',
                                   textAlign: 'center' as const,
-                                  height: '12px',
+                                  height: '17px',
                                 }}
                               >
                                 安全衛生指示事項
@@ -553,9 +566,9 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                                 <td
                                   style={{
                                     border: B,
-                                    padding: '1px 3px',
-                                    fontSize: '7px',
-                                    height: '12px',
+                                    padding: '2px 4px',
+                                    fontSize: '8.5px',
+                                    height: '17px',
                                     lineHeight: 1.2,
                                     whiteSpace: 'nowrap' as const,
                                     overflow: 'hidden',
@@ -570,7 +583,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         </table>
                       </td>
 
-                      {/* 基本確認事項（右45%） */}
+                      {/* 【修正】基本確認事項（右45%）: ヘッダー9px太字、項目名7px、結果8px赤字太字、height 17px */}
                       <td style={{ width: '45%', verticalAlign: 'top', padding: 0, border: B }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
                           <thead>
@@ -578,11 +591,11 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                               <th
                                 style={{
                                   border: B,
-                                  padding: '2px 3px',
+                                  padding: '2px 4px',
                                   fontWeight: 'bold',
-                                  fontSize: '7.5px',
+                                  fontSize: '9px',
                                   textAlign: 'center' as const,
-                                  height: '12px',
+                                  height: '17px',
                                 }}
                               >
                                 基本確認事項
@@ -590,12 +603,12 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                               <th
                                 style={{
                                   border: B,
-                                  padding: '2px 3px',
+                                  padding: '2px 4px',
                                   fontWeight: 'bold',
-                                  fontSize: '7.5px',
+                                  fontSize: '9px',
                                   textAlign: 'center' as const,
-                                  width: '22px',
-                                  height: '12px',
+                                  width: '26px',
+                                  height: '17px',
                                 }}
                               >
                                 結果
@@ -612,9 +625,9 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                                   <td
                                     style={{
                                       border: B,
-                                      padding: '1px 2px',
-                                      fontSize: '6px',
-                                      height: '12px',
+                                      padding: '2px 3px',
+                                      fontSize: '7px',
+                                      height: '17px',
                                       lineHeight: 1.2,
                                       whiteSpace: 'nowrap' as const,
                                       overflow: 'hidden',
@@ -626,12 +639,12 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                                   <td
                                     style={{
                                       border: B,
-                                      padding: '1px 2px',
-                                      fontSize: '7px',
+                                      padding: '2px 3px',
+                                      fontSize: '8px',
                                       textAlign: 'center' as const,
                                       fontWeight: 'bold',
-                                      width: '22px',
-                                      height: '12px',
+                                      width: '26px',
+                                      height: '17px',
                                       ...RED,
                                     }}
                                   >
@@ -653,46 +666,47 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
         {/* ==================================================================
             第4段: ダンプ・段階確認行
+            【修正】fontSize 9px、height 18px
             ================================================================== */}
-        <table style={{ ...TABLE_BASE, marginBottom: '0px', fontSize: '7.5px' }}>
+        <table style={{ ...TABLE_BASE, marginBottom: '0px', fontSize: '9px' }}>
           <tbody>
             <tr>
-              <td style={{ ...TH, width: '10%', height: '14px' }}>ダンプ台数</td>
+              <td style={{ ...TH, width: '10%', height: '18px', fontSize: '9px' }}>ダンプ台数</td>
               <td
                 style={{
                   ...CELL,
                   width: '25%',
                   textAlign: 'center' as const,
-                  fontSize: '7.5px',
-                  height: '14px',
+                  fontSize: '9px',
+                  height: '18px',
                   ...RED,
                 }}
               >
                 搬入{dumpIncoming}台＋搬出{dumpOutgoing}台＝{dumpTotal}台
               </td>
-              <td style={{ ...TH, width: '8%', height: '14px' }}>段階確認</td>
+              <td style={{ ...TH, width: '8%', height: '18px', fontSize: '9px' }}>段階確認</td>
               <td
                 style={{
                   ...CELL,
                   width: '10%',
                   textAlign: 'center' as const,
                   fontWeight: 'bold',
-                  fontSize: '7.5px',
-                  height: '14px',
+                  fontSize: '9px',
+                  height: '18px',
                   ...RED,
                 }}
               >
                 {data.stageConfirmation === '有' ? '有' : data.stageConfirmation === '無' ? '無' : ''}
               </td>
-              <td style={{ ...TH, width: '8%', height: '14px' }}>確認立会</td>
+              <td style={{ ...TH, width: '8%', height: '18px', fontSize: '9px' }}>確認立会</td>
               <td
                 style={{
                   ...CELL,
                   width: '10%',
                   textAlign: 'center' as const,
                   fontWeight: 'bold',
-                  fontSize: '7.5px',
-                  height: '14px',
+                  fontSize: '9px',
+                  height: '18px',
                   ...RED,
                 }}
               >
@@ -704,6 +718,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
         {/* ==================================================================
             第5段: 当現場確認項目（左右5項目ずつ配置）
+            【修正】ヘッダー9px太字、項目名7.5px、結果8px赤字太字、height 17px
             ================================================================== */}
         <table style={{ ...TABLE_BASE, marginBottom: '0px' }}>
           <thead>
@@ -713,9 +728,9 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                 colSpan={6}
                 style={{
                   border: B,
-                  padding: '2px 3px',
+                  padding: '2px 4px',
                   fontWeight: 'bold',
-                  fontSize: '7.5px',
+                  fontSize: '9px',
                   textAlign: 'center' as const,
                 }}
               >
@@ -724,12 +739,12 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
             </tr>
             {/* サブヘッダー */}
             <tr>
-              <th style={{ ...TH, width: '4%' }}>No.</th>
-              <th style={{ ...TH, width: '30%' }}>確認項目</th>
-              <th style={{ ...TH, width: '6%' }}>結果</th>
-              <th style={{ ...TH, width: '4%' }}>No.</th>
-              <th style={{ ...TH, width: '30%' }}>確認項目</th>
-              <th style={{ ...TH, width: '6%' }}>結果</th>
+              <th style={{ ...TH, width: '4%', fontSize: '9px' }}>No.</th>
+              <th style={{ ...TH, width: '30%', fontSize: '9px' }}>確認項目</th>
+              <th style={{ ...TH, width: '6%', fontSize: '9px' }}>結果</th>
+              <th style={{ ...TH, width: '4%', fontSize: '9px' }}>No.</th>
+              <th style={{ ...TH, width: '30%', fontSize: '9px' }}>確認項目</th>
+              <th style={{ ...TH, width: '6%', fontSize: '9px' }}>結果</th>
             </tr>
           </thead>
           <tbody>
@@ -744,10 +759,10 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                 : '';
               return (
                 <tr key={i}>
-                  <td style={{ ...CELL, textAlign: 'center' as const, height: '13px', fontSize: '6.5px' }}>
+                  <td style={{ ...CELL, textAlign: 'center' as const, height: '17px', fontSize: '7.5px' }}>
                     {i + 1}
                   </td>
-                  <td style={{ ...CELL_WRAP, height: '13px', fontSize: '6.5px', padding: '1px 3px' }}>
+                  <td style={{ ...CELL_WRAP, height: '17px', fontSize: '7.5px', padding: '2px 4px' }}>
                     {left.label}
                   </td>
                   <td
@@ -755,17 +770,17 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       ...CELL,
                       textAlign: 'center' as const,
                       fontWeight: 'bold',
-                      fontSize: '7px',
-                      height: '13px',
+                      fontSize: '8px',
+                      height: '17px',
                       ...RED,
                     }}
                   >
                     {leftResult || ''}
                   </td>
-                  <td style={{ ...CELL, textAlign: 'center' as const, height: '13px', fontSize: '6.5px' }}>
+                  <td style={{ ...CELL, textAlign: 'center' as const, height: '17px', fontSize: '7.5px' }}>
                     {i + 6}
                   </td>
-                  <td style={{ ...CELL_WRAP, height: '13px', fontSize: '6.5px', padding: '1px 3px' }}>
+                  <td style={{ ...CELL_WRAP, height: '17px', fontSize: '7.5px', padding: '2px 4px' }}>
                     {right.label}
                   </td>
                   <td
@@ -773,8 +788,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       ...CELL,
                       textAlign: 'center' as const,
                       fontWeight: 'bold',
-                      fontSize: '7px',
-                      height: '13px',
+                      fontSize: '8px',
+                      height: '17px',
                       ...RED,
                     }}
                   >
@@ -794,30 +809,33 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
             <tr>
               {/* ====================================
                   左セル（50%）: 作業連絡調整事項 + 巡視記録 + 配置図
+                  【修正】ヘッダー8.5px太字、テキスト8px、各種高さ拡大
                   ==================================== */}
               <td style={{ width: '50%', verticalAlign: 'top', padding: 0 }}>
                 {/* 作業連絡調整事項 */}
                 <table style={{ ...TABLE_BASE }}>
                   <tbody>
-                    {/* ヘッダー行 */}
+                    {/* ヘッダー行 【修正】8.5px太字 */}
                     <tr>
                       <td
                         colSpan={4}
                         style={{
                           ...TH_WRAP,
                           textAlign: 'left' as const,
+                          fontSize: '8.5px',
                         }}
                       >
                         ＊作業連絡調整事項・打合せ・朝礼等周知事項・その他
                       </td>
                     </tr>
-                    {/* データ行 */}
+                    {/* データ行 【修正】height 28px、fontSize 8px */}
                     <tr>
                       <td
                         colSpan={4}
                         style={{
                           ...CELL_WRAP,
-                          height: '22px',
+                          height: '28px',
+                          fontSize: '8px',
                           verticalAlign: 'top',
                           ...RED,
                         }}
@@ -825,36 +843,38 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         {data.patrolRecord?.coordinationNotes || ''}
                       </td>
                     </tr>
-                    {/* 巡視点検者・巡視時間 */}
+                    {/* 【修正】巡視点検者・巡視時間: height 18px、fontSize 8px */}
                     <tr>
-                      <td style={{ ...TH, width: '15%', height: '14px' }}>巡視点検者</td>
-                      <td style={{ ...CELL, width: '35%', height: '14px', ...RED }}>
+                      <td style={{ ...TH, width: '15%', height: '18px', fontSize: '8.5px' }}>巡視点検者</td>
+                      <td style={{ ...CELL, width: '35%', height: '18px', fontSize: '8px', ...RED }}>
                         {data.patrolRecord?.inspector || ''}
                       </td>
-                      <td style={{ ...TH, width: '15%', height: '14px' }}>巡視時間</td>
-                      <td style={{ ...CELL, width: '35%', height: '14px', ...RED }}>
+                      <td style={{ ...TH, width: '15%', height: '18px', fontSize: '8.5px' }}>巡視時間</td>
+                      <td style={{ ...CELL, width: '35%', height: '18px', fontSize: '8px', ...RED }}>
                         {data.patrolRecord?.inspectionTime || ''}
                       </td>
                     </tr>
-                    {/* 巡視所見ヘッダー */}
+                    {/* 巡視所見ヘッダー 【修正】8.5px太字 */}
                     <tr>
                       <td
                         colSpan={4}
                         style={{
                           ...TH,
                           textAlign: 'left' as const,
+                          fontSize: '8.5px',
                         }}
                       >
                         巡視所見
                       </td>
                     </tr>
-                    {/* 巡視所見データ */}
+                    {/* 巡視所見データ 【修正】height 28px、fontSize 8px */}
                     <tr>
                       <td
                         colSpan={4}
                         style={{
                           ...CELL_WRAP,
-                          height: '22px',
+                          height: '28px',
+                          fontSize: '8px',
                           verticalAlign: 'top',
                           ...RED,
                         }}
@@ -865,7 +885,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                   </tbody>
                 </table>
 
-                {/* 配置図・略図 */}
+                {/* 【修正】配置図・略図: セル高さ130px、画像maxHeight 120px */}
                 <table style={{ ...TABLE_BASE }}>
                   <tbody>
                     <tr>
@@ -873,6 +893,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         style={{
                           ...TH,
                           textAlign: 'left' as const,
+                          fontSize: '8.5px',
                         }}
                       >
                         （配置図・略図）
@@ -885,6 +906,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           textAlign: 'center' as const,
                           verticalAlign: 'middle',
                           padding: '2px',
+                          height: '130px',
                         }}
                       >
                         {data.annotatedDiagramUrl ? (
@@ -892,7 +914,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                             src={data.annotatedDiagramUrl}
                             alt="配置図"
                             style={{
-                              maxHeight: '65px',
+                              maxHeight: '120px',
                               maxWidth: '100%',
                               objectFit: 'contain' as const,
                             }}
@@ -902,7 +924,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                             src={data.baseDiagramUrl}
                             alt="配置図"
                             style={{
-                              maxHeight: '65px',
+                              maxHeight: '120px',
                               maxWidth: '100%',
                               objectFit: 'contain' as const,
                             }}
@@ -918,9 +940,10 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
               {/* ====================================
                   右セル（50%）: 点検チェックリスト
+                  【修正】凡例ヘッダー7.5px太字
                   ==================================== */}
               <td style={{ width: '50%', verticalAlign: 'top', padding: 0 }}>
-                {/* 点検チェックリスト ヘッダー */}
+                {/* 点検チェックリスト ヘッダー 【修正】7.5px太字 */}
                 <table style={{ ...TABLE_BASE }}>
                   <tbody>
                     <tr>
@@ -929,7 +952,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           border: B,
                           padding: '2px 3px',
                           fontWeight: 'bold',
-                          fontSize: '6.5px',
+                          fontSize: '7.5px',
                           textAlign: 'left' as const,
                           lineHeight: 1.3,
                         }}
