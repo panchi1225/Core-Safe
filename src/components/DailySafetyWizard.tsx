@@ -1,6 +1,6 @@
 // src/components/DailySafetyWizard.tsx
 // 安全衛生日誌（作業打合せ及び安全衛生日誌）ウィザード
-// STEP1: 作業内容入力、STEP2: 配置図・略図、STEP3: 当日作業確認、STEP4: 巡視記録、STEP5: 未実装プレースホルダー
+// STEP1: 作業内容入力、STEP2: 配置図・略図、STEP3: 当日作業確認、STEP4: 巡視記録、STEP5: 点検チェックリスト
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
@@ -11,6 +11,8 @@ import {
   AdditionalWorkEntry,
   Step3ConfirmationItems,
   Step3SiteConfirmationItems,
+  Step5InspectionChecklist,
+  Step5InspectionItem,
   PatrolRecord,
   INITIAL_DAILY_SAFETY_REPORT,
   INITIAL_MASTER_DATA,
@@ -34,6 +36,22 @@ const PATROL_TIME_OPTIONS: string[] = [
   '8:00', '8:30', '9:00', '9:30', '10:00', '10:30', '11:00', '11:30',
   '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00',
 ];
+
+// ============================
+// STEP5: 点検チェックリストの大分類定義
+// ============================
+const STEP5_CATEGORIES: { key: keyof Step5InspectionChecklist; title: string }[] = [
+  { key: 'management', title: '管理' },
+  { key: 'machinery', title: '重機・機械' },
+  { key: 'electrical', title: '電気' },
+  { key: 'falling', title: '墜落転落' },
+  { key: 'debris', title: '飛来・落下崩壊・転倒' },
+  { key: 'environment', title: '作業環境' },
+  { key: 'others', title: 'その他' },
+];
+
+// STEP5: 評価ドロップダウンの選択肢
+const INSPECTION_VALUES: ('○' | '△' | '×' | '◎' | '')[] = ['', '○', '△', '×', '◎'];
 
 // ============================
 // Props
@@ -323,30 +341,30 @@ const SAFETY_INSTRUCTIONS_COUNT = 7;
 const STEP3_CONFIRMATION_LABELS: { key: keyof Step3ConfirmationItems; label: string }[] = [
   { key: 'item1', label: '健康状態の把握' },
   { key: 'item2', label: '服装・保護具の着用' },
-  { key: 'item3', label: '資格者の配置（資格証の確認）' },           /* 【修正】項目名変更 */
+  { key: 'item3', label: '資格者の配置（資格証の確認）' },
   { key: 'item4', label: '作業手順および合図・指揮系統の周知' },
-  { key: 'item5', label: '危険作業および危険個所の周知' },           /* 【修正】項目名変更 */
-  { key: 'item6', label: '安全指示事項の周知確認（作業開始前）' },   /* 【修正】項目名変更 */
-  { key: 'item7', label: '相互の声掛けおよび合図確認の実施' },       /* 【修正】項目名変更 */
-  { key: 'item8', label: '異常・危険発見時の報告体制の周知' },       /* 【修正】追加 */
-  { key: 'item9', label: 'KY活動および作業指揮者の明確化' },         /* 【修正】追加 */
-  { key: 'item10', label: '新規入場者教育の実施' },                  /* 【修正】追加 */
+  { key: 'item5', label: '危険作業および危険個所の周知' },
+  { key: 'item6', label: '安全指示事項の周知確認（作業開始前）' },
+  { key: 'item7', label: '相互の声掛けおよび合図確認の実施' },
+  { key: 'item8', label: '異常・危険発見時の報告体制の周知' },
+  { key: 'item9', label: 'KY活動および作業指揮者の明確化' },
+  { key: 'item10', label: '新規入場者教育の実施' },
 ];
 
 // ============================
 // 【修正】STEP3: 当現場確認事項の定義（10項目に拡張、項目名を変更）
 // ============================
 const STEP3_SITE_CONFIRMATION_LABELS: { key: keyof Step3SiteConfirmationItems; label: string }[] = [
-  { key: 'item1', label: '埋設物・架空線確認（作業開始前）' },               /* 【修正】項目名変更 */
-  { key: 'item2', label: '作業帯分離措置' },                                 /* 【修正】項目名変更 */
-  { key: 'item3', label: '建設機械使用前点検' },                             /* 【修正】項目名変更 */
-  { key: 'item4', label: '仮囲い・保安設備確認' },                           /* 【修正】項目名変更 */
-  { key: 'item5', label: '過積載確認' },                                     /* 【修正】項目名変更 */
-  { key: 'item6', label: '作業員と建設機械の接触防止措置' },                 /* 【修正】項目名変更 */
-  { key: 'item7', label: '現場内の整理整頓' },                               /* 【修正】項目名変更 */
-  { key: 'item8', label: '重機旋回範囲内立入禁止措置' },                     /* 【修正】追加 */
-  { key: 'item9', label: '誘導員配置および合図体制' },                       /* 【修正】追加 */
-  { key: 'item10', label: '作業通路および避難経路の確保' },                  /* 【修正】追加 */
+  { key: 'item1', label: '埋設物・架空線確認（作業開始前）' },
+  { key: 'item2', label: '作業帯分離措置' },
+  { key: 'item3', label: '建設機械使用前点検' },
+  { key: 'item4', label: '仮囲い・保安設備確認' },
+  { key: 'item5', label: '過積載確認' },
+  { key: 'item6', label: '作業員と建設機械の接触防止措置' },
+  { key: 'item7', label: '現場内の整理整頓' },
+  { key: 'item8', label: '重機旋回範囲内立入禁止措置' },
+  { key: 'item9', label: '誘導員配置および合図体制' },
+  { key: 'item10', label: '作業通路および避難経路の確保' },
 ];
 
 // ============================
@@ -411,6 +429,10 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           inspectionTime: '14:00',
           findings: '',
         };
+      }
+      /* STEP5: step5InspectionChecklistのフォールバック */
+      if (!restored.step5InspectionChecklist) {
+        restored.step5InspectionChecklist = INITIAL_DAILY_SAFETY_REPORT.step5InspectionChecklist;
       }
       return restored;
     }
@@ -540,6 +562,50 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           [field]: value,
         },
       }));
+      setSaveStatus('idle');
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  // ============================
+  // STEP5: 点検チェックリストの評価値を更新するハンドラ
+  // ============================
+  const updateStep5ItemValue = useCallback(
+    (categoryKey: keyof Step5InspectionChecklist, itemIndex: number, newValue: Step5InspectionItem['value']) => {
+      setReport((prev) => {
+        const updatedCategory = [...prev.step5InspectionChecklist[categoryKey]];
+        updatedCategory[itemIndex] = { ...updatedCategory[itemIndex], value: newValue };
+        return {
+          ...prev,
+          step5InspectionChecklist: {
+            ...prev.step5InspectionChecklist,
+            [categoryKey]: updatedCategory,
+          },
+        };
+      });
+      setSaveStatus('idle');
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  // ============================
+  // STEP5: 自由記入欄の項目名を更新するハンドラ
+  // ============================
+  const updateStep5ItemLabel = useCallback(
+    (categoryKey: keyof Step5InspectionChecklist, itemIndex: number, newLabel: string) => {
+      setReport((prev) => {
+        const updatedCategory = [...prev.step5InspectionChecklist[categoryKey]];
+        updatedCategory[itemIndex] = { ...updatedCategory[itemIndex], label: newLabel };
+        return {
+          ...prev,
+          step5InspectionChecklist: {
+            ...prev.step5InspectionChecklist,
+            [categoryKey]: updatedCategory,
+          },
+        };
+      });
       setSaveStatus('idle');
       setHasUnsavedChanges(true);
     },
@@ -1252,6 +1318,13 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
+  // STEP5: プレビューボタンのハンドラ
+  // ============================
+  const handlePreview = () => {
+    alert('プレビュー機能は次のプロンプトで実装します');
+  };
+
+  // ============================
   // STEP1 レンダリング
   // ============================
   const renderStep1 = () => (
@@ -1867,7 +1940,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       </div>
 
       {/* ===== セクション3: 基本確認事項 ===== */}
-      {/* 【修正】「確認事項」→「基本確認事項」に名称変更、10項目に拡張 */}
       <div className="bg-white rounded-lg shadow p-4 mb-4">
         <h3 className="text-base font-bold text-gray-800 mb-3">
           <i className="fa-solid fa-check-double mr-2 text-pink-500"></i>
@@ -1915,7 +1987,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       </div>
 
       {/* ===== セクション4: 当現場確認事項 ===== */}
-      {/* 【修正】「当現場の確認事項」→「当現場確認事項」に名称変更、10項目に拡張 */}
       <div className="bg-white rounded-lg shadow p-4 mb-4">
         <h3 className="text-base font-bold text-gray-800 mb-3">
           <i className="fa-solid fa-hard-hat mr-2 text-pink-500"></i>
@@ -2175,20 +2246,109 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   );
 
   // ============================
-  // STEP5 プレースホルダー
+  // STEP5 レンダリング — 点検チェックリスト
   // ============================
-  const renderPlaceholder = (currentStep: number) => (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-800 border-l-4 border-pink-500 pl-3">
-        STEP {currentStep}
-      </h2>
-      <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
-        <i className="fa-solid fa-code text-5xl text-gray-300 mb-4 block"></i>
-        <p className="text-gray-500 font-bold text-lg mb-2">このSTEPは現在開発中です</p>
-        <p className="text-gray-400 text-sm">次回のアップデートで実装されます。</p>
+  const renderStep5 = () => {
+    // 固定項目の通し番号を計算するためのカウンター
+    let fixedItemCounter = 0;
+
+    return (
+      <div className="space-y-6">
+        {/* ヘッダー */}
+        <h2 className="text-xl font-bold text-gray-800 border-l-4 border-pink-500 pl-3">
+          STEP 5: 点検チェックリスト
+        </h2>
+
+        {/* 凡例表示 */}
+        <div className="bg-gray-100 rounded p-2 text-sm text-center mb-4">
+          <span className="font-bold">○</span> 適正　
+          <span className="font-bold">△</span> 一部適正　
+          <span className="font-bold">×</span> 不適切　
+          <span className="font-bold">◎</span> 是正済　
+          <span className="font-bold">無印</span> 該当無
+        </div>
+
+        {/* 各大分類セクション */}
+        {STEP5_CATEGORIES.map((category) => {
+          // この大分類の固定項目番号をリセット
+          fixedItemCounter = 0;
+
+          return (
+            <div key={category.key} className="bg-white rounded-lg shadow mb-4">
+              {/* セクションタイトル */}
+              <div className="bg-pink-100 font-bold p-2 rounded-t-lg text-gray-800">
+                {category.title}
+              </div>
+
+              {/* 各項目 */}
+              <div className="p-2">
+                {report.step5InspectionChecklist[category.key].map((item, itemIndex) => {
+                  // 固定項目のカウント（自由記入欄でない場合）
+                  if (!item.isCustom) {
+                    fixedItemCounter++;
+                  }
+                  const displayNumber = !item.isCustom ? fixedItemCounter : 0;
+
+                  return (
+                    <div
+                      key={`${category.key}-${itemIndex}`}
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-2 border-b border-gray-200 last:border-b-0 gap-1 sm:gap-2"
+                    >
+                      {/* 左側: 番号（または＋マーク） + 項目名 */}
+                      <div className="flex items-start gap-2 flex-1 min-w-0">
+                        {/* 番号表示 */}
+                        <span className="text-xs font-bold text-gray-500 shrink-0 mt-0.5 w-6 text-right">
+                          {item.isCustom ? '＋' : `${displayNumber}.`}
+                        </span>
+
+                        {/* 項目名: 固定項目は読み取り専用テキスト、自由記入欄はテキスト入力 */}
+                        {item.isCustom ? (
+                          <input
+                            type="text"
+                            className="flex-1 p-1 border border-dashed border-gray-300 rounded bg-white text-black outline-none text-sm min-w-0"
+                            placeholder="項目を入力"
+                            value={item.label}
+                            onChange={(e) =>
+                              updateStep5ItemLabel(category.key, itemIndex, e.target.value)
+                            }
+                          />
+                        ) : (
+                          <span className="text-sm text-gray-700 break-words">
+                            {item.label}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* 右側: ドロップダウン（4択 + 無印） */}
+                      <div className="shrink-0 pl-8 sm:pl-0">
+                        <select
+                          className="w-20 p-1 border border-gray-300 rounded text-center text-sm bg-white text-black outline-none appearance-none"
+                          value={item.value}
+                          onChange={(e) =>
+                            updateStep5ItemValue(
+                              category.key,
+                              itemIndex,
+                              e.target.value as Step5InspectionItem['value']
+                            )
+                          }
+                        >
+                          {INSPECTION_VALUES.map((v) => (
+                            <option key={v} value={v}>
+                              {v === '' ? '　' : v}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
-    </div>
-  );
+    );
+  };
 
   // ============================
   // メインレンダリング
@@ -2228,9 +2388,10 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
           {step === 4 && renderStep4()}
-          {step === 5 && renderPlaceholder(5)}
+          {step === 5 && renderStep5()}
         </main>
 
+        {/* フッター: STEP5では「次へ」の代わりに「プレビュー」ボタンを表示 */}
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
           <div className="flex items-center gap-2">
             <button
@@ -2260,17 +2421,23 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
               </button>
             )}
           </div>
-          <button
-            onClick={handleNext}
-            disabled={step === 5}
-            className={`px-8 py-3 rounded-lg font-bold shadow flex items-center ${
-              step === 5
-                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-pink-600 text-white hover:bg-pink-700'
-            }`}
-          >
-            次へ <i className="fa-solid fa-chevron-right ml-2"></i>
-          </button>
+
+          {/* STEP5の場合は「プレビュー」ボタン、それ以外は「次へ」ボタン */}
+          {step === 5 ? (
+            <button
+              onClick={handlePreview}
+              className="px-8 py-3 rounded-lg font-bold shadow flex items-center bg-pink-600 text-white hover:bg-pink-700"
+            >
+              <i className="fa-solid fa-eye mr-2"></i>プレビュー
+            </button>
+          ) : (
+            <button
+              onClick={handleNext}
+              className="px-8 py-3 rounded-lg font-bold shadow flex items-center bg-pink-600 text-white hover:bg-pink-700"
+            >
+              次へ <i className="fa-solid fa-chevron-right ml-2"></i>
+            </button>
+          )}
         </footer>
       </div>
 

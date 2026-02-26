@@ -222,9 +222,9 @@ export const INITIAL_MASTER_DATA: MasterData = {
   processes: [],
   cautions: [],
   // --- 安全衛生日誌用マスタ初期値 ---
-  machines: [],       // 機械
-  equipment: [],      // 資機材
-  safetyInstructionItems: [],  // 安全衛生指示事項
+  machines: [],
+  equipment: [],
+  safetyInstructionItems: [],
 };
 
 // --- Safety Training Report ---
@@ -505,19 +505,41 @@ export interface SiteCheck {
   result: 'good' | 'bad' | ''; // 良/否/未選択
 }
 
-/** 点検チェックリスト大項目 */
+/** 点検チェックリスト大項目（レガシー — 後方互換のため残す） */
 export interface InspectionCategory {
   categoryName: string;      // 大項目名（管理、重機・機械、電機、墜落転落 等）
   items: InspectionItem[];
 }
 
-/** 点検チェックリスト個別項目 */
+/** 点検チェックリスト個別項目（レガシー — 後方互換のため残す） */
 export interface InspectionItem {
   id: string;
   label: string;             // 点検項目名
   result: '○' | '△' | '×' | '◎' | '';  // 結果（未入力は空文字）
   isEditable: boolean;       // 編集可能か（「その他」欄のみtrue）
   editedLabel: string;       // 編集後のラベル（isEditableがtrueの場合に使用）
+}
+
+// ============================
+// STEP5: 点検チェックリスト用の新規型定義
+// ============================
+
+/** STEP5 点検チェックリスト個別項目 */
+export interface Step5InspectionItem {
+  label: string;        // 項目名（固定項目は変更不可、自由記入欄は編集可能）
+  value: '○' | '△' | '×' | '◎' | '';  // 評価（''は無印＝該当無）
+  isCustom: boolean;    // true: 自由記入欄、false: 固定項目
+}
+
+/** STEP5 点検チェックリスト（7大分類） */
+export interface Step5InspectionChecklist {
+  management: Step5InspectionItem[];       // 管理（固定10項目 + 自由2項目 = 12項目）
+  machinery: Step5InspectionItem[];        // 重機・機械（固定5項目 + 自由2項目 = 7項目）
+  electrical: Step5InspectionItem[];       // 電気（固定5項目 + 自由2項目 = 7項目）
+  falling: Step5InspectionItem[];          // 墜落転落（固定5項目 + 自由2項目 = 7項目）
+  debris: Step5InspectionItem[];           // 飛来・落下崩壊・転倒（固定5項目 + 自由2項目 = 7項目）
+  environment: Step5InspectionItem[];      // 作業環境（固定5項目 + 自由2項目 = 7項目）
+  others: Step5InspectionItem[];           // その他（固定5項目 + 自由3項目 = 8項目）
 }
 
 // ============================
@@ -537,10 +559,9 @@ export interface AdditionalWorkEntry {
 // STEP3: 基本確認事項・当現場確認事項の型定義
 // 【修正】「確認事項」→「基本確認事項」、「当現場の確認事項」→「当現場確認事項」に名称変更
 // 【修正】7項目から10項目に拡張（item8〜item10を追加）
-// ※プロパティ名 confirmationItems / siteConfirmationItems は後方互換性のため維持
 // ============================
 
-/** 基本確認事項（10項目） */  /* 【修正】7項目→10項目に拡張 */
+/** 基本確認事項（10項目） */
 export interface Step3ConfirmationItems {
   item1: '良' | '否' | '';   // 健康状態の把握
   item2: '良' | '否' | '';   // 服装・保護具の着用
@@ -549,12 +570,12 @@ export interface Step3ConfirmationItems {
   item5: '良' | '否' | '';   // 危険作業および危険個所の周知
   item6: '良' | '否' | '';   // 安全指示事項の周知確認（作業開始前）
   item7: '良' | '否' | '';   // 相互の声掛けおよび合図確認の実施
-  item8: '良' | '否' | '';   // 異常・危険発見時の報告体制の周知       /* 【修正】追加 */
-  item9: '良' | '否' | '';   // KY活動および作業指揮者の明確化         /* 【修正】追加 */
-  item10: '良' | '否' | '';  // 新規入場者教育の実施                   /* 【修正】追加 */
+  item8: '良' | '否' | '';   // 異常・危険発見時の報告体制の周知
+  item9: '良' | '否' | '';   // KY活動および作業指揮者の明確化
+  item10: '良' | '否' | '';  // 新規入場者教育の実施
 }
 
-/** 当現場確認事項（10項目） */  /* 【修正】7項目→10項目に拡張 */
+/** 当現場確認事項（10項目） */
 export interface Step3SiteConfirmationItems {
   item1: '良' | '否' | '';   // 埋設物・架空線確認（作業開始前）
   item2: '良' | '否' | '';   // 作業帯分離措置
@@ -563,9 +584,9 @@ export interface Step3SiteConfirmationItems {
   item5: '良' | '否' | '';   // 過積載確認
   item6: '良' | '否' | '';   // 作業員と建設機械の接触防止措置
   item7: '良' | '否' | '';   // 現場内の整理整頓
-  item8: '良' | '否' | '';   // 重機旋回範囲内立入禁止措置             /* 【修正】追加 */
-  item9: '良' | '否' | '';   // 誘導員配置および合図体制               /* 【修正】追加 */
-  item10: '良' | '否' | '';  // 作業通路および避難経路の確保           /* 【修正】追加 */
+  item8: '良' | '否' | '';   // 重機旋回範囲内立入禁止措置
+  item9: '良' | '否' | '';   // 誘導員配置および合図体制
+  item10: '良' | '否' | '';  // 作業通路および避難経路の確保
 }
 
 /** ダンプ台数 */
@@ -610,8 +631,8 @@ export interface DailySafetyReportData {
   additionalWorkEntries: WorkEntry[];  // 追加作業（当日赤字追加）— 既存フィールド
   actualWorkerCounts: Record<string, number>; // 各作業の実施人数（キー: workEntryのid）
   totalWorkers: number;                // 本日の作業人員数（自動合計）
-  confirmationChecks: ConfirmationCheck[];    // 基本確認事項（良/否）  /* 【修正】コメント名称変更 */
-  siteChecks: SiteCheck[];                    // 当現場確認事項（良/否）  /* 【修正】コメント名称変更 */
+  confirmationChecks: ConfirmationCheck[];    // 基本確認事項（良/否）
+  siteChecks: SiteCheck[];                    // 当現場確認事項（良/否）
   dumpTruckRounds: number;             // ダンプ回数
   dumpTruckCount: number;              // ダンプ台数
   dumpTruckTotal: number;              // ダンプ合計台数（自動計算）
@@ -620,35 +641,28 @@ export interface DailySafetyReportData {
 
   // --- STEP3: 当日作業確認データ（追加フィールド） ---
   actualWorkers: { entryIndex: number; count: number }[];
-    // STEP1の各作業セットに対応する実施人数
-
   step3AdditionalWorkEntries: AdditionalWorkEntry[];
-    // STEP3で追加された作業（帳票出力時に赤字表示）
-
   step3ConfirmationItems: Step3ConfirmationItems;
-    // 基本確認事項（10項目: 良/否）  /* 【修正】名称変更・10項目に拡張 */
-
   step3SiteConfirmationItems: Step3SiteConfirmationItems;
-    // 当現場確認事項（10項目: 良/否）  /* 【修正】名称変更・10項目に拡張 */
-
   stageConfirmation: '有' | '無' | '';     // 段階確認
   witnessConfirmation: '有' | '無' | '';   // 立会確認
-
   dumpTrucks: DumpTrucks;
-    // 搬入・搬出ダンプ台数
 
   // --- STEP4: 巡視記録（既存フィールド — 後方互換のため残す） ---
-  coordinationNotes: string;           // 作業連絡調整事項（自由入力）
-  patrolInspector: string;             // 巡視点検者（supervisorsマスタ選択）
-  patrolTime: string;                  // 巡視時間（プルダウン選択）
-  patrolAmPm: 'AM' | 'PM';            // AM/PM選択
-  patrolFindings: string;              // 巡視所見（自由入力）
+  coordinationNotes: string;
+  patrolInspector: string;
+  patrolTime: string;
+  patrolAmPm: 'AM' | 'PM';
+  patrolFindings: string;
 
   // --- STEP4: 巡視記録データ（新規追加） ---
   patrolRecord: PatrolRecord;
 
-  // --- STEP5: 点検チェックリスト ---
-  inspectionChecklist: InspectionCategory[]; // 点検チェックリスト
+  // --- STEP5: 点検チェックリスト（レガシー — 後方互換のため残す） ---
+  inspectionChecklist: InspectionCategory[];
+
+  // --- STEP5: 点検チェックリスト（新規追加：7大分類・固定項目・自由記入欄） ---
+  step5InspectionChecklist: Step5InspectionChecklist;
 
   // --- 所長確認 ---
   directorStampUrl: string;     // 所長電子印画像URL
@@ -685,66 +699,43 @@ function getAutumnalEquinoxDay(year: number): number {
  */
 function getNthMonday(year: number, month: number, n: number): number {
   const firstDay = new Date(year, month - 1, 1);
-  const firstDow = firstDay.getDay(); // 0=日, 1=月, ...
+  const firstDow = firstDay.getDay();
   const firstMonday = firstDow <= 1 ? (1 - firstDow + 1) : (8 - firstDow + 1);
   return firstMonday + (n - 1) * 7;
 }
 
 /**
  * 日本の祝日かどうかを判定する関数
- * SafetyPlanPrintLayout.tsx 内の isJapaneseHoliday と同じロジック
  */
 export function isJapaneseHoliday(date: Date): boolean {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const day = date.getDate();
-  const dow = date.getDay(); // 0=日
+  const dow = date.getDay();
 
-  // 固定祝日
   const fixedHolidays: [number, number][] = [
-    [1, 1],   // 元日
-    [2, 11],  // 建国記念の日
-    [2, 23],  // 天皇誕生日
-    [4, 29],  // 昭和の日
-    [5, 3],   // 憲法記念日
-    [5, 4],   // みどりの日
-    [5, 5],   // こどもの日
-    [8, 11],  // 山の日
-    [11, 3],  // 文化の日
-    [11, 23], // 勤労感謝の日
+    [1, 1], [2, 11], [2, 23], [4, 29], [5, 3], [5, 4], [5, 5],
+    [8, 11], [11, 3], [11, 23],
   ];
 
   for (const [m, d] of fixedHolidays) {
     if (month === m && day === d) return true;
   }
 
-  // 春分の日
   if (month === 3 && day === getVernalEquinoxDay(year)) return true;
-
-  // 秋分の日
   if (month === 9 && day === getAutumnalEquinoxDay(year)) return true;
 
-  // ハッピーマンデー制度
-  // 成人の日：1月第2月曜
   if (month === 1 && day === getNthMonday(year, 1, 2)) return true;
-  // 海の日：7月第3月曜
   if (month === 7 && day === getNthMonday(year, 7, 3)) return true;
-  // 敬老の日：9月第3月曜
   if (month === 9 && day === getNthMonday(year, 9, 3)) return true;
-  // スポーツの日：10月第2月曜
   if (month === 10 && day === getNthMonday(year, 10, 2)) return true;
 
-  // 振替休日：祝日が日曜日の場合、翌月曜日が振替休日
   if (dow === 1) {
-    // 昨日が祝日だったか（日曜日のチェック）
     const yesterday = new Date(year, month - 1, day - 1);
     if (yesterday.getDay() === 0) {
-      // 再帰を避けるため、昨日が祝日かどうかを直接チェック
       const yYear = yesterday.getFullYear();
       const yMonth = yesterday.getMonth() + 1;
       const yDay = yesterday.getDate();
-      
-      // 固定祝日チェック
       for (const [m, d] of fixedHolidays) {
         if (yMonth === m && yDay === d) return true;
       }
@@ -757,8 +748,6 @@ export function isJapaneseHoliday(date: Date): boolean {
     }
   }
 
-  // 国民の休日：祝日と祝日に挟まれた日
-  // 典型例: 9月の敬老の日と秋分の日の間
   if (month === 9) {
     const keirouDay = getNthMonday(year, 9, 3);
     const shubunDay = getAutumnalEquinoxDay(year);
@@ -782,12 +771,9 @@ export function getJapaneseDayOfWeek(date: Date): string {
 export function getNextBusinessDay(baseDate: Date): Date {
   const next = new Date(baseDate);
   next.setDate(next.getDate() + 1);
-  
-  // 土日祝を飛ばす
   while (next.getDay() === 0 || next.getDay() === 6 || isJapaneseHoliday(next)) {
     next.setDate(next.getDate() + 1);
   }
-  
   return next;
 }
 
@@ -801,15 +787,14 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
 }
 
-/** 点検チェックリストの初期値を生成する */
+/** 点検チェックリストの初期値を生成する（レガシー — 後方互換のため残す） */
 function createInitialInspectionChecklist(): InspectionCategory[] {
-  // ヘルパー: 点検項目を生成（最後の項目のみ isEditable: true）
   const createItems = (labels: string[]): InspectionItem[] => {
     return labels.map((label, index) => ({
       id: generateId(),
       label,
-      result: '' as '' ,
-      isEditable: index === labels.length - 1,  // 最後の項目のみ編集可能
+      result: '' as '',
+      isEditable: index === labels.length - 1,
       editedLabel: '',
     }));
   };
@@ -893,6 +878,81 @@ function createInitialInspectionChecklist(): InspectionCategory[] {
   ];
 }
 
+/** STEP5 点検チェックリストの初期値を生成する（新規追加） */
+function createInitialStep5InspectionChecklist(): Step5InspectionChecklist {
+  return {
+    management: [
+      { label: '朝（夕）礼・ＫＹミーティングの実施状況', value: '', isCustom: false },
+      { label: '各作業間の連絡・調整', value: '', isCustom: false },
+      { label: '作業主任者・有資格者の配置状況', value: '', isCustom: false },
+      { label: '保護具（保安帽・安全帯・マスク・メガネ等）の使用', value: '', isCustom: false },
+      { label: '救命胴衣の着用・浮き輪の常備', value: '', isCustom: false },
+      { label: '標識類（立入禁止・足場積載荷重・作業主任者）', value: '', isCustom: false },
+      { label: '建設廃棄物（許可証・契約書・マニュフェスト）', value: '', isCustom: false },
+      { label: '各種点検状況の確認・記録状況', value: '', isCustom: false },
+      { label: '建設業許可・労災成立・確認申請・占用許可等掲示', value: '', isCustom: false },
+      { label: 'その他掲示物管理（有効期限・汚れ等）', value: '', isCustom: false },
+      { label: '', value: '', isCustom: true },
+      { label: '', value: '', isCustom: true },
+    ],
+    machinery: [
+      { label: '始業点検記録・自主検査済証の確認', value: '', isCustom: false },
+      { label: '合図者・合図の方法・玉掛用具・玉掛方法・ワイヤー', value: '', isCustom: false },
+      { label: 'クレーン・重機の設置状況　立入禁止措置状況', value: '', isCustom: false },
+      { label: '安全装置（外れ止め・過巻防止装置等）', value: '', isCustom: false },
+      { label: '敷板・アウトリガ－・用途外使用', value: '', isCustom: false },
+      { label: '', value: '', isCustom: true },
+      { label: '', value: '', isCustom: true },
+    ],
+    electrical: [
+      { label: '分電盤（取扱者表示・アース・行先表示）', value: '', isCustom: false },
+      { label: '配線（充電部養生・活線損傷・水浸し等）', value: '', isCustom: false },
+      { label: '電工ドラム・アース・ホルダー', value: '', isCustom: false },
+      { label: '架空電線防護措置', value: '', isCustom: false },
+      { label: '電動工具類の使用状況（カバー・刃の取付）', value: '', isCustom: false },
+      { label: '', value: '', isCustom: true },
+      { label: '', value: '', isCustom: true },
+    ],
+    falling: [
+      { label: '手すり（足場・桟橋・開口部・床端等）', value: '', isCustom: false },
+      { label: '脚立・梯子・ローリングタワー使用状況', value: '', isCustom: false },
+      { label: '安全ネット・防網・親綱', value: '', isCustom: false },
+      { label: '昇降設備・安全通路', value: '', isCustom: false },
+      { label: '足場・作業床の整理状況', value: '', isCustom: false },
+      { label: '', value: '', isCustom: true },
+      { label: '', value: '', isCustom: true },
+    ],
+    debris: [
+      { label: '支保工（土止め・型枠・ずい道等）', value: '', isCustom: false },
+      { label: '切土・盛土・掘削・勾配', value: '', isCustom: false },
+      { label: '湧き水・浮石・落石・亀裂', value: '', isCustom: false },
+      { label: '足場（ヤラズ・壁つなぎ等）・作業構台', value: '', isCustom: false },
+      { label: '幅木の有無・足場上の資材・養生シート等', value: '', isCustom: false },
+      { label: '', value: '', isCustom: true },
+      { label: '', value: '', isCustom: true },
+    ],
+    environment: [
+      { label: '整理・整頓（事務所内・休憩所・通路・資材置場）', value: '', isCustom: false },
+      { label: '照明・採光・粉塵換気・有機溶剤換気', value: '', isCustom: false },
+      { label: '有機溶剤・アセ・酸素ボンベ・燃料等管理状況', value: '', isCustom: false },
+      { label: '火気使用状況（消火器・作業場所・休憩所）・タバコ', value: '', isCustom: false },
+      { label: '仮設トイレの衛生状況', value: '', isCustom: false },
+      { label: '', value: '', isCustom: true },
+      { label: '', value: '', isCustom: true },
+    ],
+    others: [
+      { label: '騒音・振動・水質汚濁・粉じん飛散等防止措置条項', value: '', isCustom: false },
+      { label: '過積載防止・運行速度管理', value: '', isCustom: false },
+      { label: '機械と作業員の分離措置及び誘導員、合図員の配置', value: '', isCustom: false },
+      { label: 'ウイルス対策', value: '', isCustom: false },
+      { label: '熱中症対策', value: '', isCustom: false },
+      { label: '', value: '', isCustom: true },
+      { label: '', value: '', isCustom: true },
+      { label: '', value: '', isCustom: true },
+    ],
+  };
+}
+
 // 今日の日付
 const today = new Date();
 const todayISO = today.toISOString().split('T')[0];
@@ -913,8 +973,8 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
 
   // --- STEP1: 作業内容（前日入力） ---
   workEntries: [],
-  materialEntries: [],      // 搬出入資機材（資機材マスタから選択）
-  preparationEntries: [],   // 段取り資材等（資機材マスタから選択）
+  materialEntries: [],
+  preparationEntries: [],
   safetyInstructions: [],
 
   // --- STEP2: 配置図（前日入力） ---
@@ -952,31 +1012,13 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
   // --- STEP3: 当日作業確認データ（追加フィールド初期値） ---
   actualWorkers: [],
   step3AdditionalWorkEntries: [],
-  /* 【修正】基本確認事項: 7項目→10項目に拡張（item8〜item10を追加） */
   step3ConfirmationItems: {
-    item1: '',
-    item2: '',
-    item3: '',
-    item4: '',
-    item5: '',
-    item6: '',
-    item7: '',
-    item8: '',   // 【修正】追加
-    item9: '',   // 【修正】追加
-    item10: '',  // 【修正】追加
+    item1: '', item2: '', item3: '', item4: '', item5: '',
+    item6: '', item7: '', item8: '', item9: '', item10: '',
   },
-  /* 【修正】当現場確認事項: 7項目→10項目に拡張（item8〜item10を追加） */
   step3SiteConfirmationItems: {
-    item1: '',
-    item2: '',
-    item3: '',
-    item4: '',
-    item5: '',
-    item6: '',
-    item7: '',
-    item8: '',   // 【修正】追加
-    item9: '',   // 【修正】追加
-    item10: '',  // 【修正】追加
+    item1: '', item2: '', item3: '', item4: '', item5: '',
+    item6: '', item7: '', item8: '', item9: '', item10: '',
   },
   stageConfirmation: '',
   witnessConfirmation: '',
@@ -997,8 +1039,11 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
     findings: '',
   },
 
-  // --- STEP5: 点検チェックリスト ---
+  // --- STEP5: 点検チェックリスト（レガシー — 後方互換のため残す） ---
   inspectionChecklist: createInitialInspectionChecklist(),
+
+  // --- STEP5: 点検チェックリスト（新規追加：7大分類・固定項目・自由記入欄） ---
+  step5InspectionChecklist: createInitialStep5InspectionChecklist(),
 
   // --- 所長確認 ---
   directorStampUrl: '',
