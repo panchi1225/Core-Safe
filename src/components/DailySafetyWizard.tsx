@@ -368,6 +368,18 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   // --- ドラフトID ---
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
 
+  // 【修正】作業日変更検知用: 初期化時の作業日を保持する
+  // 一時保存データから復元した場合はその作業日、新規作成時はnull
+  const [originalWorkDate, setOriginalWorkDate] = useState<string | null>(() => {
+    if (initialData) {
+      return initialData.workDate || null;
+    }
+    return null;
+  });
+
+  // 【修正】作業日変更確認ダイアログ表示用state
+  const [showDateChangeConfirm, setShowDateChangeConfirm] = useState(false);
+
   // --- マスタデータ ---
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
 
@@ -644,11 +656,60 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
+  // 【修正】作業日変更時の新規ドラフト分離処理
+  // 「はい」が選択された場合に呼ばれるコールバック
+  // ============================
+  const handleDateChangeSeparation = useCallback(() => {
+    // a) 新しいドラフトIDを生成
+    const newId = generateId();
+
+    // b) draftIdを新しいIDに更新
+    setDraftId(newId);
+
+    // c) STEP2以降のデータを初期状態にリセット
+    //    ※STEP1のデータはすべて維持する
+    setReport((prev) => ({
+      ...prev,
+      annotatedDiagramUrl: '',
+      baseDiagramUrl: '',
+    }));
+    // キャンバス関連のstateをクリア
+    setCurrentDiagramSrc('');
+    setDiagramLoaded(false);
+    setCanvasHistory([]);
+    backgroundImageRef.current = null;
+
+    // d) originalWorkDateを現在のreport.workDateに更新
+    setOriginalWorkDate(report.workDate);
+
+    // e) stepを2に進める
+    setStep(2);
+
+    // 確認ダイアログを閉じる
+    setShowDateChangeConfirm(false);
+
+    // 変更フラグ更新
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  }, [report.workDate]);
+
+  // ============================
   // ステップ遷移
   // ============================
   const handleNext = () => {
     if (step === 1) {
       if (!validateStep1()) return;
+
+      // 【修正】作業日変更判定:
+      // originalWorkDateがnullでない（一時保存データから復元）かつ
+      // 作業日が変更されている場合、確認ダイアログを表示
+      if (
+        originalWorkDate !== null &&
+        originalWorkDate !== report.workDate
+      ) {
+        setShowDateChangeConfirm(true);
+        return;
+      }
     }
     setStep((prev) => Math.min(prev + 1, 5));
   };
@@ -1684,6 +1745,18 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         rightButtonLabel={confirmModal.rightButtonLabel}
         leftButtonClass={confirmModal.leftButtonClass}
         rightButtonClass={confirmModal.rightButtonClass}
+      />
+
+      {/* 【修正】作業日変更確認ダイアログ */}
+      <ConfirmationModal
+        isOpen={showDateChangeConfirm}
+        message={'作業日が変更されました。新しい日誌として作成します。\nSTEP2以降は初期状態に戻ります。よろしいですか？'}
+        onLeftButtonClick={handleDateChangeSeparation}
+        onRightButtonClick={() => setShowDateChangeConfirm(false)}
+        leftButtonLabel="はい"
+        rightButtonLabel="いいえ"
+        leftButtonClass="px-4 py-2 bg-pink-600 text-white rounded font-bold hover:bg-pink-700"
+        rightButtonClass="px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300"
       />
 
       {/* 【修正1】保存済み配置図選択モーダル — インライン削除確認UI搭載 */}
