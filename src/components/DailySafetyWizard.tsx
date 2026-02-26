@@ -132,12 +132,9 @@ const DiagramPickerModal: React.FC<DiagramPickerModalProps> = ({
   onDelete,
   onClose,
 }) => {
-  // 【修正1】削除対象のIDをモーダル内stateで管理
   const [deletingDiagramId, setDeletingDiagramId] = useState<string | null>(null);
-  // 削除処理中フラグ
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // モーダルが閉じた時にリセット
   useEffect(() => {
     if (!isOpen) {
       setDeletingDiagramId(null);
@@ -147,7 +144,6 @@ const DiagramPickerModal: React.FC<DiagramPickerModalProps> = ({
 
   if (!isOpen) return null;
 
-  // 日時フォーマットヘルパー
   const formatDate = (ms: number): string => {
     const d = new Date(ms);
     const yyyy = d.getFullYear();
@@ -158,7 +154,6 @@ const DiagramPickerModal: React.FC<DiagramPickerModalProps> = ({
     return `${yyyy}/${mm}/${dd} ${hh}:${min}`;
   };
 
-  // 【修正1】インライン削除確認の「はい」ボタン処理
   const handleConfirmDelete = async (id: string) => {
     setIsDeleting(true);
     try {
@@ -175,7 +170,6 @@ const DiagramPickerModal: React.FC<DiagramPickerModalProps> = ({
   return (
     <div className="fixed inset-0 z-[60] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col animate-fade-in">
-        {/* ヘッダー */}
         <div className="p-4 border-b flex items-center justify-between shrink-0">
           <h3 className="text-lg font-bold text-gray-800">
             <i className="fa-solid fa-images mr-2 text-pink-500"></i>
@@ -189,16 +183,13 @@ const DiagramPickerModal: React.FC<DiagramPickerModalProps> = ({
           </button>
         </div>
 
-        {/* コンテンツ */}
         <div className="flex-1 overflow-y-auto p-4">
           {isLoading ? (
-            /* ローディング表示 */
             <div className="flex flex-col items-center justify-center py-12">
               <div className="w-10 h-10 border-4 border-pink-200 border-t-pink-600 rounded-full animate-spin mb-4"></div>
               <p className="text-gray-500 text-sm font-bold">読み込み中...</p>
             </div>
           ) : images.length === 0 ? (
-            /* 0件の場合 */
             <div className="text-center py-12">
               <i className="fa-solid fa-folder-open text-4xl text-gray-300 mb-4 block"></i>
               <p className="text-gray-400 font-bold text-sm">
@@ -206,14 +197,12 @@ const DiagramPickerModal: React.FC<DiagramPickerModalProps> = ({
               </p>
             </div>
           ) : (
-            /* サムネイルグリッド: 2列表示（スマホは1列） */
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {images.map((img) => (
                 <div
                   key={img.id}
                   className="border border-gray-200 rounded-lg p-3 hover:border-pink-300 hover:shadow-md transition-all bg-gray-50"
                 >
-                  {/* 【修正1】削除確認中はインライン確認UIを表示 */}
                   {deletingDiagramId === img.id ? (
                     <div className="flex flex-col items-center justify-center py-4">
                       <p className="text-sm font-bold text-red-600 mb-3">
@@ -239,7 +228,6 @@ const DiagramPickerModal: React.FC<DiagramPickerModalProps> = ({
                     </div>
                   ) : (
                     <>
-                      {/* サムネイル画像 */}
                       <div className="flex justify-center mb-2">
                         <img
                           src={img.imageDataUrl}
@@ -247,15 +235,12 @@ const DiagramPickerModal: React.FC<DiagramPickerModalProps> = ({
                           className="w-24 h-24 object-cover rounded border border-gray-200 bg-white"
                         />
                       </div>
-                      {/* ファイル名 */}
                       <p className="text-xs text-gray-700 font-bold truncate text-center mb-1" title={img.fileName}>
                         {img.fileName}
                       </p>
-                      {/* アップロード日時 */}
                       <p className="text-[10px] text-gray-400 text-center mb-2">
                         {formatDate(img.createdAt)}
                       </p>
-                      {/* 操作ボタン */}
                       <div className="flex gap-2">
                         <button
                           onClick={() => onSelect(img)}
@@ -279,7 +264,6 @@ const DiagramPickerModal: React.FC<DiagramPickerModalProps> = ({
           )}
         </div>
 
-        {/* フッター */}
         <div className="p-4 border-t shrink-0">
           <button
             onClick={onClose}
@@ -334,34 +318,39 @@ function createEmptyAdditionalWorkEntry(): AdditionalWorkEntry {
 const SAFETY_INSTRUCTIONS_COUNT = 7;
 
 // ============================
-// STEP3: 確認事項の定義
+// 【修正】STEP3: 基本確認事項の定義（10項目に拡張、項目名を変更）
 // ============================
 const STEP3_CONFIRMATION_LABELS: { key: keyof Step3ConfirmationItems; label: string }[] = [
   { key: 'item1', label: '健康状態の把握' },
   { key: 'item2', label: '服装・保護具の着用' },
-  { key: 'item3', label: '資格証の確認' },
+  { key: 'item3', label: '資格者の配置（資格証の確認）' },           /* 【修正】項目名変更 */
   { key: 'item4', label: '作業手順および合図・指揮系統の周知' },
-  { key: 'item5', label: '危険個所の周知' },
-  { key: 'item6', label: 'KY活動および作業指揮者の明確化' },
-  { key: 'item7', label: '新規入場者教育の実施' },
+  { key: 'item5', label: '危険作業および危険個所の周知' },           /* 【修正】項目名変更 */
+  { key: 'item6', label: '安全指示事項の周知確認（作業開始前）' },   /* 【修正】項目名変更 */
+  { key: 'item7', label: '相互の声掛けおよび合図確認の実施' },       /* 【修正】項目名変更 */
+  { key: 'item8', label: '異常・危険発見時の報告体制の周知' },       /* 【修正】追加 */
+  { key: 'item9', label: 'KY活動および作業指揮者の明確化' },         /* 【修正】追加 */
+  { key: 'item10', label: '新規入場者教育の実施' },                  /* 【修正】追加 */
 ];
 
 // ============================
-// STEP3: 当現場の確認事項の定義
+// 【修正】STEP3: 当現場確認事項の定義（10項目に拡張、項目名を変更）
 // ============================
 const STEP3_SITE_CONFIRMATION_LABELS: { key: keyof Step3SiteConfirmationItems; label: string }[] = [
-  { key: 'item1', label: '作業前に「埋設物」および「架空線」の確認を行ったか。' },
-  { key: 'item2', label: '作業帯の分離措置（作業エリアの明示）を行っているか。' },
-  { key: 'item3', label: '建設機械等の使用前点検を実施しているか。' },
-  { key: 'item4', label: '仮囲い・保安設備に損傷や劣化などの不備はないか。' },
-  { key: 'item5', label: '過積載がないか。確認を行っているか。' },
-  { key: 'item6', label: '作業員と建設機械の接触防止措置を行っているか。' },
-  { key: 'item7', label: '現場内の整理整頓はできているか。' },
+  { key: 'item1', label: '埋設物・架空線確認（作業開始前）' },               /* 【修正】項目名変更 */
+  { key: 'item2', label: '作業帯分離措置' },                                 /* 【修正】項目名変更 */
+  { key: 'item3', label: '建設機械使用前点検' },                             /* 【修正】項目名変更 */
+  { key: 'item4', label: '仮囲い・保安設備確認' },                           /* 【修正】項目名変更 */
+  { key: 'item5', label: '過積載確認' },                                     /* 【修正】項目名変更 */
+  { key: 'item6', label: '作業員と建設機械の接触防止措置' },                 /* 【修正】項目名変更 */
+  { key: 'item7', label: '現場内の整理整頓' },                               /* 【修正】項目名変更 */
+  { key: 'item8', label: '重機旋回範囲内立入禁止措置' },                     /* 【修正】追加 */
+  { key: 'item9', label: '誘導員配置および合図体制' },                       /* 【修正】追加 */
+  { key: 'item10', label: '作業通路および避難経路の確保' },                  /* 【修正】追加 */
 ];
 
 // ============================
 // 【修正B】画像サイズエラー判定ヘルパー
-// Firestoreドキュメントサイズ制限やペイロードサイズ超過を検出する
 // ============================
 function isImageSizeError(error: unknown): boolean {
   const errorMessage =
@@ -384,33 +373,37 @@ function isImageSizeError(error: unknown): boolean {
 // メインコンポーネント
 // ============================
 const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
-  // --- ステップ管理 ---
   const [step, setStep] = useState(1);
 
-  // --- レポートデータ ---
   const [report, setReport] = useState<DailySafetyReportData>(() => {
     if (initialData) {
-      // 一時保存データから復元時、safetyInstructions を7個に正規化
       const restored = { ...initialData };
       const si = restored.safetyInstructions || [];
-      // 7個未満なら空文字で埋め、7個を超えていれば切り詰め
       restored.safetyInstructions = Array.from(
         { length: SAFETY_INSTRUCTIONS_COUNT },
         (_, i) => si[i] || ''
       );
-      // STEP3追加フィールドが存在しない場合のフォールバック
       if (!restored.actualWorkers) restored.actualWorkers = [];
       if (!restored.step3AdditionalWorkEntries) restored.step3AdditionalWorkEntries = [];
+      /* 【修正】基本確認事項: 10項目対応のフォールバック（item8〜item10を補完） */
       if (!restored.step3ConfirmationItems) {
-        restored.step3ConfirmationItems = { item1: '', item2: '', item3: '', item4: '', item5: '', item6: '', item7: '' };
+        restored.step3ConfirmationItems = { item1: '', item2: '', item3: '', item4: '', item5: '', item6: '', item7: '', item8: '', item9: '', item10: '' };
+      } else {
+        if (!('item8' in restored.step3ConfirmationItems)) (restored.step3ConfirmationItems as any).item8 = '';
+        if (!('item9' in restored.step3ConfirmationItems)) (restored.step3ConfirmationItems as any).item9 = '';
+        if (!('item10' in restored.step3ConfirmationItems)) (restored.step3ConfirmationItems as any).item10 = '';
       }
+      /* 【修正】当現場確認事項: 10項目対応のフォールバック（item8〜item10を補完） */
       if (!restored.step3SiteConfirmationItems) {
-        restored.step3SiteConfirmationItems = { item1: '', item2: '', item3: '', item4: '', item5: '', item6: '', item7: '' };
+        restored.step3SiteConfirmationItems = { item1: '', item2: '', item3: '', item4: '', item5: '', item6: '', item7: '', item8: '', item9: '', item10: '' };
+      } else {
+        if (!('item8' in restored.step3SiteConfirmationItems)) (restored.step3SiteConfirmationItems as any).item8 = '';
+        if (!('item9' in restored.step3SiteConfirmationItems)) (restored.step3SiteConfirmationItems as any).item9 = '';
+        if (!('item10' in restored.step3SiteConfirmationItems)) (restored.step3SiteConfirmationItems as any).item10 = '';
       }
       if (!restored.stageConfirmation) restored.stageConfirmation = '';
       if (!restored.witnessConfirmation) restored.witnessConfirmation = '';
       if (!restored.dumpTrucks) restored.dumpTrucks = { incoming: 0, outgoing: 0 };
-      // STEP4: patrolRecord が存在しない場合のフォールバック
       if (!restored.patrolRecord) {
         restored.patrolRecord = {
           coordinationNotes: '',
@@ -421,7 +414,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       }
       return restored;
     }
-    // 初期値: 作業エントリが空なら1つ追加
     const init = { ...INITIAL_DAILY_SAFETY_REPORT };
     if (init.workEntries.length === 0) {
       init.workEntries = [createEmptyWorkEntry()];
@@ -432,16 +424,12 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     if (init.preparationEntries.length === 0) {
       init.preparationEntries = [''];
     }
-    // 安全衛生指示事項は7個の空文字配列で初期化
     init.safetyInstructions = Array(SAFETY_INSTRUCTIONS_COUNT).fill('');
     return init;
   });
 
-  // --- ドラフトID ---
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
 
-  // 【修正】作業日変更検知用: 初期化時の作業日を保持する
-  // 一時保存データから復元した場合はその作業日、新規作成時はnull
   const [originalWorkDate, setOriginalWorkDate] = useState<string | null>(() => {
     if (initialData) {
       return initialData.workDate || null;
@@ -449,20 +437,15 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     return null;
   });
 
-  // 【修正】作業日変更確認ダイアログ表示用state
   const [showDateChangeConfirm, setShowDateChangeConfirm] = useState(false);
 
-  // --- マスタデータ ---
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
 
-  // --- 保存状態 ---
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // --- バリデーションエラー ---
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
-  // --- モーダル ---
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -484,43 +467,31 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     rightButtonClass: '',
   });
 
-  // --- STEP2: 保存済み配置図選択モーダル ---
   const [showDiagramPicker, setShowDiagramPicker] = useState(false);
   const [diagramImages, setDiagramImages] = useState<DiagramImage[]>([]);
   const [diagramPickerLoading, setDiagramPickerLoading] = useState(false);
 
-  // --- STEP2: HTML Canvas API 関連 ---
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasElRef = useRef<HTMLCanvasElement>(null);
-  const [penColor, setPenColor] = useState('#ff0000'); // デフォルト: 赤
-  const [penWidth, setPenWidth] = useState(4); // デフォルト: 中(4px)
+  const [penColor, setPenColor] = useState('#ff0000');
+  const [penWidth, setPenWidth] = useState(4);
   const [diagramLoaded, setDiagramLoaded] = useState(false);
 
-  // 描画履歴（各スナップショットの data URL を保持）
   const [canvasHistory, setCanvasHistory] = useState<string[]>([]);
 
-  // 描画中フラグ（useRef で管理し、再レンダリングを防止）
   const isDrawingRef = useRef(false);
 
-  // 背景画像のImageオブジェクトを保持（全消去・元に戻す時に再利用）
   const backgroundImageRef = useRef<HTMLImageElement | null>(null);
 
-  // キャンバスに表示する画像URLを別stateで管理
-  // useEffectの依存配列からreportのURLを排除することで、保存時のキャンバス再初期化を防止
   const [currentDiagramSrc, setCurrentDiagramSrc] = useState<string>(() => {
-    // 初期値: 一時保存データから復元時に設定
     if (initialData) {
       return initialData.annotatedDiagramUrl || initialData.baseDiagramUrl || '';
     }
     return '';
   });
 
-  // --- STEP2: アップロード用の隠しinput ref ---
   const diagramFileInputRef = useRef<HTMLInputElement>(null);
 
-  // ============================
-  // 一時保存データから復元した際にdiagramLoadedを設定
-  // ============================
   useEffect(() => {
     if (initialData) {
       const src = initialData.annotatedDiagramUrl || initialData.baseDiagramUrl;
@@ -530,14 +501,10 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     }
   }, [initialData]);
 
-  // ============================
-  // マスタデータ読み込み
-  // ============================
   useEffect(() => {
     const loadMaster = async () => {
       try {
         const data = await getMasterData();
-        // getMasterData が各フィールドを返さない場合に備えてフォールバック
         setMasterData({
           ...data,
           machines: data.machines || INITIAL_MASTER_DATA.machines,
@@ -552,9 +519,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     loadMaster();
   }, []);
 
-  // ============================
-  // レポート更新ヘルパー
-  // ============================
   const updateReport = useCallback(
     (field: keyof DailySafetyReportData, value: any) => {
       setReport((prev) => ({ ...prev, [field]: value }));
@@ -567,9 +531,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     []
   );
 
-  // ============================
-  // STEP4: patrolRecord 更新ヘルパー
-  // ============================
   const updatePatrolRecord = useCallback(
     (field: keyof PatrolRecord, value: string) => {
       setReport((prev) => ({
@@ -585,9 +546,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     []
   );
 
-  // ============================
-  // 打合せ日変更時に作業日を翌営業日に連動 + 曜日自動更新
-  // ============================
   const handleMeetingDateChange = (dateStr: string) => {
     const meetingDate = new Date(dateStr + 'T00:00:00');
     const nextBizDate = getNextBusinessDay(meetingDate);
@@ -607,9 +565,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     setSaveStatus('idle');
   };
 
-  // ============================
-  // 作業日変更時の曜日自動更新
-  // ============================
   const handleWorkDateChange = (dateStr: string) => {
     const d = new Date(dateStr + 'T00:00:00');
     setReport((prev) => ({
@@ -621,9 +576,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     setSaveStatus('idle');
   };
 
-  // ============================
-  // 作業エントリ操作
-  // ============================
   const updateWorkEntry = (id: string, field: keyof WorkEntry, value: any) => {
     setReport((prev) => ({
       ...prev,
@@ -667,9 +619,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     });
   };
 
-  // ============================
-  // 搬出入資機材・段取り資材等・安全衛生指示事項の汎用操作
-  // ============================
   const updateListEntry = (
     field: 'materialEntries' | 'preparationEntries' | 'safetyInstructions',
     index: number,
@@ -706,13 +655,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     setSaveStatus('idle');
   };
 
-  // ============================
-  // STEP3: 実施人数更新
-  // ============================
   const updateActualWorkers = (entryIndex: number, count: number) => {
     setReport((prev) => {
       const newActualWorkers = [...prev.actualWorkers];
-      // 該当インデックスが存在するか確認
       const existingIdx = newActualWorkers.findIndex((aw) => aw.entryIndex === entryIndex);
       if (existingIdx >= 0) {
         newActualWorkers[existingIdx] = { entryIndex, count };
@@ -725,15 +670,11 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     setSaveStatus('idle');
   };
 
-  // STEP3: 特定の作業セットの実施人数を取得するヘルパー
   const getActualWorkersCount = (entryIndex: number): number => {
     const found = report.actualWorkers.find((aw) => aw.entryIndex === entryIndex);
     return found ? found.count : 0;
   };
 
-  // ============================
-  // STEP3: 追加作業の操作
-  // ============================
   const addStep3AdditionalWork = () => {
     setReport((prev) => ({
       ...prev,
@@ -777,7 +718,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     });
   };
 
-  // STEP3: 追加作業の機械を追加する
   const addMachineToAdditionalWork = (id: string) => {
     setReport((prev) => ({
       ...prev,
@@ -789,7 +729,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     setSaveStatus('idle');
   };
 
-  // STEP3: 追加作業の特定の機械を更新する
   const updateMachineInAdditionalWork = (entryId: string, machineIndex: number, value: string) => {
     setReport((prev) => ({
       ...prev,
@@ -804,7 +743,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     setSaveStatus('idle');
   };
 
-  // STEP3: 追加作業の特定の機械を削除する
   const removeMachineFromAdditionalWork = (entryId: string, machineIndex: number) => {
     setReport((prev) => ({
       ...prev,
@@ -819,54 +757,43 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     setSaveStatus('idle');
   };
 
-  // ============================
-  // STEP3: 確認事項の更新
-  // ============================
+  // 【修正】基本確認事項の更新
   const updateStep3Confirmation = (key: keyof Step3ConfirmationItems, value: '良' | '否' | '') => {
     setReport((prev) => ({
       ...prev,
       step3ConfirmationItems: {
         ...prev.step3ConfirmationItems,
-        [key]: prev.step3ConfirmationItems[key] === value ? '' : value, // トグル動作
+        [key]: prev.step3ConfirmationItems[key] === value ? '' : value,
       },
     }));
     setHasUnsavedChanges(true);
     setSaveStatus('idle');
   };
 
-  // STEP3: 当現場の確認事項の更新
+  // 【修正】当現場確認事項の更新
   const updateStep3SiteConfirmation = (key: keyof Step3SiteConfirmationItems, value: '良' | '否' | '') => {
     setReport((prev) => ({
       ...prev,
       step3SiteConfirmationItems: {
         ...prev.step3SiteConfirmationItems,
-        [key]: prev.step3SiteConfirmationItems[key] === value ? '' : value, // トグル動作
+        [key]: prev.step3SiteConfirmationItems[key] === value ? '' : value,
       },
     }));
     setHasUnsavedChanges(true);
     setSaveStatus('idle');
   };
 
-  // ============================
-  // STEP3: 本日の作業人数合計を自動計算
-  // 各作業セットの実施人数 + 追加作業の実施人数 の合計
-  // ============================
   const totalStep3Workers = (() => {
-    // STEP1の各作業セットの実施人数合計
     let total = 0;
     report.workEntries.forEach((_, index) => {
       total += getActualWorkersCount(index);
     });
-    // STEP3の追加作業の実施人数合計
     report.step3AdditionalWorkEntries.forEach((entry) => {
       total += entry.actualWorkers;
     });
     return total;
   })();
 
-  // ============================
-  // バリデーション
-  // ============================
   const validateStep1 = (): boolean => {
     const newErrors: Record<string, boolean> = {};
     let hasError = false;
@@ -880,7 +807,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       hasError = true;
     }
 
-    // 安全衛生指示事項: 7個のうち最低1つ以上選択必須
     const hasAtLeastOneSafetyInstruction = report.safetyInstructions.some((s) => s !== '');
     if (!hasAtLeastOneSafetyInstruction) {
       newErrors.safetyInstructions = true;
@@ -903,54 +829,28 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     return true;
   };
 
-  // ============================
-  // 【修正】作業日変更時の新規ドラフト分離処理
-  // 「はい」が選択された場合に呼ばれるコールバック
-  // ============================
   const handleDateChangeSeparation = useCallback(() => {
-    // a) 新しいドラフトIDを生成
     const newId = generateId();
-
-    // b) draftIdを新しいIDに更新
     setDraftId(newId);
-
-    // c) STEP2以降のデータを初期状態にリセット
-    //    ※STEP1のデータはすべて維持する
     setReport((prev) => ({
       ...prev,
       annotatedDiagramUrl: '',
       baseDiagramUrl: '',
     }));
-    // キャンバス関連のstateをクリア
     setCurrentDiagramSrc('');
     setDiagramLoaded(false);
     setCanvasHistory([]);
     backgroundImageRef.current = null;
-
-    // d) originalWorkDateを現在のreport.workDateに更新
     setOriginalWorkDate(report.workDate);
-
-    // e) stepを2に進める
     setStep(2);
-
-    // 確認ダイアログを閉じる
     setShowDateChangeConfirm(false);
-
-    // 変更フラグ更新
     setHasUnsavedChanges(true);
     setSaveStatus('idle');
   }, [report.workDate]);
 
-  // ============================
-  // ステップ遷移
-  // ============================
   const handleNext = () => {
     if (step === 1) {
       if (!validateStep1()) return;
-
-      // 【修正】作業日変更判定:
-      // originalWorkDateがnullでない（一時保存データから復元）かつ
-      // 作業日が変更されている場合、確認ダイアログを表示
       if (
         originalWorkDate !== null &&
         originalWorkDate !== report.workDate
@@ -959,7 +859,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         return;
       }
     }
-    // STEP4→STEP5はバリデーション不要（未入力でも次へ進める）
     setStep((prev) => Math.min(prev + 1, 5));
   };
 
@@ -967,20 +866,15 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     setStep((prev) => Math.max(prev - 1, 1));
   };
 
-  // ============================
-  // 一時保存処理 — 【修正A】JPEG圧縮 + 【修正B】サイズエラーメッセージ改善
-  // ============================
   const handleSave = async () => {
     if (!report.project) {
       alert('保存するには「工事名」の選択が必須です。');
       return;
     }
 
-    // STEP2でキャンバスが存在する場合は、キャンバス内容を画像化して保存
     let updatedReport = { ...report };
     const canvasEl = canvasElRef.current;
     if (canvasEl && canvasEl.width > 0 && canvasEl.height > 0) {
-      // 【修正A】PNGからJPEG（品質60%）に変更し、dataURLのサイズを大幅に削減
       const dataUrl = canvasEl.toDataURL('image/jpeg', 0.6);
       console.log('[handleSave] toDataURL prefix:', dataUrl.substring(0, 30));
       updatedReport = { ...updatedReport, annotatedDiagramUrl: dataUrl };
@@ -995,7 +889,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       setHasUnsavedChanges(false);
       setShowCompleteModal(true);
     } catch (error: any) {
-      // 【修正B】画像サイズエラーの判定
       const errorMessage = error?.message || error?.toString() || '';
       if (
         errorMessage.includes('exceeds the maximum allowed size') ||
@@ -1014,9 +907,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     }
   };
 
-  // ============================
-  // ホームへ戻る
-  // ============================
   const handleHomeClick = () => {
     if (hasUnsavedChanges) {
       setConfirmModal({
@@ -1039,24 +929,15 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     }
   };
 
-  // ============================
-  // エラー表示用ヘルパー
-  // ============================
   const getErrorClass = (field: string) =>
     errors[field] ? 'border-red-500 bg-red-50' : 'border-gray-300';
 
   // ============================
   // STEP2: HTML Canvas API によるキャンバス初期化
-  // - currentDiagramSrc の画像を読み込み、アスペクト比に基づいてキャンバスサイズを決定
-  // - 画像をキャンバス全体にフィットして描画
-  // - 描画履歴の初期状態として背景画像のスナップショットを保存
   // ============================
   useEffect(() => {
-    // STEP2のときのみキャンバスを初期化
     if (step !== 2) return;
-    // 配置図が読み込まれていない場合はキャンバスを生成しない
     if (!diagramLoaded) return;
-    // currentDiagramSrc がなければ初期化しない
     if (!currentDiagramSrc) return;
 
     const canvasEl = canvasElRef.current;
@@ -1065,29 +946,22 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     const ctx = canvasEl.getContext('2d');
     if (!ctx) return;
 
-    // 画像を読み込み
     const img = new Image();
     img.onload = () => {
       const naturalW = img.naturalWidth;
       const naturalH = img.naturalHeight;
 
-      // コンテナ幅を取得（最大800px）
       const containerWidth = canvasContainerRef.current?.clientWidth || 800;
       const canvasWidth = Math.min(containerWidth, 800);
-      // キャンバスの高さ = 幅 × (画像の naturalHeight / naturalWidth)
       const canvasHeight = Math.round(canvasWidth * (naturalH / naturalW));
 
-      // canvas要素の内部ピクセルサイズを設定
       canvasEl.width = canvasWidth;
       canvasEl.height = canvasHeight;
 
-      // 画像をキャンバス全体にフィットして描画
       ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
 
-      // 背景画像を保持（全消去・元に戻す時に再利用）
       backgroundImageRef.current = img;
 
-      // 【修正A】描画履歴の初期スナップショットもJPEG圧縮で保存
       const initialSnapshot = canvasEl.toDataURL('image/jpeg', 0.6);
       setCanvasHistory([initialSnapshot]);
 
@@ -1103,10 +977,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
 
   // ============================
   // STEP2: キャンバスへのフリーハンド描画イベントハンドラ
-  // マウスイベントとタッチイベントの両方に対応
   // ============================
-
-  // キャンバスの座標を取得する共通ヘルパー（CSS表示サイズと内部ピクセルサイズの差を補正）
   const getCanvasCoordinates = (
     canvasEl: HTMLCanvasElement,
     clientX: number,
@@ -1120,7 +991,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     return { x, y };
   };
 
-  // 描画開始（mousedown）
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvasEl = canvasElRef.current;
     if (!canvasEl) return;
@@ -1128,8 +998,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     if (!ctx) return;
 
     isDrawingRef.current = true;
-
-    // 座標を補正して取得
     const { x, y } = getCanvasCoordinates(canvasEl, e.clientX, e.clientY);
 
     ctx.strokeStyle = penColor;
@@ -1140,7 +1008,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     ctx.moveTo(x, y);
   };
 
-  // 描画中（mousemove）
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawingRef.current) return;
     const canvasEl = canvasElRef.current;
@@ -1149,17 +1016,14 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     if (!ctx) return;
 
     const { x, y } = getCanvasCoordinates(canvasEl, e.clientX, e.clientY);
-
     ctx.lineTo(x, y);
     ctx.stroke();
   };
 
-  // 描画終了（mouseup / mouseleave）
   const handleMouseUp = () => {
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
 
-    // 【修正A】スナップショットをJPEG圧縮で保存
     const canvasEl = canvasElRef.current;
     if (canvasEl) {
       const snapshot = canvasEl.toDataURL('image/jpeg', 0.6);
@@ -1169,9 +1033,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     setSaveStatus('idle');
   };
 
-  // 描画開始（touchstart）
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault(); // スクロール防止
+    e.preventDefault();
     const canvasEl = canvasElRef.current;
     if (!canvasEl) return;
     const ctx = canvasEl.getContext('2d');
@@ -1190,9 +1053,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     ctx.moveTo(x, y);
   };
 
-  // 描画中（touchmove）
   const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
-    e.preventDefault(); // スクロール防止
+    e.preventDefault();
     if (!isDrawingRef.current) return;
     const canvasEl = canvasElRef.current;
     if (!canvasEl) return;
@@ -1202,18 +1064,15 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
 
     const touch = e.touches[0];
     const { x, y } = getCanvasCoordinates(canvasEl, touch.clientX, touch.clientY);
-
     ctx.lineTo(x, y);
     ctx.stroke();
   };
 
-  // 描画終了（touchend / touchcancel）
   const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
 
-    // 【修正A】スナップショットをJPEG圧縮で保存
     const canvasEl = canvasElRef.current;
     if (canvasEl) {
       const snapshot = canvasEl.toDataURL('image/jpeg', 0.6);
@@ -1225,23 +1084,19 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
 
   // ============================
   // STEP2: 配置図アップロード処理
-  // 【修正B】saveDiagramImage のエラーメッセージ改善
   // ============================
   const handleDiagramUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0]) return;
     const file = e.target.files[0];
 
     try {
-      // キャンバス表示用に既存の compressImage で圧縮
       const compressed = await compressImage(file);
       setReport((prev) => ({ ...prev, baseDiagramUrl: compressed, annotatedDiagramUrl: '' }));
-      // currentDiagramSrc を新しい画像のdata URLに更新 → useEffectでキャンバス再初期化
       setCurrentDiagramSrc(compressed);
       setHasUnsavedChanges(true);
       setSaveStatus('idle');
       setDiagramLoaded(true);
 
-      // 工事名が選択されている場合、配置図専用圧縮で元画像をFirestoreに保存
       if (report.project) {
         try {
           const diagramCompressed = await compressDiagramImage(file);
@@ -1249,7 +1104,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           console.log('[配置図元画像保存] 完了 - 工事名:', report.project, 'ファイル名:', file.name);
         } catch (saveErr: any) {
           console.error('[配置図元画像保存] 失敗:', saveErr);
-          // 【修正B】画像サイズエラーの判定
           const errorMessage = saveErr?.message || saveErr?.toString() || '';
           if (
             errorMessage.includes('exceeds the maximum allowed size') ||
@@ -1261,7 +1115,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           ) {
             alert('配置図の画像サイズが大きすぎます。より小さい画像を使用してください。');
           }
-          // それ以外のエラーはキャンバス表示を続行する（ログのみ）
         }
       }
     } catch (err) {
@@ -1269,17 +1122,12 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       alert('画像の読み込みに失敗しました。');
     }
 
-    // input の値をリセット（同じファイルを再アップロード可能にする）
     if (diagramFileInputRef.current) {
       diagramFileInputRef.current.value = '';
     }
   };
 
-  // ============================
-  // STEP2: 保存済みの配置図から選択モーダルを開く
-  // ============================
   const handleOpenDiagramPicker = async () => {
-    // 工事名が未選択の場合はアラートを表示
     if (!report.project) {
       alert('先にSTEP1で工事名を選択してください');
       return;
@@ -1299,11 +1147,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     }
   };
 
-  // ============================
-  // STEP2: 保存済み配置図モーダルから画像を選択
-  // ============================
   const handleSelectDiagramImage = (image: DiagramImage) => {
-    // 選択した元画像をキャンバスに表示
     setCurrentDiagramSrc(image.imageDataUrl);
     setDiagramLoaded(true);
     setReport((prev) => ({
@@ -1313,28 +1157,17 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     }));
     setHasUnsavedChanges(true);
     setSaveStatus('idle');
-    // モーダルを閉じる
     setShowDiagramPicker(false);
   };
 
-  // ============================
-  // 【修正1】STEP2: 保存済み配置図モーダルから画像を削除
-  // ConfirmationModalを使わず、モーダル内のインライン確認UIで処理する
-  // DiagramPickerModal の onDelete に渡すコールバック
-  // ============================
   const handleDeleteDiagramImage = async (imageId: string): Promise<void> => {
     await removeDiagramImage(imageId);
-    // リストを再読み込み
     if (report.project) {
       const updatedImages = await fetchDiagramImages(report.project);
       setDiagramImages(updatedImages);
     }
   };
 
-  // ============================
-  // STEP2: 元に戻す
-  // 履歴の最後のスナップショットを削除し、1つ前の状態を復元
-  // ============================
   const handleUndo = () => {
     const canvasEl = canvasElRef.current;
     if (!canvasEl) return;
@@ -1342,12 +1175,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     if (!ctx) return;
 
     setCanvasHistory((prev) => {
-      // 履歴が1つ以下（背景画像のみ）の場合は何もしない
       if (prev.length <= 1) return prev;
 
-      // 最後のスナップショットを削除
       const newHistory = prev.slice(0, -1);
-      // 1つ前の状態を復元
       const previousSnapshot = newHistory[newHistory.length - 1];
 
       const restoreImg = new Image();
@@ -1361,9 +1191,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     });
   };
 
-  // ============================
-  // STEP2: 全消去（書き込みのみクリア、背景画像は保持）
-  // ============================
   const handleClearAll = () => {
     const canvasEl = canvasElRef.current;
     if (!canvasEl) return;
@@ -1372,20 +1199,14 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
 
     const bgImg = backgroundImageRef.current;
     if (bgImg) {
-      // 背景画像のみを再描画
       ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
       ctx.drawImage(bgImg, 0, 0, canvasEl.width, canvasEl.height);
 
-      // 【修正A】履歴クリア後のスナップショットもJPEG圧縮で保存
       const bgSnapshot = canvasEl.toDataURL('image/jpeg', 0.6);
       setCanvasHistory([bgSnapshot]);
     }
   };
 
-  // ============================
-  // STEP2: キャンバスを画像として書き出し＆保存
-  // 【修正A】JPEG圧縮 + 【修正B】サイズエラーメッセージ改善
-  // ============================
   const handleSaveCanvas = async () => {
     if (!report.project) {
       alert('保存するには「工事名」の選択が必須です。');
@@ -1394,16 +1215,13 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
 
     const canvasEl = canvasElRef.current;
     if (!canvasEl || canvasEl.width === 0 || canvasEl.height === 0) {
-      // キャンバスなしの場合は通常保存
       await handleSave();
       return;
     }
 
-    // 【修正A】PNGからJPEG（品質60%）に変更し、dataURLのサイズを大幅に削減
     const dataUrl = canvasEl.toDataURL('image/jpeg', 0.6);
     console.log('[handleSaveCanvas] toDataURL prefix:', dataUrl.substring(0, 30));
 
-    // annotatedDiagramUrl に保存。currentDiagramSrc は更新しない（再初期化防止）
     const updatedReport = { ...report, annotatedDiagramUrl: dataUrl };
     setReport(updatedReport);
 
@@ -1415,7 +1233,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       setHasUnsavedChanges(false);
       setShowCompleteModal(true);
     } catch (error: any) {
-      // 【修正B】画像サイズエラーの判定
       const errorMessage = error?.message || error?.toString() || '';
       if (
         errorMessage.includes('exceeds the maximum allowed size') ||
@@ -1522,7 +1339,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         <div className="space-y-4">
           {report.workEntries.map((entry, index) => (
             <div key={entry.id} className="bg-gray-50 rounded-lg p-4 relative">
-              {/* セット番号とゴミ箱 */}
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-bold text-pink-600">
                   作業{toCircledNumber(index + 1)}
@@ -1538,9 +1354,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                 )}
               </div>
 
-              {/* 入力フィールド（レスポンシブ対応） */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* 作業内容 */}
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold text-gray-600 mb-1">作業内容</label>
                   <input
@@ -1552,7 +1366,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   />
                 </div>
 
-                {/* 会社名 */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">会社名</label>
                   <select
@@ -1569,7 +1382,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   </select>
                 </div>
 
-                {/* 人数（予定） */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">人数（予定）</label>
                   <select
@@ -1587,7 +1399,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   </select>
                 </div>
 
-                {/* 機械 — masterData.machines を参照 */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">機械</label>
                   <select
@@ -1608,7 +1419,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           ))}
         </div>
 
-        {/* 作業追加ボタン */}
         <button
           onClick={addWorkEntry}
           className="mt-3 w-full py-2 border-2 border-dashed border-pink-300 text-pink-600 rounded-lg font-bold hover:bg-pink-50 transition-colors text-sm"
@@ -1617,7 +1427,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </button>
       </div>
 
-      {/* (6) 搬出入資機材 — masterData.equipment を参照 */}
+      {/* (6) 搬出入資機材 */}
       <div>
         <label className="block text-sm font-bold text-gray-700 mb-2">搬出入資機材（任意）</label>
         {report.materialEntries.map((val, idx) => (
@@ -1651,7 +1461,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </button>
       </div>
 
-      {/* (7) 段取り資材等 — masterData.equipment を参照 */}
+      {/* (7) 段取り資材等 */}
       <div>
         <label className="block text-sm font-bold text-gray-700 mb-2">段取り資材等（任意）</label>
         {report.preparationEntries.map((val, idx) => (
@@ -1685,7 +1495,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </button>
       </div>
 
-      {/* (8) 安全衛生指示事項 — 7個固定表示、masterData.safetyInstructionItems を参照 */}
+      {/* (8) 安全衛生指示事項 */}
       <div>
         <label className="block text-sm font-bold text-gray-700 mb-2">
           安全衛生指示事項 <span className="text-red-500 text-xs">*1つ以上選択必須</span>
@@ -1719,7 +1529,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   // STEP2 レンダリング
   // ============================
   const renderStep2 = () => {
-    // 配置図の有無を判定（diagramLoaded で管理）
     const hasDiagram = diagramLoaded && !!(currentDiagramSrc);
 
     return (
@@ -1728,7 +1537,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           STEP 2: 配置図・略図
         </h2>
 
-        {/* 配置図アップロードエリア */}
         <div className="bg-pink-50 border border-pink-200 rounded-lg p-4 space-y-3">
           <p className="text-sm font-bold text-gray-700">
             <i className="fa-solid fa-image mr-2 text-pink-500"></i>
@@ -1736,7 +1544,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* 新しい配置図をアップロード */}
             <label className="flex-1 cursor-pointer">
               <div className="py-3 px-4 bg-pink-600 text-white rounded-lg font-bold text-center hover:bg-pink-700 transition-colors text-sm">
                 <i className="fa-solid fa-upload mr-2"></i>
@@ -1751,7 +1558,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
               />
             </label>
 
-            {/* 保存済みの配置図から選択 */}
             <button
               onClick={handleOpenDiagramPicker}
               className="flex-1 py-3 px-4 bg-gray-600 text-white rounded-lg font-bold text-center text-sm hover:bg-gray-700 transition-colors"
@@ -1762,13 +1568,10 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           </div>
         </div>
 
-        {/* 書き込みキャンバス */}
         {hasDiagram ? (
           <>
-            {/* ツールバー */}
             <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
               <div className="flex flex-wrap items-center gap-3">
-                {/* ペンの色選択 */}
                 <div className="flex items-center gap-1">
                   <span className="text-xs font-bold text-gray-500 mr-1">色:</span>
                   {[
@@ -1791,10 +1594,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   ))}
                 </div>
 
-                {/* 区切り線 */}
                 <div className="w-px h-8 bg-gray-200 hidden sm:block"></div>
 
-                {/* ペンの太さ */}
                 <div className="flex items-center gap-1">
                   <span className="text-xs font-bold text-gray-500 mr-1">太さ:</span>
                   {[
@@ -1816,10 +1617,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   ))}
                 </div>
 
-                {/* 区切り線 */}
                 <div className="w-px h-8 bg-gray-200 hidden sm:block"></div>
 
-                {/* 元に戻す・全消去 */}
                 <div className="flex items-center gap-2">
                   <button
                     onClick={handleUndo}
@@ -1837,7 +1636,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
               </div>
             </div>
 
-            {/* キャンバス — HTML Canvas API を使用 */}
             <div
               ref={canvasContainerRef}
               style={{ maxWidth: '800px', width: '100%', margin: '0 auto' }}
@@ -1858,7 +1656,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
             </div>
           </>
         ) : (
-          /* 配置図未選択時のプレースホルダー */
           <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
             <i className="fa-solid fa-map text-5xl text-gray-300 mb-4 block"></i>
             <p className="text-gray-400 font-bold text-sm">
@@ -1886,11 +1683,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           作業内容と実施人数
         </h3>
 
-        {/* STEP1で入力した作業セットの一覧（読み取り専用 + 実施人数入力） */}
         <div className="space-y-4">
           {report.workEntries.map((entry, index) => (
             <div key={entry.id} className="bg-gray-50 rounded-lg p-4">
-              {/* 作業番号ラベル */}
               <div className="mb-3">
                 <span className="text-sm font-bold text-pink-600">
                   作業{toCircledNumber(index + 1)}
@@ -1898,7 +1693,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* 作業内容（読み取り専用） */}
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold text-gray-600 mb-1">作業内容</label>
                   <div className="w-full p-2 border border-gray-200 rounded bg-gray-100 text-gray-700 text-sm">
@@ -1906,7 +1700,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   </div>
                 </div>
 
-                {/* 会社名（読み取り専用） */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">会社名</label>
                   <div className="w-full p-2 border border-gray-200 rounded bg-gray-100 text-gray-700 text-sm">
@@ -1914,7 +1707,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   </div>
                 </div>
 
-                {/* 計画人数（読み取り専用） */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">計画人数</label>
                   <div className="w-full p-2 border border-gray-200 rounded bg-gray-100 text-gray-700 text-sm">
@@ -1922,7 +1714,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   </div>
                 </div>
 
-                {/* 主要機械（読み取り専用） */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">主要機械</label>
                   <div className="w-full p-2 border border-gray-200 rounded bg-gray-100 text-gray-700 text-sm">
@@ -1930,7 +1721,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   </div>
                 </div>
 
-                {/* 実施人数（編集可能ドロップダウン） */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">
                     実施人数 <span className="text-pink-500">（当日入力）</span>
@@ -1952,8 +1742,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
             </div>
           ))}
         </div>
-
-        {/* 【修正】本日の作業人数合計 — 元々ここにあった表示を削除（追加作業セクションの下に移動） */}
       </div>
 
       {/* ===== セクション2: 追加作業 ===== */}
@@ -1963,11 +1751,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           追加作業
         </h3>
 
-        {/* 追加作業カード一覧 */}
         <div className="space-y-4">
           {report.step3AdditionalWorkEntries.map((entry, index) => (
             <div key={entry.id} className="bg-gray-50 rounded-lg p-4 relative">
-              {/* 追加作業番号と削除ボタン */}
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-bold text-pink-600">
                   追加作業{toCircledNumber(index + 1)}
@@ -1982,7 +1768,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* 作業内容（自由入力） */}
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold text-gray-600 mb-1">作業内容</label>
                   <input
@@ -1994,7 +1779,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   />
                 </div>
 
-                {/* 会社名（マスタ選択） */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">会社名</label>
                   <select
@@ -2011,7 +1795,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   </select>
                 </div>
 
-                {/* 実施人数（ドロップダウン 1〜50） */}
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">実施人数</label>
                   <select
@@ -2027,7 +1810,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   </select>
                 </div>
 
-                {/* 主要機械（複数選択可能） */}
                 <div className="md:col-span-2">
                   <label className="block text-xs font-bold text-gray-600 mb-1">主要機械</label>
                   {entry.machines.map((machine, machineIdx) => (
@@ -2065,7 +1847,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           ))}
         </div>
 
-        {/* 追加作業追加ボタン */}
         <button
           onClick={addStep3AdditionalWork}
           className="mt-3 w-full py-2 border-2 border-dashed border-pink-300 text-pink-600 rounded-lg font-bold hover:bg-pink-50 transition-colors text-sm"
@@ -2074,7 +1855,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </button>
       </div>
 
-      {/* 【修正】本日の作業人数合計 — 追加作業セクションの下に移動 */}
+      {/* 本日の作業人数合計 */}
       <div className="p-3 bg-pink-50 border border-pink-200 rounded-lg flex items-center justify-between">
         <span className="text-sm font-bold text-gray-700">
           <i className="fa-solid fa-users mr-2 text-pink-500"></i>
@@ -2085,11 +1866,12 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </span>
       </div>
 
-      {/* ===== セクション3: 確認事項 ===== */}
+      {/* ===== セクション3: 基本確認事項 ===== */}
+      {/* 【修正】「確認事項」→「基本確認事項」に名称変更、10項目に拡張 */}
       <div className="bg-white rounded-lg shadow p-4 mb-4">
         <h3 className="text-base font-bold text-gray-800 mb-3">
           <i className="fa-solid fa-check-double mr-2 text-pink-500"></i>
-          確認事項
+          基本確認事項
         </h3>
 
         <div className="space-y-3">
@@ -2098,7 +1880,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
               key={item.key}
               className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0"
             >
-              {/* 左側: 項目番号と項目名 */}
               <div className="flex items-start gap-2 flex-1 mr-3">
                 <span className="text-xs font-bold text-gray-500 shrink-0 mt-0.5">
                   {index + 1}.
@@ -2106,7 +1887,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                 <span className="text-sm text-gray-700">{item.label}</span>
               </div>
 
-              {/* 右側: 良/否ボタン */}
               <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() => updateStep3Confirmation(item.key, '良')}
@@ -2134,11 +1914,12 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </div>
       </div>
 
-      {/* ===== セクション4: 当現場の確認事項 ===== */}
+      {/* ===== セクション4: 当現場確認事項 ===== */}
+      {/* 【修正】「当現場の確認事項」→「当現場確認事項」に名称変更、10項目に拡張 */}
       <div className="bg-white rounded-lg shadow p-4 mb-4">
         <h3 className="text-base font-bold text-gray-800 mb-3">
           <i className="fa-solid fa-hard-hat mr-2 text-pink-500"></i>
-          当現場の確認事項
+          当現場確認事項
         </h3>
 
         <div className="space-y-3">
@@ -2147,7 +1928,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
               key={item.key}
               className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0"
             >
-              {/* 左側: 項目番号と項目名 */}
               <div className="flex items-start gap-2 flex-1 mr-3">
                 <span className="text-xs font-bold text-gray-500 shrink-0 mt-0.5">
                   {index + 1}.
@@ -2155,7 +1935,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                 <span className="text-sm text-gray-700">{item.label}</span>
               </div>
 
-              {/* 右側: 良/否ボタン */}
               <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() => updateStep3SiteConfirmation(item.key, '良')}
@@ -2191,7 +1970,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* 段階確認 */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">段階確認</label>
             <div className="flex gap-2">
@@ -2228,7 +2006,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
             </div>
           </div>
 
-          {/* 立会確認 */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">立会確認</label>
             <div className="flex gap-2">
@@ -2275,7 +2052,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </h3>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* 搬入 */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">搬入</label>
             <div className="flex items-center gap-2">
@@ -2297,7 +2073,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
             </div>
           </div>
 
-          {/* 搬出 */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">搬出</label>
             <div className="flex items-center gap-2">
@@ -2328,12 +2103,10 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   // ============================
   const renderStep4 = () => (
     <div className="space-y-6">
-      {/* STEP4ヘッダー */}
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-pink-500 pl-3">
         STEP 4: 巡視記録
       </h2>
 
-      {/* ===== セクション1: 作業調整事項 ===== */}
       <div className="bg-white rounded-lg shadow p-4 mb-4">
         <h3 className="text-base font-bold text-gray-800 mb-3">
           <i className="fa-solid fa-clipboard mr-2 text-pink-500"></i>
@@ -2348,7 +2121,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         />
       </div>
 
-      {/* ===== セクション2: 巡視点検者 ===== */}
       <div className="bg-white rounded-lg shadow p-4 mb-4">
         <h3 className="text-base font-bold text-gray-800 mb-3">
           <i className="fa-solid fa-user-check mr-2 text-pink-500"></i>
@@ -2368,7 +2140,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </select>
       </div>
 
-      {/* ===== セクション3: 巡視時間 ===== */}
       <div className="bg-white rounded-lg shadow p-4 mb-4">
         <h3 className="text-base font-bold text-gray-800 mb-3">
           <i className="fa-solid fa-clock mr-2 text-pink-500"></i>
@@ -2387,7 +2158,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </select>
       </div>
 
-      {/* ===== セクション4: 所見 ===== */}
       <div className="bg-white rounded-lg shadow p-4 mb-4">
         <h3 className="text-base font-bold text-gray-800 mb-3">
           <i className="fa-solid fa-pen-to-square mr-2 text-pink-500"></i>
@@ -2426,7 +2196,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   return (
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
-        {/* ヘッダー */}
         <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <button onClick={handleHomeClick} className="text-white hover:text-gray-300">
@@ -2438,7 +2207,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           </div>
         </header>
 
-        {/* ステップインジケーター（5ステップ対応） */}
         <div className="bg-white p-4 shadow-sm mb-4">
           <div className="flex justify-between text-xs font-bold text-gray-400 mb-2">
             <span className={step >= 1 ? 'text-pink-600' : ''}>STEP 1</span>
@@ -2455,7 +2223,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           </div>
         </div>
 
-        {/* メインコンテンツ */}
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
@@ -2464,7 +2231,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           {step === 5 && renderPlaceholder(5)}
         </main>
 
-        {/* フッター（固定） */}
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-20">
           <div className="flex items-center gap-2">
             <button
@@ -2476,7 +2242,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
             >
               戻る
             </button>
-            {/* STEP2では「一時保存」ボタンをキャンバス書き出し保存に */}
             {step === 2 && diagramLoaded ? (
               <button
                 onClick={handleSaveCanvas}
@@ -2509,7 +2274,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </footer>
       </div>
 
-      {/* 保存完了モーダル */}
       <CompleteModal
         isOpen={showCompleteModal}
         onOk={() => {
@@ -2518,7 +2282,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         }}
       />
 
-      {/* 確認モーダル（作業削除・ホームに戻る等で使用。配置図削除には使用しない） */}
       <ConfirmationModal
         isOpen={confirmModal.isOpen}
         message={confirmModal.message}

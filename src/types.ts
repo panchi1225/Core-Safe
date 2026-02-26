@@ -491,14 +491,14 @@ export interface WorkEntry {
   isAdditional: boolean;     // 追加作業フラグ（当日追加は true）
 }
 
-/** 確認事項チェック */
+/** 基本確認事項チェック */  /* 【修正】「確認事項」→「基本確認事項」に名称変更 */
 export interface ConfirmationCheck {
   id: string;
   label: string;             // 確認項目名
   result: 'good' | 'bad' | ''; // 良/否/未選択
 }
 
-/** 当現場の確認項目チェック */
+/** 当現場確認事項チェック */  /* 【修正】「当現場の確認項目」→「当現場確認事項」に名称変更 */
 export interface SiteCheck {
   id: string;
   label: string;             // 確認項目名
@@ -534,29 +534,38 @@ export interface AdditionalWorkEntry {
 }
 
 // ============================
-// STEP3: 確認事項の型定義
+// STEP3: 基本確認事項・当現場確認事項の型定義
+// 【修正】「確認事項」→「基本確認事項」、「当現場の確認事項」→「当現場確認事項」に名称変更
+// 【修正】7項目から10項目に拡張（item8〜item10を追加）
+// ※プロパティ名 confirmationItems / siteConfirmationItems は後方互換性のため維持
 // ============================
 
-/** 確認事項（7項目） */
+/** 基本確認事項（10項目） */  /* 【修正】7項目→10項目に拡張 */
 export interface Step3ConfirmationItems {
-  item1: '良' | '否' | '';  // 健康状態の把握
-  item2: '良' | '否' | '';  // 服装・保護具の着用
-  item3: '良' | '否' | '';  // 資格証の確認
-  item4: '良' | '否' | '';  // 作業手順および合図・指揮系統の周知
-  item5: '良' | '否' | '';  // 危険個所の周知
-  item6: '良' | '否' | '';  // KY活動および作業指揮者の明確化
-  item7: '良' | '否' | '';  // 新規入場者教育の実施
+  item1: '良' | '否' | '';   // 健康状態の把握
+  item2: '良' | '否' | '';   // 服装・保護具の着用
+  item3: '良' | '否' | '';   // 資格者の配置（資格証の確認）
+  item4: '良' | '否' | '';   // 作業手順および合図・指揮系統の周知
+  item5: '良' | '否' | '';   // 危険作業および危険個所の周知
+  item6: '良' | '否' | '';   // 安全指示事項の周知確認（作業開始前）
+  item7: '良' | '否' | '';   // 相互の声掛けおよび合図確認の実施
+  item8: '良' | '否' | '';   // 異常・危険発見時の報告体制の周知       /* 【修正】追加 */
+  item9: '良' | '否' | '';   // KY活動および作業指揮者の明確化         /* 【修正】追加 */
+  item10: '良' | '否' | '';  // 新規入場者教育の実施                   /* 【修正】追加 */
 }
 
-/** 当現場の確認事項（7項目） */
+/** 当現場確認事項（10項目） */  /* 【修正】7項目→10項目に拡張 */
 export interface Step3SiteConfirmationItems {
-  item1: '良' | '否' | '';  // 埋設物・架空線の確認
-  item2: '良' | '否' | '';  // 作業帯の分離措置
-  item3: '良' | '否' | '';  // 建設機械等の使用前点検
-  item4: '良' | '否' | '';  // 仮囲い・保安設備の不備
-  item5: '良' | '否' | '';  // 過積載の確認
-  item6: '良' | '否' | '';  // 作業員と建設機械の接触防止
-  item7: '良' | '否' | '';  // 現場内の整理整頓
+  item1: '良' | '否' | '';   // 埋設物・架空線確認（作業開始前）
+  item2: '良' | '否' | '';   // 作業帯分離措置
+  item3: '良' | '否' | '';   // 建設機械使用前点検
+  item4: '良' | '否' | '';   // 仮囲い・保安設備確認
+  item5: '良' | '否' | '';   // 過積載確認
+  item6: '良' | '否' | '';   // 作業員と建設機械の接触防止措置
+  item7: '良' | '否' | '';   // 現場内の整理整頓
+  item8: '良' | '否' | '';   // 重機旋回範囲内立入禁止措置             /* 【修正】追加 */
+  item9: '良' | '否' | '';   // 誘導員配置および合図体制               /* 【修正】追加 */
+  item10: '良' | '否' | '';  // 作業通路および避難経路の確保           /* 【修正】追加 */
 }
 
 /** ダンプ台数 */
@@ -601,8 +610,8 @@ export interface DailySafetyReportData {
   additionalWorkEntries: WorkEntry[];  // 追加作業（当日赤字追加）— 既存フィールド
   actualWorkerCounts: Record<string, number>; // 各作業の実施人数（キー: workEntryのid）
   totalWorkers: number;                // 本日の作業人員数（自動合計）
-  confirmationChecks: ConfirmationCheck[];    // 確認事項（良/否）
-  siteChecks: SiteCheck[];                    // 当現場の確認項目（良/否）
+  confirmationChecks: ConfirmationCheck[];    // 基本確認事項（良/否）  /* 【修正】コメント名称変更 */
+  siteChecks: SiteCheck[];                    // 当現場確認事項（良/否）  /* 【修正】コメント名称変更 */
   dumpTruckRounds: number;             // ダンプ回数
   dumpTruckCount: number;              // ダンプ台数
   dumpTruckTotal: number;              // ダンプ合計台数（自動計算）
@@ -617,10 +626,10 @@ export interface DailySafetyReportData {
     // STEP3で追加された作業（帳票出力時に赤字表示）
 
   step3ConfirmationItems: Step3ConfirmationItems;
-    // 確認事項（7項目: 良/否）
+    // 基本確認事項（10項目: 良/否）  /* 【修正】名称変更・10項目に拡張 */
 
   step3SiteConfirmationItems: Step3SiteConfirmationItems;
-    // 当現場の確認事項（7項目: 良/否）
+    // 当現場確認事項（10項目: 良/否）  /* 【修正】名称変更・10項目に拡張 */
 
   stageConfirmation: '有' | '無' | '';     // 段階確認
   witnessConfirmation: '有' | '無' | '';   // 立会確認
@@ -943,6 +952,7 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
   // --- STEP3: 当日作業確認データ（追加フィールド初期値） ---
   actualWorkers: [],
   step3AdditionalWorkEntries: [],
+  /* 【修正】基本確認事項: 7項目→10項目に拡張（item8〜item10を追加） */
   step3ConfirmationItems: {
     item1: '',
     item2: '',
@@ -951,7 +961,11 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
     item5: '',
     item6: '',
     item7: '',
+    item8: '',   // 【修正】追加
+    item9: '',   // 【修正】追加
+    item10: '',  // 【修正】追加
   },
+  /* 【修正】当現場確認事項: 7項目→10項目に拡張（item8〜item10を追加） */
   step3SiteConfirmationItems: {
     item1: '',
     item2: '',
@@ -960,6 +974,9 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
     item5: '',
     item6: '',
     item7: '',
+    item8: '',   // 【修正】追加
+    item9: '',   // 【修正】追加
+    item10: '',  // 【修正】追加
   },
   stageConfirmation: '',
   witnessConfirmation: '',
