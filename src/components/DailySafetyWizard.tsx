@@ -13,7 +13,6 @@ import {
   getNextBusinessDay,
 } from '../types';
 import { getMasterData, compressImage, saveDraft } from '../services/firebaseService';
-import { Canvas as FabricCanvas, PencilBrush, FabricImage } from 'fabric';
 
 // ============================
 // Props
@@ -189,29 +188,39 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     rightButtonClass: '',
   });
 
-  // --- STEP2: Fabric.js 関連 ---
+  // --- STEP2: HTML Canvas API 関連 ---
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasElRef = useRef<HTMLCanvasElement>(null);
-  const fabricCanvasRef = useRef<FabricCanvas | null>(null);
   const [penColor, setPenColor] = useState('#ff0000'); // デフォルト: 赤
   const [penWidth, setPenWidth] = useState(4); // デフォルト: 中(4px)
   const [diagramLoaded, setDiagramLoaded] = useState(false);
-  const [canvasHistory, setCanvasHistory] = useState<string[]>([]);
-  const isInitializingRef = useRef(false);
 
-  // 【修正】キャンバスに表示する画像URLを別stateで管理し、useEffectの依存配列からreportのURLを排除
-  // これにより、handleSaveCanvasでannotatedDiagramUrlを更新してもキャンバスが再初期化されなくなる
-  const [currentDiagramSrc, setCurrentDiagramSrc] = useState<string>('');
+  // 描画履歴（各スナップショットの data URL を保持）
+  const [canvasHistory, setCanvasHistory] = useState<string[]>([]);
+
+  // 描画中フラグ（useRef で管理し、再レンダリングを防止）
+  const isDrawingRef = useRef(false);
+
+  // 背景画像のImageオブジェクトを保持（全消去・元に戻す時に再利用）
+  const backgroundImageRef = useRef<HTMLImageElement | null>(null);
+
+  // キャンバスに表示する画像URLを別stateで管理
+  // useEffectの依存配列からreportのURLを排除することで、保存時のキャンバス再初期化を防止
+  const [currentDiagramSrc, setCurrentDiagramSrc] = useState<string>(() => {
+    // 初期値: 一時保存データから復元時に設定
+    if (initialData) {
+      return initialData.annotatedDiagramUrl || initialData.baseDiagramUrl || '';
+    }
+    return '';
+  });
 
   // ============================
-  // 【修正】一時保存データから復元した際にdiagramLoadedとcurrentDiagramSrcを設定
+  // 一時保存データから復元した際にdiagramLoadedを設定
   // ============================
   useEffect(() => {
     if (initialData) {
-      // annotatedDiagramUrl または baseDiagramUrl があれば配置図を復元可能
       const src = initialData.annotatedDiagramUrl || initialData.baseDiagramUrl;
       if (src) {
-        setCurrentDiagramSrc(src);
         setDiagramLoaded(true);
       }
     }
@@ -255,14 +264,11 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   );
 
   // ============================
-  // 【修正1】打合せ日変更時に作業日を翌営業日に連動 + 曜日自動更新
-  // 翌営業日の「日付」をそのまま作業日に設定し、曜日もその日付から算出する
+  // 打合せ日変更時に作業日を翌営業日に連動 + 曜日自動更新
   // ============================
   const handleMeetingDateChange = (dateStr: string) => {
     const meetingDate = new Date(dateStr + 'T00:00:00');
-    // getNextBusinessDay で翌営業日（土日祝を飛ばす）を取得
     const nextBizDate = getNextBusinessDay(meetingDate);
-    // 翌営業日の日付文字列をローカルタイムゾーンで生成（タイムゾーンずれ防止）
     const yyyy = nextBizDate.getFullYear();
     const mm = String(nextBizDate.getMonth() + 1).padStart(2, '0');
     const dd = String(nextBizDate.getDate()).padStart(2, '0');
@@ -272,7 +278,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       ...prev,
       meetingDate: dateStr,
       meetingDayOfWeek: getJapaneseDayOfWeek(meetingDate),
-      // 作業日の日付と曜日を翌営業日に正しく設定
       workDate: nextBizDateStr,
       workDayOfWeek: getJapaneseDayOfWeek(nextBizDate),
     }));
@@ -281,7 +286,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // 作業日変更時の曜日自動更新（手動変更も可能なまま）
+  // 作業日変更時の曜日自動更新
   // ============================
   const handleWorkDateChange = (dateStr: string) => {
     const d = new Date(dateStr + 'T00:00:00');
@@ -405,10 +410,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     if (hasError) {
       setErrors(newErrors);
       if (newErrors.safetyInstructions && !newErrors.project && !newErrors.meetingConductor) {
-        // 安全衛生指示事項のみエラーの場合
         alert('安全衛生指示事項を1つ以上選択してください。');
       } else if (newErrors.safetyInstructions) {
-        // 他のエラーと合わせて表示
         alert('未入力の必須項目があります。\n赤枠の項目を確認してください。\n\n安全衛生指示事項を1つ以上選択してください。');
       } else {
         alert('未入力の必須項目があります。\n赤枠の項目を確認してください。');
@@ -435,7 +438,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // 一時保存処理 — キャンバス内容を annotatedDiagramUrl に確実に保存
+  // 一時保存処理
   // ============================
   const handleSave = async () => {
     if (!report.project) {
@@ -443,19 +446,13 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       return;
     }
 
-    // 【修正】STEP2でキャンバスが存在する場合は、キャンバス内容をpng形式で画像化して保存
+    // STEP2でキャンバスが存在する場合は、キャンバス内容をpng形式で画像化して保存
     let updatedReport = { ...report };
-    const fc = fabricCanvasRef.current;
-    if (fc) {
-      fc.renderAll();
-      const dataUrl = fc.toDataURL({
-        format: 'png',
-        quality: 1.0,
-        multiplier: 1,
-      });
+    const canvasEl = canvasElRef.current;
+    if (canvasEl && canvasEl.width > 0 && canvasEl.height > 0) {
+      const dataUrl = canvasEl.toDataURL('image/png');
       console.log('[handleSave] toDataURL prefix:', dataUrl.substring(0, 30));
       updatedReport = { ...updatedReport, annotatedDiagramUrl: dataUrl };
-      // 【修正】reportのstateは更新するが、currentDiagramSrcは更新しない（キャンバス再初期化防止）
       setReport(updatedReport);
     }
 
@@ -505,117 +502,185 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     errors[field] ? 'border-red-500 bg-red-50' : 'border-gray-300';
 
   // ============================
-  // 【修正】STEP2: Fabric.js キャンバス初期化
-  // 不具合1修正: ネイティブ Image で読み込み、アスペクト比に基づきキャンバスサイズを決定、CSSスタイルを排除
-  // 不具合2修正: 依存配列から report.annotatedDiagramUrl / report.baseDiagramUrl を排除し、
-  //              currentDiagramSrc を使用して再初期化ループを防止
+  // STEP2: HTML Canvas API によるキャンバス初期化
+  // - currentDiagramSrc の画像を読み込み、アスペクト比に基づいてキャンバスサイズを決定
+  // - 画像をキャンバス全体にフィットして描画
+  // - 描画履歴の初期状態として背景画像のスナップショットを保存
   // ============================
   useEffect(() => {
     // STEP2のときのみキャンバスを初期化
     if (step !== 2) return;
     // 配置図が読み込まれていない場合はキャンバスを生成しない
     if (!diagramLoaded) return;
-    // 【修正】currentDiagramSrc がなければ初期化しない
+    // currentDiagramSrc がなければ初期化しない
     if (!currentDiagramSrc) return;
-    // 既に初期化中なら中断
-    if (isInitializingRef.current) return;
-
-    isInitializingRef.current = true;
-
-    // 既存キャンバスがあれば破棄
-    if (fabricCanvasRef.current) {
-      fabricCanvasRef.current.dispose();
-      fabricCanvasRef.current = null;
-    }
 
     const canvasEl = canvasElRef.current;
-    if (!canvasEl) {
-      isInitializingRef.current = false;
-      return;
-    }
+    if (!canvasEl) return;
 
-    // 【修正】ネイティブ Image で画像を読み込み、naturalWidth / naturalHeight からアスペクト比を計算
+    const ctx = canvasEl.getContext('2d');
+    if (!ctx) return;
+
+    // 画像を読み込み
     const img = new Image();
     img.onload = () => {
       const naturalW = img.naturalWidth;
       const naturalH = img.naturalHeight;
 
-      // 【修正】コンテナ幅を取得（最大800px）
+      // コンテナ幅を取得（最大800px）
       const containerWidth = canvasContainerRef.current?.clientWidth || 800;
       const canvasWidth = Math.min(containerWidth, 800);
-      // 【修正】キャンバスの高さ = 幅 × (画像の naturalHeight / naturalWidth)
+      // キャンバスの高さ = 幅 × (画像の naturalHeight / naturalWidth)
       const canvasHeight = Math.round(canvasWidth * (naturalH / naturalW));
 
-      // canvas要素のサイズ設定（Fabric.jsが内部的に管理するため、CSSではなくここで設定）
+      // canvas要素の内部ピクセルサイズを設定
       canvasEl.width = canvasWidth;
       canvasEl.height = canvasHeight;
 
-      const fc = new FabricCanvas(canvasEl, {
-        isDrawingMode: true,
-        width: canvasWidth,
-        height: canvasHeight,
-      });
+      // 画像をキャンバス全体にフィットして描画
+      ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
 
-      // ペンブラシ設定
-      const brush = new PencilBrush(fc);
-      brush.color = penColor;
-      brush.width = penWidth;
-      fc.freeDrawingBrush = brush;
+      // 背景画像を保持（全消去・元に戻す時に再利用）
+      backgroundImageRef.current = img;
 
-      // 【修正】ネイティブ Image から FabricImage を生成し、scaleX/scaleY を個別に計算
-      // キャンバスサイズが画像のアスペクト比に合わせてあるため、中央配置は不要
-      const fabricImg = new FabricImage(img);
-      fabricImg.scaleX = canvasWidth / naturalW;
-      fabricImg.scaleY = canvasHeight / naturalH;
-      fabricImg.left = 0;
-      fabricImg.top = 0;
+      // 描画履歴を初期化（背景画像のスナップショットを初期状態として保存）
+      const initialSnapshot = canvasEl.toDataURL('image/png');
+      setCanvasHistory([initialSnapshot]);
 
-      fc.backgroundImage = fabricImg;
-      fc.renderAll();
-
-      // 描画履歴を初期化
-      setCanvasHistory([]);
-
-      // パス追加時に履歴保存
-      fc.on('path:created', () => {
-        const json = JSON.stringify(fc.toJSON());
-        setCanvasHistory((prev) => [...prev, json]);
-      });
-
-      fabricCanvasRef.current = fc;
-      isInitializingRef.current = false;
+      console.log('[キャンバス初期化] 完了 - サイズ:', canvasWidth, 'x', canvasHeight);
     };
     img.onerror = () => {
       console.error('[キャンバス初期化] 画像読み込みエラー:', currentDiagramSrc.substring(0, 50));
-      isInitializingRef.current = false;
     };
-    // 【修正】currentDiagramSrc を使用（report の URL ではなく独立した state）
     img.src = currentDiagramSrc;
 
-    return () => {
-      if (fabricCanvasRef.current) {
-        fabricCanvasRef.current.dispose();
-        fabricCanvasRef.current = null;
-      }
-      isInitializingRef.current = false;
-    };
-    // 【修正】依存配列から report.baseDiagramUrl, report.annotatedDiagramUrl を排除
-    // currentDiagramSrc のみに依存することで、保存時の再初期化ループを防止
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, diagramLoaded, currentDiagramSrc]);
 
   // ============================
-  // STEP2: ペンの色・太さ変更時にブラシを更新
+  // STEP2: キャンバスへのフリーハンド描画イベントハンドラ
+  // マウスイベントとタッチイベントの両方に対応
   // ============================
-  useEffect(() => {
-    const fc = fabricCanvasRef.current;
-    if (!fc || !fc.freeDrawingBrush) return;
-    fc.freeDrawingBrush.color = penColor;
-    fc.freeDrawingBrush.width = penWidth;
-  }, [penColor, penWidth]);
+
+  // キャンバスの座標を取得する共通ヘルパー（CSS表示サイズと内部ピクセルサイズの差を補正）
+  const getCanvasCoordinates = (
+    canvasEl: HTMLCanvasElement,
+    clientX: number,
+    clientY: number
+  ): { x: number; y: number } => {
+    const rect = canvasEl.getBoundingClientRect();
+    const scaleX = canvasEl.width / rect.width;
+    const scaleY = canvasEl.height / rect.height;
+    const x = (clientX - rect.left) * scaleX;
+    const y = (clientY - rect.top) * scaleY;
+    return { x, y };
+  };
+
+  // 描画開始（mousedown）
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvasEl = canvasElRef.current;
+    if (!canvasEl) return;
+    const ctx = canvasEl.getContext('2d');
+    if (!ctx) return;
+
+    isDrawingRef.current = true;
+
+    // 座標を補正して取得
+    const { x, y } = getCanvasCoordinates(canvasEl, e.clientX, e.clientY);
+
+    ctx.strokeStyle = penColor;
+    ctx.lineWidth = penWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  // 描画中（mousemove）
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawingRef.current) return;
+    const canvasEl = canvasElRef.current;
+    if (!canvasEl) return;
+    const ctx = canvasEl.getContext('2d');
+    if (!ctx) return;
+
+    const { x, y } = getCanvasCoordinates(canvasEl, e.clientX, e.clientY);
+
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  // 描画終了（mouseup / mouseleave）
+  const handleMouseUp = () => {
+    if (!isDrawingRef.current) return;
+    isDrawingRef.current = false;
+
+    // スナップショットを保存
+    const canvasEl = canvasElRef.current;
+    if (canvasEl) {
+      const snapshot = canvasEl.toDataURL('image/png');
+      setCanvasHistory((prev) => [...prev, snapshot]);
+    }
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
+  // 描画開始（touchstart）
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault(); // スクロール防止
+    const canvasEl = canvasElRef.current;
+    if (!canvasEl) return;
+    const ctx = canvasEl.getContext('2d');
+    if (!ctx) return;
+    if (e.touches.length === 0) return;
+
+    isDrawingRef.current = true;
+    const touch = e.touches[0];
+    const { x, y } = getCanvasCoordinates(canvasEl, touch.clientX, touch.clientY);
+
+    ctx.strokeStyle = penColor;
+    ctx.lineWidth = penWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  // 描画中（touchmove）
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault(); // スクロール防止
+    if (!isDrawingRef.current) return;
+    const canvasEl = canvasElRef.current;
+    if (!canvasEl) return;
+    const ctx = canvasEl.getContext('2d');
+    if (!ctx) return;
+    if (e.touches.length === 0) return;
+
+    const touch = e.touches[0];
+    const { x, y } = getCanvasCoordinates(canvasEl, touch.clientX, touch.clientY);
+
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  // 描画終了（touchend / touchcancel）
+  const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (!isDrawingRef.current) return;
+    isDrawingRef.current = false;
+
+    // スナップショットを保存
+    const canvasEl = canvasElRef.current;
+    if (canvasEl) {
+      const snapshot = canvasEl.toDataURL('image/png');
+      setCanvasHistory((prev) => [...prev, snapshot]);
+    }
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
 
   // ============================
-  // 【修正】STEP2: 配置図アップロード処理
+  // STEP2: 配置図アップロード処理
   // 新しい画像アップロード時は currentDiagramSrc を更新してキャンバスを再初期化
   // ============================
   const handleDiagramUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -623,7 +688,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     try {
       const compressed = await compressImage(e.target.files[0]);
       setReport((prev) => ({ ...prev, baseDiagramUrl: compressed, annotatedDiagramUrl: '' }));
-      // 【修正】currentDiagramSrc を新しい画像のdata URLに更新
+      // currentDiagramSrc を新しい画像のdata URLに更新 → useEffectでキャンバス再初期化
       setCurrentDiagramSrc(compressed);
       setHasUnsavedChanges(true);
       setSaveStatus('idle');
@@ -635,13 +700,13 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // 【修正】STEP2: 前回の配置図を使用
+  // STEP2: 前回の配置図を使用
   // currentDiagramSrc を設定してキャンバスを初期化
   // ============================
   const handleUsePreviousDiagram = () => {
     const src = report.annotatedDiagramUrl || report.baseDiagramUrl;
     if (src) {
-      // 【修正】currentDiagramSrc を更新してキャンバスを再初期化
+      // currentDiagramSrc を更新してキャンバスを再初期化
       setCurrentDiagramSrc(src);
       setDiagramLoaded(true);
     } else {
@@ -650,38 +715,60 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // STEP2: 元に戻す（消しゴム）
+  // STEP2: 元に戻す
+  // 履歴の最後のスナップショットを削除し、1つ前の状態を復元
   // ============================
   const handleUndo = () => {
-    const fc = fabricCanvasRef.current;
-    if (!fc) return;
+    const canvasEl = canvasElRef.current;
+    if (!canvasEl) return;
+    const ctx = canvasEl.getContext('2d');
+    if (!ctx) return;
 
-    const objects = fc.getObjects();
-    if (objects.length > 0) {
-      const lastObj = objects[objects.length - 1];
-      fc.remove(lastObj);
-      fc.renderAll();
-      setCanvasHistory((prev) => prev.slice(0, -1));
+    setCanvasHistory((prev) => {
+      // 履歴が1つ以下（背景画像のみ）の場合は何もしない
+      if (prev.length <= 1) return prev;
+
+      // 最後のスナップショットを削除
+      const newHistory = prev.slice(0, -1);
+      // 1つ前の状態を復元
+      const previousSnapshot = newHistory[newHistory.length - 1];
+
+      const restoreImg = new Image();
+      restoreImg.onload = () => {
+        ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+        ctx.drawImage(restoreImg, 0, 0, canvasEl.width, canvasEl.height);
+      };
+      restoreImg.src = previousSnapshot;
+
+      return newHistory;
+    });
+  };
+
+  // ============================
+  // STEP2: 全消去（書き込みのみクリア、背景画像は保持）
+  // ============================
+  const handleClearAll = () => {
+    const canvasEl = canvasElRef.current;
+    if (!canvasEl) return;
+    const ctx = canvasEl.getContext('2d');
+    if (!ctx) return;
+
+    const bgImg = backgroundImageRef.current;
+    if (bgImg) {
+      // 背景画像のみを再描画
+      ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+      ctx.drawImage(bgImg, 0, 0, canvasEl.width, canvasEl.height);
+
+      // 履歴をクリアし、背景画像のスナップショットのみに
+      const bgSnapshot = canvasEl.toDataURL('image/png');
+      setCanvasHistory([bgSnapshot]);
     }
   };
 
   // ============================
-  // STEP2: 全消去（書き込みのみクリア）
-  // ============================
-  const handleClearAll = () => {
-    const fc = fabricCanvasRef.current;
-    if (!fc) return;
-
-    // 背景画像を保持したまま描画オブジェクトのみ削除
-    const objects = fc.getObjects();
-    objects.forEach((obj) => fc.remove(obj));
-    fc.renderAll();
-    setCanvasHistory([]);
-  };
-
-  // ============================
-  // 【修正】STEP2: キャンバスを画像として書き出し＆保存
-  // toDataURL を png 形式で書き出し、currentDiagramSrc は更新しない（再初期化防止）
+  // STEP2: キャンバスを画像として書き出し＆保存
+  // canvas.toDataURL で png 形式で書き出し
+  // currentDiagramSrc は更新しない（キャンバスの再初期化を防ぐ）
   // ============================
   const handleSaveCanvas = async () => {
     if (!report.project) {
@@ -689,37 +776,23 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       return;
     }
 
-    const fc = fabricCanvasRef.current;
-    if (!fc) {
+    const canvasEl = canvasElRef.current;
+    if (!canvasEl || canvasEl.width === 0 || canvasEl.height === 0) {
       // キャンバスなしの場合は通常保存
       await handleSave();
       return;
     }
 
-    // 【修正】描画完了を確認してから書き出し
-    fc.renderAll();
-
-    // 【修正】png 形式で書き出し（jpeg だと背景が黒くなる場合がある）
-    const dataUrl = fc.toDataURL({
-      format: 'png',
-      quality: 1.0,
-      multiplier: 1,
-    });
-
-    // 【修正】書き出した data URL が "data:image/png" で始まることを確認
+    // png 形式で書き出し
+    const dataUrl = canvasEl.toDataURL('image/png');
     console.log('[handleSaveCanvas] toDataURL prefix:', dataUrl.substring(0, 30));
-    if (!dataUrl.startsWith('data:image/png')) {
-      console.warn('[handleSaveCanvas] 書き出し形式が png ではありません:', dataUrl.substring(0, 50));
-    }
 
-    // 【修正】annotatedDiagramUrl に保存し、baseDiagramUrl も保持
-    // currentDiagramSrc は更新しない（キャンバスの再初期化を防ぐため）
+    // annotatedDiagramUrl に保存。currentDiagramSrc は更新しない（再初期化防止）
     const updatedReport = { ...report, annotatedDiagramUrl: dataUrl };
     setReport(updatedReport);
 
     setSaveStatus('saving');
     try {
-      // 【修正】updatedReport を saveDraft に渡す
       const newId = await saveDraft(draftId, 'DAILY_SAFETY', updatedReport);
       setDraftId(newId);
       setSaveStatus('saved');
@@ -1139,15 +1212,23 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
               </div>
             </div>
 
-            {/* 【修正】キャンバス — CSSスタイル(width/height)を排除、コンテナで max-width: 800px + 中央揃え */}
+            {/* キャンバス — HTML Canvas API を使用 */}
             <div
               ref={canvasContainerRef}
-              className="flex justify-center"
               style={{ maxWidth: '800px', width: '100%', margin: '0 auto' }}
             >
               <canvas
                 ref={canvasElRef}
-                className="border border-gray-300 rounded-lg shadow-sm touch-none"
+                className="border border-gray-300 rounded-lg shadow-sm"
+                style={{ width: '100%', height: 'auto', touchAction: 'none' }}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchEnd}
               />
             </div>
           </>
