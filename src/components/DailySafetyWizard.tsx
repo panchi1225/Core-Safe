@@ -1,6 +1,6 @@
 // src/components/DailySafetyWizard.tsx
 // 安全衛生日誌（作業打合せ及び安全衛生日誌）ウィザード
-// STEP1: 作業内容入力、STEP2: 配置図・略図、STEP3〜5: 未実装プレースホルダー
+// STEP1: 作業内容入力、STEP2: 配置図・略図、STEP3: 当日作業確認、STEP4〜5: 未実装プレースホルダー
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
@@ -8,6 +8,9 @@ import {
   DailySafetyReportData,
   WorkEntry,
   DiagramImage,
+  AdditionalWorkEntry,
+  Step3ConfirmationItems,
+  Step3SiteConfirmationItems,
   INITIAL_DAILY_SAFETY_REPORT,
   INITIAL_MASTER_DATA,
   getJapaneseDayOfWeek,
@@ -304,9 +307,48 @@ function createEmptyWorkEntry(): WorkEntry {
 }
 
 // ============================
+// 空の追加作業エントリ生成（STEP3用）
+// ============================
+function createEmptyAdditionalWorkEntry(): AdditionalWorkEntry {
+  return {
+    id: generateId(),
+    description: '',
+    company: '',
+    actualWorkers: 1,
+    machines: [],
+  };
+}
+
+// ============================
 // 安全衛生指示事項の固定数
 // ============================
 const SAFETY_INSTRUCTIONS_COUNT = 7;
+
+// ============================
+// STEP3: 確認事項の定義
+// ============================
+const STEP3_CONFIRMATION_LABELS: { key: keyof Step3ConfirmationItems; label: string }[] = [
+  { key: 'item1', label: '健康状態の把握' },
+  { key: 'item2', label: '服装・保護具の着用' },
+  { key: 'item3', label: '資格証の確認' },
+  { key: 'item4', label: '作業手順および合図・指揮系統の周知' },
+  { key: 'item5', label: '危険個所の周知' },
+  { key: 'item6', label: 'KY活動および作業指揮者の明確化' },
+  { key: 'item7', label: '新規入場者教育の実施' },
+];
+
+// ============================
+// STEP3: 当現場の確認事項の定義
+// ============================
+const STEP3_SITE_CONFIRMATION_LABELS: { key: keyof Step3SiteConfirmationItems; label: string }[] = [
+  { key: 'item1', label: '作業前に「埋設物」および「架空線」の確認を行ったか。' },
+  { key: 'item2', label: '作業帯の分離措置（作業エリアの明示）を行っているか。' },
+  { key: 'item3', label: '建設機械等の使用前点検を実施しているか。' },
+  { key: 'item4', label: '仮囲い・保安設備に損傷や劣化などの不備はないか。' },
+  { key: 'item5', label: '過積載がないか。確認を行っているか。' },
+  { key: 'item6', label: '作業員と建設機械の接触防止措置を行っているか。' },
+  { key: 'item7', label: '現場内の整理整頓はできているか。' },
+];
 
 // ============================
 // 【修正B】画像サイズエラー判定ヘルパー
@@ -347,6 +389,18 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         { length: SAFETY_INSTRUCTIONS_COUNT },
         (_, i) => si[i] || ''
       );
+      // STEP3追加フィールドが存在しない場合のフォールバック
+      if (!restored.actualWorkers) restored.actualWorkers = [];
+      if (!restored.step3AdditionalWorkEntries) restored.step3AdditionalWorkEntries = [];
+      if (!restored.step3ConfirmationItems) {
+        restored.step3ConfirmationItems = { item1: '', item2: '', item3: '', item4: '', item5: '', item6: '', item7: '' };
+      }
+      if (!restored.step3SiteConfirmationItems) {
+        restored.step3SiteConfirmationItems = { item1: '', item2: '', item3: '', item4: '', item5: '', item6: '', item7: '' };
+      }
+      if (!restored.stageConfirmation) restored.stageConfirmation = '';
+      if (!restored.witnessConfirmation) restored.witnessConfirmation = '';
+      if (!restored.dumpTrucks) restored.dumpTrucks = { incoming: 0, outgoing: 0 };
       return restored;
     }
     // 初期値: 作業エントリが空なら1つ追加
@@ -615,6 +669,164 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     setHasUnsavedChanges(true);
     setSaveStatus('idle');
   };
+
+  // ============================
+  // STEP3: 実施人数更新
+  // ============================
+  const updateActualWorkers = (entryIndex: number, count: number) => {
+    setReport((prev) => {
+      const newActualWorkers = [...prev.actualWorkers];
+      // 該当インデックスが存在するか確認
+      const existingIdx = newActualWorkers.findIndex((aw) => aw.entryIndex === entryIndex);
+      if (existingIdx >= 0) {
+        newActualWorkers[existingIdx] = { entryIndex, count };
+      } else {
+        newActualWorkers.push({ entryIndex, count });
+      }
+      return { ...prev, actualWorkers: newActualWorkers };
+    });
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
+  // STEP3: 特定の作業セットの実施人数を取得するヘルパー
+  const getActualWorkersCount = (entryIndex: number): number => {
+    const found = report.actualWorkers.find((aw) => aw.entryIndex === entryIndex);
+    return found ? found.count : 0;
+  };
+
+  // ============================
+  // STEP3: 追加作業の操作
+  // ============================
+  const addStep3AdditionalWork = () => {
+    setReport((prev) => ({
+      ...prev,
+      step3AdditionalWorkEntries: [...prev.step3AdditionalWorkEntries, createEmptyAdditionalWorkEntry()],
+    }));
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
+  const updateStep3AdditionalWork = (id: string, field: keyof AdditionalWorkEntry, value: any) => {
+    setReport((prev) => ({
+      ...prev,
+      step3AdditionalWorkEntries: prev.step3AdditionalWorkEntries.map((entry) =>
+        entry.id === id ? { ...entry, [field]: value } : entry
+      ),
+    }));
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
+  const removeStep3AdditionalWork = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      message: 'この追加作業を削除しますか？',
+      leftButtonLabel: '削除する',
+      leftButtonClass: 'px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700',
+      onLeftButtonClick: () => {
+        setReport((prev) => ({
+          ...prev,
+          step3AdditionalWorkEntries: prev.step3AdditionalWorkEntries.filter((e) => e.id !== id),
+        }));
+        setHasUnsavedChanges(true);
+        setSaveStatus('idle');
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+      rightButtonLabel: 'キャンセル',
+      rightButtonClass: 'px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300',
+      onRightButtonClick: () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
+  };
+
+  // STEP3: 追加作業の機械を追加する
+  const addMachineToAdditionalWork = (id: string) => {
+    setReport((prev) => ({
+      ...prev,
+      step3AdditionalWorkEntries: prev.step3AdditionalWorkEntries.map((entry) =>
+        entry.id === id ? { ...entry, machines: [...entry.machines, ''] } : entry
+      ),
+    }));
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
+  // STEP3: 追加作業の特定の機械を更新する
+  const updateMachineInAdditionalWork = (entryId: string, machineIndex: number, value: string) => {
+    setReport((prev) => ({
+      ...prev,
+      step3AdditionalWorkEntries: prev.step3AdditionalWorkEntries.map((entry) => {
+        if (entry.id !== entryId) return entry;
+        const newMachines = [...entry.machines];
+        newMachines[machineIndex] = value;
+        return { ...entry, machines: newMachines };
+      }),
+    }));
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
+  // STEP3: 追加作業の特定の機械を削除する
+  const removeMachineFromAdditionalWork = (entryId: string, machineIndex: number) => {
+    setReport((prev) => ({
+      ...prev,
+      step3AdditionalWorkEntries: prev.step3AdditionalWorkEntries.map((entry) => {
+        if (entry.id !== entryId) return entry;
+        const newMachines = [...entry.machines];
+        newMachines.splice(machineIndex, 1);
+        return { ...entry, machines: newMachines };
+      }),
+    }));
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
+  // ============================
+  // STEP3: 確認事項の更新
+  // ============================
+  const updateStep3Confirmation = (key: keyof Step3ConfirmationItems, value: '良' | '否' | '') => {
+    setReport((prev) => ({
+      ...prev,
+      step3ConfirmationItems: {
+        ...prev.step3ConfirmationItems,
+        [key]: prev.step3ConfirmationItems[key] === value ? '' : value, // トグル動作
+      },
+    }));
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
+  // STEP3: 当現場の確認事項の更新
+  const updateStep3SiteConfirmation = (key: keyof Step3SiteConfirmationItems, value: '良' | '否' | '') => {
+    setReport((prev) => ({
+      ...prev,
+      step3SiteConfirmationItems: {
+        ...prev.step3SiteConfirmationItems,
+        [key]: prev.step3SiteConfirmationItems[key] === value ? '' : value, // トグル動作
+      },
+    }));
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
+  // ============================
+  // STEP3: 本日の作業人数合計を自動計算
+  // 各作業セットの実施人数 + 追加作業の実施人数 の合計
+  // ============================
+  const totalStep3Workers = (() => {
+    // STEP1の各作業セットの実施人数合計
+    let total = 0;
+    report.workEntries.forEach((_, index) => {
+      total += getActualWorkersCount(index);
+    });
+    // STEP3の追加作業の実施人数合計
+    report.step3AdditionalWorkEntries.forEach((entry) => {
+      total += entry.actualWorkers;
+    });
+    return total;
+  })();
 
   // ============================
   // バリデーション
@@ -1622,7 +1834,458 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // STEP3〜5 プレースホルダー
+  // STEP3 レンダリング — 当日作業確認
+  // ============================
+  const renderStep3 = () => (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-gray-800 border-l-4 border-pink-500 pl-3">
+        STEP 3: 当日作業確認
+      </h2>
+
+      {/* ===== セクション1: 作業内容と実施人数 ===== */}
+      <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <h3 className="text-base font-bold text-gray-800 mb-3">
+          <i className="fa-solid fa-clipboard-list mr-2 text-pink-500"></i>
+          作業内容と実施人数
+        </h3>
+
+        {/* STEP1で入力した作業セットの一覧（読み取り専用 + 実施人数入力） */}
+        <div className="space-y-4">
+          {report.workEntries.map((entry, index) => (
+            <div key={entry.id} className="bg-gray-50 rounded-lg p-4">
+              {/* 作業番号ラベル */}
+              <div className="mb-3">
+                <span className="text-sm font-bold text-pink-600">
+                  作業{toCircledNumber(index + 1)}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* 作業内容（読み取り専用） */}
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-gray-600 mb-1">作業内容</label>
+                  <div className="w-full p-2 border border-gray-200 rounded bg-gray-100 text-gray-700 text-sm">
+                    {entry.workContent || '（未入力）'}
+                  </div>
+                </div>
+
+                {/* 会社名（読み取り専用） */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">会社名</label>
+                  <div className="w-full p-2 border border-gray-200 rounded bg-gray-100 text-gray-700 text-sm">
+                    {entry.company || '（未選択）'}
+                  </div>
+                </div>
+
+                {/* 計画人数（読み取り専用） */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">計画人数</label>
+                  <div className="w-full p-2 border border-gray-200 rounded bg-gray-100 text-gray-700 text-sm">
+                    {entry.plannedWorkers}名
+                  </div>
+                </div>
+
+                {/* 主要機械（読み取り専用） */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">主要機械</label>
+                  <div className="w-full p-2 border border-gray-200 rounded bg-gray-100 text-gray-700 text-sm">
+                    {entry.machine || '（未選択）'}
+                  </div>
+                </div>
+
+                {/* 実施人数（編集可能ドロップダウン） */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">
+                    実施人数 <span className="text-pink-500">（当日入力）</span>
+                  </label>
+                  <select
+                    className="w-full p-2 border border-pink-300 rounded bg-white text-black outline-none appearance-none text-sm"
+                    value={getActualWorkersCount(index)}
+                    onChange={(e) => updateActualWorkers(index, parseInt(e.target.value))}
+                  >
+                    <option value={0}>選択してください</option>
+                    {Array.from({ length: 50 }, (_, i) => i + 1).map((n) => (
+                      <option key={n} value={n}>
+                        {n}名
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* 本日の作業人数合計 */}
+        <div className="mt-4 p-3 bg-pink-50 border border-pink-200 rounded-lg flex items-center justify-between">
+          <span className="text-sm font-bold text-gray-700">
+            <i className="fa-solid fa-users mr-2 text-pink-500"></i>
+            本日の作業人数合計
+          </span>
+          <span className="text-lg font-bold text-pink-600">
+            {totalStep3Workers}人
+          </span>
+        </div>
+      </div>
+
+      {/* ===== セクション2: 追加作業 ===== */}
+      <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <h3 className="text-base font-bold text-gray-800 mb-3">
+          <i className="fa-solid fa-plus-circle mr-2 text-pink-500"></i>
+          追加作業
+        </h3>
+
+        {/* 追加作業カード一覧 */}
+        <div className="space-y-4">
+          {report.step3AdditionalWorkEntries.map((entry, index) => (
+            <div key={entry.id} className="bg-gray-50 rounded-lg p-4 relative">
+              {/* 追加作業番号と削除ボタン */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-bold text-pink-600">
+                  追加作業{toCircledNumber(index + 1)}
+                </span>
+                <button
+                  onClick={() => removeStep3AdditionalWork(entry.id)}
+                  className="text-gray-400 hover:text-red-500 p-1 transition-colors"
+                  title="この追加作業を削除"
+                >
+                  <i className="fa-solid fa-trash"></i>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* 作業内容（自由入力） */}
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-gray-600 mb-1">作業内容</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm"
+                    placeholder="作業内容を入力"
+                    value={entry.description}
+                    onChange={(e) => updateStep3AdditionalWork(entry.id, 'description', e.target.value)}
+                  />
+                </div>
+
+                {/* 会社名（マスタ選択） */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">会社名</label>
+                  <select
+                    className="w-full p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
+                    value={entry.company}
+                    onChange={(e) => updateStep3AdditionalWork(entry.id, 'company', e.target.value)}
+                  >
+                    <option value="">選択してください</option>
+                    {masterData.contractors.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 実施人数（ドロップダウン 1〜50） */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">実施人数</label>
+                  <select
+                    className="w-full p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
+                    value={entry.actualWorkers}
+                    onChange={(e) => updateStep3AdditionalWork(entry.id, 'actualWorkers', parseInt(e.target.value))}
+                  >
+                    {Array.from({ length: 50 }, (_, i) => i + 1).map((n) => (
+                      <option key={n} value={n}>
+                        {n}名
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 主要機械（複数選択可能） */}
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-gray-600 mb-1">主要機械</label>
+                  {entry.machines.map((machine, machineIdx) => (
+                    <div key={machineIdx} className="flex items-center gap-2 mb-2">
+                      <select
+                        className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
+                        value={machine}
+                        onChange={(e) => updateMachineInAdditionalWork(entry.id, machineIdx, e.target.value)}
+                      >
+                        <option value="">選択してください</option>
+                        {masterData.machines.map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => removeMachineFromAdditionalWork(entry.id, machineIdx)}
+                        className="text-gray-400 hover:text-red-500 p-1 transition-colors shrink-0"
+                        title="削除"
+                      >
+                        <i className="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => addMachineToAdditionalWork(entry.id)}
+                    className="text-sm text-pink-600 font-bold hover:underline"
+                  >
+                    <i className="fa-solid fa-plus mr-1"></i>追加
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* 追加作業追加ボタン */}
+        <button
+          onClick={addStep3AdditionalWork}
+          className="mt-3 w-full py-2 border-2 border-dashed border-pink-300 text-pink-600 rounded-lg font-bold hover:bg-pink-50 transition-colors text-sm"
+        >
+          <i className="fa-solid fa-plus mr-2"></i>追加作業を追加
+        </button>
+      </div>
+
+      {/* ===== セクション3: 確認事項 ===== */}
+      <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <h3 className="text-base font-bold text-gray-800 mb-3">
+          <i className="fa-solid fa-check-double mr-2 text-pink-500"></i>
+          確認事項
+        </h3>
+
+        <div className="space-y-3">
+          {STEP3_CONFIRMATION_LABELS.map((item, index) => (
+            <div
+              key={item.key}
+              className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0"
+            >
+              {/* 左側: 項目番号と項目名 */}
+              <div className="flex items-start gap-2 flex-1 mr-3">
+                <span className="text-xs font-bold text-gray-500 shrink-0 mt-0.5">
+                  {index + 1}.
+                </span>
+                <span className="text-sm text-gray-700">{item.label}</span>
+              </div>
+
+              {/* 右側: 良/否ボタン */}
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => updateStep3Confirmation(item.key, '良')}
+                  className={`px-4 py-1.5 rounded font-bold text-sm border transition-colors ${
+                    report.step3ConfirmationItems[item.key] === '良'
+                      ? 'bg-pink-500 text-white border-pink-500'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-pink-300'
+                  }`}
+                >
+                  良
+                </button>
+                <button
+                  onClick={() => updateStep3Confirmation(item.key, '否')}
+                  className={`px-4 py-1.5 rounded font-bold text-sm border transition-colors ${
+                    report.step3ConfirmationItems[item.key] === '否'
+                      ? 'bg-red-500 text-white border-red-500'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-red-300'
+                  }`}
+                >
+                  否
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ===== セクション4: 当現場の確認事項 ===== */}
+      <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <h3 className="text-base font-bold text-gray-800 mb-3">
+          <i className="fa-solid fa-hard-hat mr-2 text-pink-500"></i>
+          当現場の確認事項
+        </h3>
+
+        <div className="space-y-3">
+          {STEP3_SITE_CONFIRMATION_LABELS.map((item, index) => (
+            <div
+              key={item.key}
+              className="flex items-center justify-between py-2 border-b border-gray-100 last:border-b-0"
+            >
+              {/* 左側: 項目番号と項目名 */}
+              <div className="flex items-start gap-2 flex-1 mr-3">
+                <span className="text-xs font-bold text-gray-500 shrink-0 mt-0.5">
+                  {index + 1}.
+                </span>
+                <span className="text-sm text-gray-700">{item.label}</span>
+              </div>
+
+              {/* 右側: 良/否ボタン */}
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => updateStep3SiteConfirmation(item.key, '良')}
+                  className={`px-4 py-1.5 rounded font-bold text-sm border transition-colors ${
+                    report.step3SiteConfirmationItems[item.key] === '良'
+                      ? 'bg-pink-500 text-white border-pink-500'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-pink-300'
+                  }`}
+                >
+                  良
+                </button>
+                <button
+                  onClick={() => updateStep3SiteConfirmation(item.key, '否')}
+                  className={`px-4 py-1.5 rounded font-bold text-sm border transition-colors ${
+                    report.step3SiteConfirmationItems[item.key] === '否'
+                      ? 'bg-red-500 text-white border-red-500'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-red-300'
+                  }`}
+                >
+                  否
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ===== セクション5: 段階確認・立会確認 ===== */}
+      <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <h3 className="text-base font-bold text-gray-800 mb-3">
+          <i className="fa-solid fa-clipboard-check mr-2 text-pink-500"></i>
+          段階確認・立会確認
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* 段階確認 */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">段階確認</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  updateReport(
+                    'stageConfirmation',
+                    report.stageConfirmation === '有' ? '' : '有'
+                  );
+                }}
+                className={`flex-1 px-4 py-2 rounded font-bold text-sm border transition-colors ${
+                  report.stageConfirmation === '有'
+                    ? 'bg-pink-500 text-white border-pink-500'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-pink-300'
+                }`}
+              >
+                有
+              </button>
+              <button
+                onClick={() => {
+                  updateReport(
+                    'stageConfirmation',
+                    report.stageConfirmation === '無' ? '' : '無'
+                  );
+                }}
+                className={`flex-1 px-4 py-2 rounded font-bold text-sm border transition-colors ${
+                  report.stageConfirmation === '無'
+                    ? 'bg-pink-500 text-white border-pink-500'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-pink-300'
+                }`}
+              >
+                無
+              </button>
+            </div>
+          </div>
+
+          {/* 立会確認 */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">立会確認</label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  updateReport(
+                    'witnessConfirmation',
+                    report.witnessConfirmation === '有' ? '' : '有'
+                  );
+                }}
+                className={`flex-1 px-4 py-2 rounded font-bold text-sm border transition-colors ${
+                  report.witnessConfirmation === '有'
+                    ? 'bg-pink-500 text-white border-pink-500'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-pink-300'
+                }`}
+              >
+                有
+              </button>
+              <button
+                onClick={() => {
+                  updateReport(
+                    'witnessConfirmation',
+                    report.witnessConfirmation === '無' ? '' : '無'
+                  );
+                }}
+                className={`flex-1 px-4 py-2 rounded font-bold text-sm border transition-colors ${
+                  report.witnessConfirmation === '無'
+                    ? 'bg-pink-500 text-white border-pink-500'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-pink-300'
+                }`}
+              >
+                無
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== セクション6: ダンプ台数 ===== */}
+      <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <h3 className="text-base font-bold text-gray-800 mb-3">
+          <i className="fa-solid fa-truck mr-2 text-pink-500"></i>
+          ダンプ台数
+        </h3>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* 搬入 */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">搬入</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm"
+                placeholder="0"
+                value={report.dumpTrucks.incoming === 0 ? '' : report.dumpTrucks.incoming}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value) || 0;
+                  updateReport('dumpTrucks', {
+                    ...report.dumpTrucks,
+                    incoming: Math.max(0, val),
+                  });
+                }}
+              />
+              <span className="text-sm font-bold text-gray-600 shrink-0">台</span>
+            </div>
+          </div>
+
+          {/* 搬出 */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">搬出</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min={0}
+                className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none text-sm"
+                placeholder="0"
+                value={report.dumpTrucks.outgoing === 0 ? '' : report.dumpTrucks.outgoing}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value) || 0;
+                  updateReport('dumpTrucks', {
+                    ...report.dumpTrucks,
+                    outgoing: Math.max(0, val),
+                  });
+                }}
+              />
+              <span className="text-sm font-bold text-gray-600 shrink-0">台</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ============================
+  // STEP4・STEP5 プレースホルダー
   // ============================
   const renderPlaceholder = (currentStep: number) => (
     <div className="space-y-6">
@@ -1676,7 +2339,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         <main className="mx-auto p-4 bg-white shadow-lg rounded-lg min-h-[60vh] max-w-3xl">
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
-          {step === 3 && renderPlaceholder(3)}
+          {step === 3 && renderStep3()}
           {step === 4 && renderPlaceholder(4)}
           {step === 5 && renderPlaceholder(5)}
         </main>

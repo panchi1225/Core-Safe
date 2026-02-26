@@ -520,6 +520,51 @@ export interface InspectionItem {
   editedLabel: string;       // 編集後のラベル（isEditableがtrueの場合に使用）
 }
 
+// ============================
+// STEP3: 追加作業エントリの型定義
+// ============================
+
+/** STEP3で追加された作業（帳票出力時に赤字表示） */
+export interface AdditionalWorkEntry {
+  id: string;
+  description: string;   // 作業内容（自由入力）
+  company: string;        // 会社名（マスタリスト選択）
+  actualWorkers: number;  // 実施人数（ドロップダウン 1-50）
+  machines: string[];     // 主要機械（マスタリスト選択、複数可）
+}
+
+// ============================
+// STEP3: 確認事項の型定義
+// ============================
+
+/** 確認事項（7項目） */
+export interface Step3ConfirmationItems {
+  item1: '良' | '否' | '';  // 健康状態の把握
+  item2: '良' | '否' | '';  // 服装・保護具の着用
+  item3: '良' | '否' | '';  // 資格証の確認
+  item4: '良' | '否' | '';  // 作業手順および合図・指揮系統の周知
+  item5: '良' | '否' | '';  // 危険個所の周知
+  item6: '良' | '否' | '';  // KY活動および作業指揮者の明確化
+  item7: '良' | '否' | '';  // 新規入場者教育の実施
+}
+
+/** 当現場の確認事項（7項目） */
+export interface Step3SiteConfirmationItems {
+  item1: '良' | '否' | '';  // 埋設物・架空線の確認
+  item2: '良' | '否' | '';  // 作業帯の分離措置
+  item3: '良' | '否' | '';  // 建設機械等の使用前点検
+  item4: '良' | '否' | '';  // 仮囲い・保安設備の不備
+  item5: '良' | '否' | '';  // 過積載の確認
+  item6: '良' | '否' | '';  // 作業員と建設機械の接触防止
+  item7: '良' | '否' | '';  // 現場内の整理整頓
+}
+
+/** ダンプ台数 */
+export interface DumpTrucks {
+  incoming: number;  // 搬入ダンプ台数
+  outgoing: number;  // 搬出ダンプ台数
+}
+
 /** 安全衛生日誌メインデータ */
 export interface DailySafetyReportData {
   // --- 基本情報 ---
@@ -541,7 +586,7 @@ export interface DailySafetyReportData {
   annotatedDiagramUrl: string;  // 書き込み済み配置図画像URL
 
   // --- STEP3: 作業当日確認 ---
-  additionalWorkEntries: WorkEntry[];  // 追加作業（当日赤字追加）
+  additionalWorkEntries: WorkEntry[];  // 追加作業（当日赤字追加）— 既存フィールド
   actualWorkerCounts: Record<string, number>; // 各作業の実施人数（キー: workEntryのid）
   totalWorkers: number;                // 本日の作業人員数（自動合計）
   confirmationChecks: ConfirmationCheck[];    // 確認事項（良/否）
@@ -551,6 +596,25 @@ export interface DailySafetyReportData {
   dumpTruckTotal: number;              // ダンプ合計台数（自動計算）
   hasStageConfirmation: boolean;       // 段階確認の有無
   hasWitnessConfirmation: boolean;     // 立会確認の有無
+
+  // --- STEP3: 当日作業確認データ（追加フィールド） ---
+  actualWorkers: { entryIndex: number; count: number }[];
+    // STEP1の各作業セットに対応する実施人数
+
+  step3AdditionalWorkEntries: AdditionalWorkEntry[];
+    // STEP3で追加された作業（帳票出力時に赤字表示）
+
+  step3ConfirmationItems: Step3ConfirmationItems;
+    // 確認事項（7項目: 良/否）
+
+  step3SiteConfirmationItems: Step3SiteConfirmationItems;
+    // 当現場の確認事項（7項目: 良/否）
+
+  stageConfirmation: '有' | '無' | '';     // 段階確認
+  witnessConfirmation: '有' | '無' | '';   // 立会確認
+
+  dumpTrucks: DumpTrucks;
+    // 搬入・搬出ダンプ台数
 
   // --- STEP4: 巡視記録 ---
   coordinationNotes: string;           // 作業連絡調整事項（自由入力）
@@ -833,7 +897,7 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
   baseDiagramUrl: '',
   annotatedDiagramUrl: '',
 
-  // --- STEP3: 作業当日確認 ---
+  // --- STEP3: 作業当日確認（既存フィールド） ---
   additionalWorkEntries: [],
   actualWorkerCounts: {},
   totalWorkers: 0,
@@ -860,6 +924,31 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
   dumpTruckTotal: 0,
   hasStageConfirmation: false,
   hasWitnessConfirmation: false,
+
+  // --- STEP3: 当日作業確認データ（追加フィールド初期値） ---
+  actualWorkers: [],
+  step3AdditionalWorkEntries: [],
+  step3ConfirmationItems: {
+    item1: '',
+    item2: '',
+    item3: '',
+    item4: '',
+    item5: '',
+    item6: '',
+    item7: '',
+  },
+  step3SiteConfirmationItems: {
+    item1: '',
+    item2: '',
+    item3: '',
+    item4: '',
+    item5: '',
+    item6: '',
+    item7: '',
+  },
+  stageConfirmation: '',
+  witnessConfirmation: '',
+  dumpTrucks: { incoming: 0, outgoing: 0 },
 
   // --- STEP4: 巡視記録 ---
   coordinationNotes: '',
