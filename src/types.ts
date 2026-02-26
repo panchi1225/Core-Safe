@@ -68,9 +68,8 @@ export interface MasterData {
   processes: string[];      
   cautions: string[];
   // --- 安全衛生日誌用マスタ ---
-  machines: string[];       // 主要機械
-  materials: string[];      // 搬出入資機材
-  preparations: string[];   // 段取り資材等
+  machines: string[];       // 機械
+  equipment: string[];      // 資機材（搬出入資機材・段取り資材等で共通使用）
 }
 
 export const INITIAL_MASTER_DATA: MasterData = {
@@ -211,9 +210,8 @@ export const INITIAL_MASTER_DATA: MasterData = {
   processes: [],
   cautions: [],
   // --- 安全衛生日誌用マスタ初期値 ---
-  machines: [],       // 主要機械
-  materials: [],      // 搬出入資機材
-  preparations: [],   // 段取り資材等
+  machines: [],       // 機械
+  equipment: [],      // 資機材
 };
 
 // --- Safety Training Report ---
@@ -476,7 +474,7 @@ export interface WorkEntry {
   company: string;           // 会社名（contractorsマスタ選択）
   plannedWorkers: number;    // 人数（予定）
   actualWorkers: number;     // 人数（実施）（STEP3で入力）
-  machine: string;           // 主要機械（machinesマスタ選択）
+  machine: string;           // 機械（machinesマスタ選択）
   isAdditional: boolean;     // 追加作業フラグ（当日追加は true）
 }
 
@@ -521,8 +519,8 @@ export interface DailySafetyReportData {
 
   // --- STEP1: 作業内容（前日入力） ---
   workEntries: WorkEntry[];     // 作業内容セット（複数追加可）
-  materialEntries: string[];    // 搬出入資機材（マスタ選択、複数追加可）
-  preparationEntries: string[]; // 段取り資材等（マスタ選択、複数追加可）
+  materialEntries: string[];    // 搬出入資機材（資機材マスタから選択、複数追加可）
+  preparationEntries: string[]; // 段取り資材等（資機材マスタから選択、複数追加可）
   safetyInstructions: string[]; // 安全衛生指示事項（cautionsマスタ選択、複数追加可）
 
   // --- STEP2: 配置図（前日入力） ---
@@ -814,8 +812,8 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
 
   // --- STEP1: 作業内容（前日入力） ---
   workEntries: [],
-  materialEntries: [],
-  preparationEntries: [],
+  materialEntries: [],      // 搬出入資機材（資機材マスタから選択）
+  preparationEntries: [],   // 段取り資材等（資機材マスタから選択）
   safetyInstructions: [],
 
   // --- STEP2: 配置図（前日入力） ---

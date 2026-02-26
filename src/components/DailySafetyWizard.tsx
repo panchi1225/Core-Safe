@@ -128,7 +128,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   // --- レポートデータ ---
   const [report, setReport] = useState<DailySafetyReportData>(() => {
     if (initialData) {
-      // 【修正4】一時保存データから復元時、safetyInstructions を7個に正規化
+      // 一時保存データから復元時、safetyInstructions を7個に正規化
       const restored = { ...initialData };
       const si = restored.safetyInstructions || [];
       // 7個未満なら空文字で埋め、7個を超えていれば切り詰め
@@ -149,7 +149,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     if (init.preparationEntries.length === 0) {
       init.preparationEntries = [''];
     }
-    // 【修正4】安全衛生指示事項は7個の空文字配列で初期化
+    // 安全衛生指示事項は7個の空文字配列で初期化
     init.safetyInstructions = Array(SAFETY_INSTRUCTIONS_COUNT).fill('');
     return init;
   });
@@ -200,7 +200,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   const isInitializingRef = useRef(false);
 
   // ============================
-  // 【修正3】一時保存データから復元した際にdiagramLoadedを設定
+  // 一時保存データから復元した際にdiagramLoadedを設定
   // ============================
   useEffect(() => {
     if (initialData) {
@@ -218,12 +218,11 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     const loadMaster = async () => {
       try {
         const data = await getMasterData();
-        // getMasterData が machines/materials/preparations を返さない場合に備える
+        // getMasterData が equipment フィールドを返さない場合に備えてフォールバック
         setMasterData({
           ...data,
           machines: data.machines || INITIAL_MASTER_DATA.machines,
-          materials: data.materials || INITIAL_MASTER_DATA.materials,
-          preparations: data.preparations || INITIAL_MASTER_DATA.preparations,
+          equipment: data.equipment || INITIAL_MASTER_DATA.equipment,
           cautions: data.cautions || INITIAL_MASTER_DATA.cautions,
         });
       } catch (e) {
@@ -250,18 +249,23 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
 
   // ============================
   // 【修正1】打合せ日変更時に作業日を翌営業日に連動 + 曜日自動更新
+  // 翌営業日の「日付」をそのまま作業日に設定し、曜日もその日付から算出する
   // ============================
   const handleMeetingDateChange = (dateStr: string) => {
     const meetingDate = new Date(dateStr + 'T00:00:00');
     // getNextBusinessDay で翌営業日（土日祝を飛ばす）を取得
     const nextBizDate = getNextBusinessDay(meetingDate);
-    const nextBizDateStr = nextBizDate.toISOString().split('T')[0];
+    // 翌営業日の日付文字列をローカルタイムゾーンで生成（タイムゾーンずれ防止）
+    const yyyy = nextBizDate.getFullYear();
+    const mm = String(nextBizDate.getMonth() + 1).padStart(2, '0');
+    const dd = String(nextBizDate.getDate()).padStart(2, '0');
+    const nextBizDateStr = `${yyyy}-${mm}-${dd}`;
 
     setReport((prev) => ({
       ...prev,
       meetingDate: dateStr,
       meetingDayOfWeek: getJapaneseDayOfWeek(meetingDate),
-      // 作業日を翌営業日に自動設定
+      // 作業日の日付と曜日を翌営業日に正しく設定
       workDate: nextBizDateStr,
       workDayOfWeek: getJapaneseDayOfWeek(nextBizDate),
     }));
@@ -384,7 +388,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       hasError = true;
     }
 
-    // 【修正4】安全衛生指示事項: 7個のうち最低1つ以上選択必須
+    // 安全衛生指示事項: 7個のうち最低1つ以上選択必須
     const hasAtLeastOneSafetyInstruction = report.safetyInstructions.some((s) => s !== '');
     if (!hasAtLeastOneSafetyInstruction) {
       newErrors.safetyInstructions = true;
@@ -424,7 +428,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // 【修正3】一時保存処理 — キャンバス内容を annotatedDiagramUrl に確実に保存
+  // 一時保存処理 — キャンバス内容を annotatedDiagramUrl に確実に保存
   // ============================
   const handleSave = async () => {
     if (!report.project) {
@@ -491,7 +495,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     errors[field] ? 'border-red-500 bg-red-50' : 'border-gray-300';
 
   // ============================
-  // 【修正2・修正3】STEP2: Fabric.js キャンバス初期化
+  // STEP2: Fabric.js キャンバス初期化
   // 配置図画像をキャンバスにフィットさせ、中央配置＋アスペクト比維持
   // 一時保存データからの復元にも対応
   // ============================
@@ -517,7 +521,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       return;
     }
 
-    // 【修正3】復元ロジック: annotatedDiagramUrl > baseDiagramUrl の優先順
+    // 復元ロジック: annotatedDiagramUrl > baseDiagramUrl の優先順
     // annotatedDiagramUrl がある場合はそちらを背景として使用（書き込み済み画像）
     // なければ baseDiagramUrl を使用
     const bgSrc = report.annotatedDiagramUrl || report.baseDiagramUrl;
@@ -528,12 +532,12 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
 
     // コンテナ幅を取得
     const containerWidth = canvasContainerRef.current?.clientWidth || 800;
-    // 【修正2】PC: 最大800px、スマホ: 画面幅 - padding
+    // PC: 最大800px、スマホ: 画面幅 - padding
     const maxWidth = Math.min(containerWidth, 800);
 
     const img = new Image();
     img.onload = () => {
-      // 【修正2】画像のアスペクト比に基づいてキャンバスサイズを決定
+      // 画像のアスペクト比に基づいてキャンバスサイズを決定
       const aspectRatio = img.height / img.width;
       const canvasWidth = maxWidth;
       const canvasHeight = Math.round(canvasWidth * aspectRatio);
@@ -554,7 +558,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       brush.width = penWidth;
       fc.freeDrawingBrush = brush;
 
-      // 【修正2】背景画像をキャンバスにフィットさせて中央配置
+      // 背景画像をキャンバスにフィットさせて中央配置
       FabricImage.fromURL(bgSrc).then((fabricImg) => {
         const imgW = fabricImg.width || 1;
         const imgH = fabricImg.height || 1;
@@ -673,7 +677,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // 【修正3】STEP2: キャンバスを画像として書き出し＆保存
+  // STEP2: キャンバスを画像として書き出し＆保存
   // ============================
   const handleSaveCanvas = async () => {
     if (!report.project) {
@@ -866,9 +870,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   </select>
                 </div>
 
-                {/* 主要機械 */}
+                {/* 機械 — masterData.machines を参照 */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">主要機械</label>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">機械</label>
                   <select
                     className="w-full p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
                     value={entry.machine}
@@ -896,7 +900,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </button>
       </div>
 
-      {/* (6) 搬出入資機材 */}
+      {/* (6) 搬出入資機材 — masterData.equipment を参照 */}
       <div>
         <label className="block text-sm font-bold text-gray-700 mb-2">搬出入資機材（任意）</label>
         {report.materialEntries.map((val, idx) => (
@@ -907,9 +911,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
               onChange={(e) => updateListEntry('materialEntries', idx, e.target.value)}
             >
               <option value="">選択してください</option>
-              {masterData.materials.map((m) => (
-                <option key={m} value={m}>
-                  {m}
+              {masterData.equipment.map((eq) => (
+                <option key={eq} value={eq}>
+                  {eq}
                 </option>
               ))}
             </select>
@@ -930,7 +934,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </button>
       </div>
 
-      {/* (7) 段取り資材等 */}
+      {/* (7) 段取り資材等 — masterData.equipment を参照 */}
       <div>
         <label className="block text-sm font-bold text-gray-700 mb-2">段取り資材等（任意）</label>
         {report.preparationEntries.map((val, idx) => (
@@ -941,9 +945,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
               onChange={(e) => updateListEntry('preparationEntries', idx, e.target.value)}
             >
               <option value="">選択してください</option>
-              {masterData.preparations.map((p) => (
-                <option key={p} value={p}>
-                  {p}
+              {masterData.equipment.map((eq) => (
+                <option key={eq} value={eq}>
+                  {eq}
                 </option>
               ))}
             </select>
@@ -964,7 +968,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </button>
       </div>
 
-      {/* (8) 安全衛生指示事項 — 【修正4】7個固定表示、追加/削除ボタンなし */}
+      {/* (8) 安全衛生指示事項 — 7個固定表示、masterData.cautions を参照 */}
       <div>
         <label className="block text-sm font-bold text-gray-700 mb-2">
           安全衛生指示事項 <span className="text-red-500 text-xs">*1つ以上選択必須</span>
@@ -998,7 +1002,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   // STEP2 レンダリング
   // ============================
   const renderStep2 = () => {
-    // 【修正3】配置図の有無を判定（annotatedDiagramUrl または baseDiagramUrl）
+    // 配置図の有無を判定（annotatedDiagramUrl または baseDiagramUrl）
     const hasDiagram = !!(report.annotatedDiagramUrl || report.baseDiagramUrl);
 
     return (

@@ -199,14 +199,14 @@ const EmployeeEditForm: React.FC<{
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1">職種</label>
-                {/* ★修正: 指定リスト + 「その他」選択時は入力欄表示 */}
+                {/* 指定リスト + 「その他」選択時は入力欄表示 */}
                 <select 
                   className="w-full p-2 border rounded bg-white" 
                   value={isCustomJob ? "その他" : data.jobType} 
                   onChange={e => {
                     const val = e.target.value;
                     if (val === "その他") {
-                      handleChange('jobType', 'その他'); // 一旦「その他」という文字列を入れる（入力欄を表示するため）
+                      handleChange('jobType', 'その他');
                     } else {
                       handleChange('jobType', val);
                     }
@@ -348,17 +348,26 @@ const EmployeeEditForm: React.FC<{
   );
 };
 
+// ============================
+// マスタ項目の表示名マッピング
+// 修正: 「主要機械」→「機械」、「搬出入資機材」「段取り資材等」を削除、「資機材」を追加
+// ============================
 const LABEL_MAP: Record<string, string> = { 
   projects: "工事名", contractors: "会社名", supervisors: "現場責任者", locations: "場所", workplaces: "作業所名",
   roles: "役職", topics: "安全訓練内容", jobTypes: "工種", goals: "安全衛生目標", predictions: "予想災害", countermeasures: "防止対策",
   processes: "作業工程", cautions: "注意事項",
   // --- 安全衛生日誌用マスタ ---
-  machines: "主要機械", materials: "搬出入資機材", preparations: "段取り資材等"
+  machines: "機械",
+  equipment: "資機材"
 };
 
+// ============================
+// マスタグループ定義
+// 修正: TRAINING から materials, preparations を削除し、equipment を追加
+// ============================
 const MASTER_GROUPS = { 
   BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
-  TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures', 'machines', 'materials', 'preparations'] 
+  TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures', 'machines', 'equipment'] 
 };
 
 type TabType = 'BASIC' | 'TRAINING' | 'EMPLOYEES';

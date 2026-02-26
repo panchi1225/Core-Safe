@@ -78,14 +78,15 @@ export const saveDraft = async (
   }
 };
 
-// ■ マスタデータを取得する (★修正: 訓練内容を強制上書きして返す)
+// ■ マスタデータを取得する
+// ★修正: equipment のフォールバック処理を追加、materials / preparations のフォールバック処理を削除
 export const getMasterData = async (): Promise<MasterData> => {
   try {
     const docRef = doc(db, MASTER_COLLECTION, MASTER_DOC_ID);
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-      const data = docSnap.data() as MasterData;
+      const data = docSnap.data() as Partial<MasterData>;
       
       // ★訓練内容(topics)を新しい初期値で強制上書き
       // （※Firestoreには保存しないが、アプリ上では新しい値を使う）
@@ -108,6 +109,9 @@ export const getMasterData = async (): Promise<MasterData> => {
         subcontractors: data.subcontractors || INITIAL_MASTER_DATA.subcontractors,
         processes: data.processes || INITIAL_MASTER_DATA.processes,
         cautions: data.cautions || INITIAL_MASTER_DATA.cautions,
+        // --- 安全衛生日誌用マスタ ---
+        machines: data.machines || INITIAL_MASTER_DATA.machines,
+        equipment: data.equipment || INITIAL_MASTER_DATA.equipment,
       };
 
       return mergedData;
