@@ -1,6 +1,6 @@
 // src/components/DailySafetyWizard.tsx
 // 安全衛生日誌（作業打合せ及び安全衛生日誌）ウィザード
-// STEP1: 作業内容入力、STEP2: 配置図・略図、STEP3: 当日作業確認、STEP4〜5: 未実装プレースホルダー
+// STEP1: 作業内容入力、STEP2: 配置図・略図、STEP3: 当日作業確認、STEP4: 巡視記録、STEP5: 未実装プレースホルダー
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
@@ -11,6 +11,7 @@ import {
   AdditionalWorkEntry,
   Step3ConfirmationItems,
   Step3SiteConfirmationItems,
+  PatrolRecord,
   INITIAL_DAILY_SAFETY_REPORT,
   INITIAL_MASTER_DATA,
   getJapaneseDayOfWeek,
@@ -25,6 +26,14 @@ import {
   fetchDiagramImages,
   removeDiagramImage,
 } from '../services/firebaseService';
+
+// ============================
+// STEP4: 巡視時間の選択肢（30分刻み 8:00〜16:00 の17個）
+// ============================
+const PATROL_TIME_OPTIONS: string[] = [
+  '8:00', '8:30', '9:00', '9:30', '10:00', '10:30', '11:00', '11:30',
+  '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00',
+];
 
 // ============================
 // Props
@@ -401,6 +410,15 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       if (!restored.stageConfirmation) restored.stageConfirmation = '';
       if (!restored.witnessConfirmation) restored.witnessConfirmation = '';
       if (!restored.dumpTrucks) restored.dumpTrucks = { incoming: 0, outgoing: 0 };
+      // STEP4: patrolRecord が存在しない場合のフォールバック
+      if (!restored.patrolRecord) {
+        restored.patrolRecord = {
+          coordinationNotes: '',
+          inspector: '',
+          inspectionTime: '14:00',
+          findings: '',
+        };
+      }
       return restored;
     }
     // 初期値: 作業エントリが空なら1つ追加
@@ -545,6 +563,24 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       if (value) {
         setErrors((prev) => ({ ...prev, [field]: false }));
       }
+    },
+    []
+  );
+
+  // ============================
+  // STEP4: patrolRecord 更新ヘルパー
+  // ============================
+  const updatePatrolRecord = useCallback(
+    (field: keyof PatrolRecord, value: string) => {
+      setReport((prev) => ({
+        ...prev,
+        patrolRecord: {
+          ...prev.patrolRecord,
+          [field]: value,
+        },
+      }));
+      setSaveStatus('idle');
+      setHasUnsavedChanges(true);
     },
     []
   );
@@ -923,6 +959,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         return;
       }
     }
+    // STEP4→STEP5はバリデーション不要（未入力でも次へ進める）
     setStep((prev) => Math.min(prev + 1, 5));
   };
 
@@ -2287,7 +2324,88 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   );
 
   // ============================
-  // STEP4・STEP5 プレースホルダー
+  // STEP4 レンダリング — 巡視記録
+  // ============================
+  const renderStep4 = () => (
+    <div className="space-y-6">
+      {/* STEP4ヘッダー */}
+      <h2 className="text-xl font-bold text-gray-800 border-l-4 border-pink-500 pl-3">
+        STEP 4: 巡視記録
+      </h2>
+
+      {/* ===== セクション1: 作業調整事項 ===== */}
+      <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <h3 className="text-base font-bold text-gray-800 mb-3">
+          <i className="fa-solid fa-clipboard mr-2 text-pink-500"></i>
+          作業調整事項
+        </h3>
+        <textarea
+          className="w-full p-2 border border-gray-300 rounded-md bg-white text-black outline-none text-sm focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+          rows={4}
+          placeholder="作業調整事項を入力"
+          value={report.patrolRecord.coordinationNotes}
+          onChange={(e) => updatePatrolRecord('coordinationNotes', e.target.value)}
+        />
+      </div>
+
+      {/* ===== セクション2: 巡視点検者 ===== */}
+      <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <h3 className="text-base font-bold text-gray-800 mb-3">
+          <i className="fa-solid fa-user-check mr-2 text-pink-500"></i>
+          巡視点検者
+        </h3>
+        <select
+          className="w-full p-2 border border-gray-300 rounded-md bg-white text-black outline-none appearance-none text-sm focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+          value={report.patrolRecord.inspector}
+          onChange={(e) => updatePatrolRecord('inspector', e.target.value)}
+        >
+          <option value="">選択してください</option>
+          {masterData.supervisors.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* ===== セクション3: 巡視時間 ===== */}
+      <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <h3 className="text-base font-bold text-gray-800 mb-3">
+          <i className="fa-solid fa-clock mr-2 text-pink-500"></i>
+          巡視時間
+        </h3>
+        <select
+          className="w-full p-2 border border-gray-300 rounded-md bg-white text-black outline-none appearance-none text-sm focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+          value={report.patrolRecord.inspectionTime}
+          onChange={(e) => updatePatrolRecord('inspectionTime', e.target.value)}
+        >
+          {PATROL_TIME_OPTIONS.map((time) => (
+            <option key={time} value={time}>
+              {time}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* ===== セクション4: 所見 ===== */}
+      <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <h3 className="text-base font-bold text-gray-800 mb-3">
+          <i className="fa-solid fa-pen-to-square mr-2 text-pink-500"></i>
+          所見
+        </h3>
+        <textarea
+          className="w-full p-2 border border-gray-300 rounded-md bg-white text-black outline-none text-sm focus:ring-2 focus:ring-pink-500 focus:border-pink-500"
+          rows={6}
+          placeholder="所見を入力"
+          value={report.patrolRecord.findings}
+          onChange={(e) => updatePatrolRecord('findings', e.target.value)}
+        />
+      </div>
+    </div>
+  );
+
+  // ============================
+  // STEP5 プレースホルダー
   // ============================
   const renderPlaceholder = (currentStep: number) => (
     <div className="space-y-6">
@@ -2342,7 +2460,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           {step === 1 && renderStep1()}
           {step === 2 && renderStep2()}
           {step === 3 && renderStep3()}
-          {step === 4 && renderPlaceholder(4)}
+          {step === 4 && renderStep4()}
           {step === 5 && renderPlaceholder(5)}
         </main>
 

@@ -565,6 +565,18 @@ export interface DumpTrucks {
   outgoing: number;  // 搬出ダンプ台数
 }
 
+// ============================
+// STEP4: 巡視記録データの型定義
+// ============================
+
+/** 巡視記録 */
+export interface PatrolRecord {
+  coordinationNotes: string;  // 作業調整事項（自由入力）
+  inspector: string;          // 巡視点検者（マスタリスト選択）
+  inspectionTime: string;     // 巡視時間（ドロップダウン選択）
+  findings: string;           // 所見（自由入力）
+}
+
 /** 安全衛生日誌メインデータ */
 export interface DailySafetyReportData {
   // --- 基本情報 ---
@@ -616,12 +628,15 @@ export interface DailySafetyReportData {
   dumpTrucks: DumpTrucks;
     // 搬入・搬出ダンプ台数
 
-  // --- STEP4: 巡視記録 ---
+  // --- STEP4: 巡視記録（既存フィールド — 後方互換のため残す） ---
   coordinationNotes: string;           // 作業連絡調整事項（自由入力）
   patrolInspector: string;             // 巡視点検者（supervisorsマスタ選択）
   patrolTime: string;                  // 巡視時間（プルダウン選択）
   patrolAmPm: 'AM' | 'PM';            // AM/PM選択
   patrolFindings: string;              // 巡視所見（自由入力）
+
+  // --- STEP4: 巡視記録データ（新規追加） ---
+  patrolRecord: PatrolRecord;
 
   // --- STEP5: 点検チェックリスト ---
   inspectionChecklist: InspectionCategory[]; // 点検チェックリスト
@@ -950,12 +965,20 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
   witnessConfirmation: '',
   dumpTrucks: { incoming: 0, outgoing: 0 },
 
-  // --- STEP4: 巡視記録 ---
+  // --- STEP4: 巡視記録（既存フィールド — 後方互換のため残す） ---
   coordinationNotes: '',
   patrolInspector: '',
   patrolTime: '',
   patrolAmPm: 'AM',
   patrolFindings: '',
+
+  // --- STEP4: 巡視記録データ（新規追加） ---
+  patrolRecord: {
+    coordinationNotes: '',
+    inspector: '',
+    inspectionTime: '14:00',
+    findings: '',
+  },
 
   // --- STEP5: 点検チェックリスト ---
   inspectionChecklist: createInitialInspectionChecklist(),
