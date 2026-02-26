@@ -627,7 +627,7 @@ export interface DailySafetyReportData {
   baseDiagramUrl: string;       // ベース配置図画像URL
   annotatedDiagramUrl: string;  // 書き込み済み配置図画像URL
 
-  // --- STEP3: 作業当日確認 ---
+  // --- STEP3: 作業当日確認（既存フィールド） ---
   additionalWorkEntries: WorkEntry[];  // 追加作業（当日赤字追加）— 既存フィールド
   actualWorkerCounts: Record<string, number>; // 各作業の実施人数（キー: workEntryのid）
   totalWorkers: number;                // 本日の作業人員数（自動合計）
@@ -975,7 +975,8 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
   workEntries: [],
   materialEntries: [],
   preparationEntries: [],
-  safetyInstructions: [],
+  // 【修正】安全衛生指示事項: 7個→10個に変更
+  safetyInstructions: ['', '', '', '', '', '', '', '', '', ''],
 
   // --- STEP2: 配置図（前日入力） ---
   baseDiagramUrl: '',

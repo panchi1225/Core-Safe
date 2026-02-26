@@ -333,9 +333,9 @@ function createEmptyAdditionalWorkEntry(): AdditionalWorkEntry {
 }
 
 // ============================
-// 安全衛生指示事項の固定数
+// 【修正】安全衛生指示事項の固定数: 7個→10個に変更
 // ============================
-const SAFETY_INSTRUCTIONS_COUNT = 7;
+const SAFETY_INSTRUCTIONS_COUNT = 10;
 
 // ============================
 // 【修正】STEP3: 基本確認事項の定義（10項目に拡張、項目名を変更）
@@ -399,6 +399,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     if (initialData) {
       const restored = { ...initialData };
       const si = restored.safetyInstructions || [];
+      // 【修正】10個に合わせてリストア
       restored.safetyInstructions = Array.from(
         { length: SAFETY_INSTRUCTIONS_COUNT },
         (_, i) => si[i] || ''
@@ -448,6 +449,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     if (init.preparationEntries.length === 0) {
       init.preparationEntries = [''];
     }
+    // 【修正】10個に合わせて初期化
     init.safetyInstructions = Array(SAFETY_INSTRUCTIONS_COUNT).fill('');
     return init;
   });
@@ -878,6 +880,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       hasError = true;
     }
 
+    // 【修正】10個中1つ以上選択必須（バリデーションルールの数値変更のみ）
     const hasAtLeastOneSafetyInstruction = report.safetyInstructions.some((s) => s !== '');
     if (!hasAtLeastOneSafetyInstruction) {
       newErrors.safetyInstructions = true;
@@ -1580,7 +1583,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </button>
       </div>
 
-      {/* (8) 安全衛生指示事項 */}
+      {/* (8) 安全衛生指示事項 — 【修正】10個固定表示 */}
       <div>
         <label className="block text-sm font-bold text-gray-700 mb-2">
           安全衛生指示事項 <span className="text-red-500 text-xs">*1つ以上選択必須</span>
