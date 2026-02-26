@@ -199,13 +199,19 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   const [canvasHistory, setCanvasHistory] = useState<string[]>([]);
   const isInitializingRef = useRef(false);
 
+  // 【修正】キャンバスに表示する画像URLを別stateで管理し、useEffectの依存配列からreportのURLを排除
+  // これにより、handleSaveCanvasでannotatedDiagramUrlを更新してもキャンバスが再初期化されなくなる
+  const [currentDiagramSrc, setCurrentDiagramSrc] = useState<string>('');
+
   // ============================
-  // 一時保存データから復元した際にdiagramLoadedを設定
+  // 【修正】一時保存データから復元した際にdiagramLoadedとcurrentDiagramSrcを設定
   // ============================
   useEffect(() => {
     if (initialData) {
       // annotatedDiagramUrl または baseDiagramUrl があれば配置図を復元可能
-      if (initialData.annotatedDiagramUrl || initialData.baseDiagramUrl) {
+      const src = initialData.annotatedDiagramUrl || initialData.baseDiagramUrl;
+      if (src) {
+        setCurrentDiagramSrc(src);
         setDiagramLoaded(true);
       }
     }
@@ -437,16 +443,19 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       return;
     }
 
-    // STEP2でキャンバスが存在する場合は、キャンバス内容を画像化して保存
+    // 【修正】STEP2でキャンバスが存在する場合は、キャンバス内容をpng形式で画像化して保存
     let updatedReport = { ...report };
     const fc = fabricCanvasRef.current;
     if (fc) {
+      fc.renderAll();
       const dataUrl = fc.toDataURL({
-        format: 'jpeg',
-        quality: 0.8,
+        format: 'png',
+        quality: 1.0,
         multiplier: 1,
       });
+      console.log('[handleSave] toDataURL prefix:', dataUrl.substring(0, 30));
       updatedReport = { ...updatedReport, annotatedDiagramUrl: dataUrl };
+      // 【修正】reportのstateは更新するが、currentDiagramSrcは更新しない（キャンバス再初期化防止）
       setReport(updatedReport);
     }
 
@@ -496,15 +505,18 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     errors[field] ? 'border-red-500 bg-red-50' : 'border-gray-300';
 
   // ============================
-  // STEP2: Fabric.js キャンバス初期化
-  // 配置図画像をキャンバスにフィットさせ、中央配置＋アスペクト比維持
-  // 一時保存データからの復元にも対応
+  // 【修正】STEP2: Fabric.js キャンバス初期化
+  // 不具合1修正: ネイティブ Image で読み込み、アスペクト比に基づきキャンバスサイズを決定、CSSスタイルを排除
+  // 不具合2修正: 依存配列から report.annotatedDiagramUrl / report.baseDiagramUrl を排除し、
+  //              currentDiagramSrc を使用して再初期化ループを防止
   // ============================
   useEffect(() => {
     // STEP2のときのみキャンバスを初期化
     if (step !== 2) return;
     // 配置図が読み込まれていない場合はキャンバスを生成しない
     if (!diagramLoaded) return;
+    // 【修正】currentDiagramSrc がなければ初期化しない
+    if (!currentDiagramSrc) return;
     // 既に初期化中なら中断
     if (isInitializingRef.current) return;
 
@@ -522,28 +534,19 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       return;
     }
 
-    // 復元ロジック: annotatedDiagramUrl > baseDiagramUrl の優先順
-    // annotatedDiagramUrl がある場合はそちらを背景として使用（書き込み済み画像）
-    // なければ baseDiagramUrl を使用
-    const bgSrc = report.annotatedDiagramUrl || report.baseDiagramUrl;
-    if (!bgSrc) {
-      isInitializingRef.current = false;
-      return;
-    }
-
-    // コンテナ幅を取得
-    const containerWidth = canvasContainerRef.current?.clientWidth || 800;
-    // PC: 最大800px、スマホ: 画面幅 - padding
-    const maxWidth = Math.min(containerWidth, 800);
-
+    // 【修正】ネイティブ Image で画像を読み込み、naturalWidth / naturalHeight からアスペクト比を計算
     const img = new Image();
     img.onload = () => {
-      // 画像のアスペクト比に基づいてキャンバスサイズを決定
-      const aspectRatio = img.height / img.width;
-      const canvasWidth = maxWidth;
-      const canvasHeight = Math.round(canvasWidth * aspectRatio);
+      const naturalW = img.naturalWidth;
+      const naturalH = img.naturalHeight;
 
-      // canvas要素のサイズ設定
+      // 【修正】コンテナ幅を取得（最大800px）
+      const containerWidth = canvasContainerRef.current?.clientWidth || 800;
+      const canvasWidth = Math.min(containerWidth, 800);
+      // 【修正】キャンバスの高さ = 幅 × (画像の naturalHeight / naturalWidth)
+      const canvasHeight = Math.round(canvasWidth * (naturalH / naturalW));
+
+      // canvas要素のサイズ設定（Fabric.jsが内部的に管理するため、CSSではなくここで設定）
       canvasEl.width = canvasWidth;
       canvasEl.height = canvasHeight;
 
@@ -559,31 +562,19 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       brush.width = penWidth;
       fc.freeDrawingBrush = brush;
 
-      // 背景画像をキャンバスにフィットさせて中央配置
-      FabricImage.fromURL(bgSrc).then((fabricImg) => {
-        const imgW = fabricImg.width || 1;
-        const imgH = fabricImg.height || 1;
+      // 【修正】ネイティブ Image から FabricImage を生成し、scaleX/scaleY を個別に計算
+      // キャンバスサイズが画像のアスペクト比に合わせてあるため、中央配置は不要
+      const fabricImg = new FabricImage(img);
+      fabricImg.scaleX = canvasWidth / naturalW;
+      fabricImg.scaleY = canvasHeight / naturalH;
+      fabricImg.left = 0;
+      fabricImg.top = 0;
 
-        // アスペクト比を維持してキャンバスにフィットするスケールを計算
-        const scaleX = canvasWidth / imgW;
-        const scaleY = canvasHeight / imgH;
-        const scale = Math.min(scaleX, scaleY);
+      fc.backgroundImage = fabricImg;
+      fc.renderAll();
 
-        fabricImg.scaleX = scale;
-        fabricImg.scaleY = scale;
-
-        // 中央配置のためのオフセット計算
-        const scaledW = imgW * scale;
-        const scaledH = imgH * scale;
-        fabricImg.left = (canvasWidth - scaledW) / 2;
-        fabricImg.top = (canvasHeight - scaledH) / 2;
-
-        fc.backgroundImage = fabricImg;
-        fc.renderAll();
-
-        // 描画履歴を初期化
-        setCanvasHistory([]);
-      });
+      // 描画履歴を初期化
+      setCanvasHistory([]);
 
       // パス追加時に履歴保存
       fc.on('path:created', () => {
@@ -595,9 +586,11 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       isInitializingRef.current = false;
     };
     img.onerror = () => {
+      console.error('[キャンバス初期化] 画像読み込みエラー:', currentDiagramSrc.substring(0, 50));
       isInitializingRef.current = false;
     };
-    img.src = bgSrc;
+    // 【修正】currentDiagramSrc を使用（report の URL ではなく独立した state）
+    img.src = currentDiagramSrc;
 
     return () => {
       if (fabricCanvasRef.current) {
@@ -606,8 +599,10 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       }
       isInitializingRef.current = false;
     };
+    // 【修正】依存配列から report.baseDiagramUrl, report.annotatedDiagramUrl を排除
+    // currentDiagramSrc のみに依存することで、保存時の再初期化ループを防止
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, diagramLoaded, report.baseDiagramUrl, report.annotatedDiagramUrl]);
+  }, [step, diagramLoaded, currentDiagramSrc]);
 
   // ============================
   // STEP2: ペンの色・太さ変更時にブラシを更新
@@ -620,13 +615,16 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   }, [penColor, penWidth]);
 
   // ============================
-  // STEP2: 配置図アップロード処理
+  // 【修正】STEP2: 配置図アップロード処理
+  // 新しい画像アップロード時は currentDiagramSrc を更新してキャンバスを再初期化
   // ============================
   const handleDiagramUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0]) return;
     try {
       const compressed = await compressImage(e.target.files[0]);
       setReport((prev) => ({ ...prev, baseDiagramUrl: compressed, annotatedDiagramUrl: '' }));
+      // 【修正】currentDiagramSrc を新しい画像のdata URLに更新
+      setCurrentDiagramSrc(compressed);
       setHasUnsavedChanges(true);
       setSaveStatus('idle');
       setDiagramLoaded(true);
@@ -637,10 +635,14 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // STEP2: 前回の配置図を使用
+  // 【修正】STEP2: 前回の配置図を使用
+  // currentDiagramSrc を設定してキャンバスを初期化
   // ============================
   const handleUsePreviousDiagram = () => {
-    if (report.baseDiagramUrl || report.annotatedDiagramUrl) {
+    const src = report.annotatedDiagramUrl || report.baseDiagramUrl;
+    if (src) {
+      // 【修正】currentDiagramSrc を更新してキャンバスを再初期化
+      setCurrentDiagramSrc(src);
       setDiagramLoaded(true);
     } else {
       alert('保存済みの配置図がありません。新しい配置図をアップロードしてください。');
@@ -678,7 +680,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // STEP2: キャンバスを画像として書き出し＆保存
+  // 【修正】STEP2: キャンバスを画像として書き出し＆保存
+  // toDataURL を png 形式で書き出し、currentDiagramSrc は更新しない（再初期化防止）
   // ============================
   const handleSaveCanvas = async () => {
     if (!report.project) {
@@ -693,19 +696,30 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       return;
     }
 
-    // キャンバスの内容（背景画像＋書き込み）を1枚の画像としてdata URL化
+    // 【修正】描画完了を確認してから書き出し
+    fc.renderAll();
+
+    // 【修正】png 形式で書き出し（jpeg だと背景が黒くなる場合がある）
     const dataUrl = fc.toDataURL({
-      format: 'jpeg',
-      quality: 0.8,
+      format: 'png',
+      quality: 1.0,
       multiplier: 1,
     });
 
-    // annotatedDiagramUrl に保存し、baseDiagramUrl も保持
+    // 【修正】書き出した data URL が "data:image/png" で始まることを確認
+    console.log('[handleSaveCanvas] toDataURL prefix:', dataUrl.substring(0, 30));
+    if (!dataUrl.startsWith('data:image/png')) {
+      console.warn('[handleSaveCanvas] 書き出し形式が png ではありません:', dataUrl.substring(0, 50));
+    }
+
+    // 【修正】annotatedDiagramUrl に保存し、baseDiagramUrl も保持
+    // currentDiagramSrc は更新しない（キャンバスの再初期化を防ぐため）
     const updatedReport = { ...report, annotatedDiagramUrl: dataUrl };
     setReport(updatedReport);
 
     setSaveStatus('saving');
     try {
+      // 【修正】updatedReport を saveDraft に渡す
       const newId = await saveDraft(draftId, 'DAILY_SAFETY', updatedReport);
       setDraftId(newId);
       setSaveStatus('saved');
@@ -1125,16 +1139,15 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
               </div>
             </div>
 
-            {/* キャンバス */}
+            {/* 【修正】キャンバス — CSSスタイル(width/height)を排除、コンテナで max-width: 800px + 中央揃え */}
             <div
               ref={canvasContainerRef}
-              className="w-full flex justify-center"
-              style={{ maxWidth: '800px', margin: '0 auto' }}
+              className="flex justify-center"
+              style={{ maxWidth: '800px', width: '100%', margin: '0 auto' }}
             >
               <canvas
                 ref={canvasElRef}
                 className="border border-gray-300 rounded-lg shadow-sm touch-none"
-                style={{ width: '100%', height: 'auto' }}
               />
             </div>
           </>
