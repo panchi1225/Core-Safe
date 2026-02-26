@@ -50,6 +50,17 @@ export interface EmployeeData {
 export const EMPLOYEE_MASTER_DATA: Record<string, EmployeeData> = {};
 
 // ============================
+// 配置図元画像の型定義
+// ============================
+export interface DiagramImage {
+  id: string;              // ドキュメントID（自動生成）
+  projectName: string;     // 現場名（工事名）
+  imageDataUrl: string;    // 元画像のBase64 data URL
+  fileName: string;        // 元のファイル名（表示用）
+  createdAt: number;       // ミリ秒タイムスタンプ
+}
+
+// ============================
 // マスタデータの型定義
 // ============================
 export interface MasterData {

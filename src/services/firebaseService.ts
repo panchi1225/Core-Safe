@@ -12,12 +12,13 @@ import {
   getDoc,     
   writeBatch
 } from 'firebase/firestore';
-import { SavedDraft, MasterData, INITIAL_MASTER_DATA, EmployeeData } from '../types';
+import { SavedDraft, MasterData, INITIAL_MASTER_DATA, EmployeeData, DiagramImage } from '../types';
 
 const DRAFTS_COLLECTION = 'drafts';
 const MASTER_COLLECTION = 'masterData';
 const MASTER_DOC_ID = 'general';
 const EMPLOYEES_COLLECTION = 'employees';
+const DIAGRAM_IMAGES_COLLECTION = 'diagramImages'; // 配置図元画像コレクション
 
 // ■ データを全件取得する
 export const fetchDrafts = async (): Promise<SavedDraft[]> => {
@@ -135,7 +136,7 @@ export const saveMasterData = async (data: MasterData): Promise<void> => {
   }
 };
 
-// ■ 画像圧縮ヘルパー
+// ■ 画像圧縮ヘルパー（既存：他の帳票で使用、変更不可）
 export const compressImage = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -161,9 +162,130 @@ export const compressImage = (file: File): Promise<string> => {
   });
 };
 
+// ■ 配置図専用の画像圧縮関数
+// MAX_WIDTH: 600px、JPEG品質: 0.4（ファイルサイズ削減を優先、1枚あたり約30〜80KB目標）
+export const compressDiagramImage = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 600;
+        // 元画像が MAX_WIDTH 以下の場合はそのままのサイズを使用
+        const scale = img.width > MAX_WIDTH ? MAX_WIDTH / img.width : 1;
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        resolve(canvas.toDataURL('image/jpeg', 0.4));
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
+  });
+};
+
+// ============================
+// 配置図元画像管理機能
+// ============================
+
+// ■ 配置図元画像をFirestoreに保存する
+export const saveDiagramImage = async (
+  projectName: string,
+  imageDataUrl: string,
+  fileName: string
+): Promise<void> => {
+  try {
+    await addDoc(collection(db, DIAGRAM_IMAGES_COLLECTION), {
+      projectName,
+      imageDataUrl,
+      fileName,
+      createdAt: Timestamp.now(),
+    });
+  } catch (error) {
+    console.error("配置図元画像の保存に失敗しました: ", error);
+    throw error;
+  }
+};
+
+// ■ 指定した現場名の配置図元画像を全件取得する（createdAt降順）
+export const fetchDiagramImages = async (projectName: string): Promise<DiagramImage[]> => {
+  try {
+    const snapshot = await getDocs(collection(db, DIAGRAM_IMAGES_COLLECTION));
+    const images: DiagramImage[] = [];
+    
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      // projectName でフィルタ
+      if (data.projectName === projectName) {
+        images.push({
+          id: docSnap.id,
+          projectName: data.projectName,
+          imageDataUrl: data.imageDataUrl,
+          fileName: data.fileName,
+          // Timestamp → ミリ秒タイムスタンプに変換
+          createdAt: data.createdAt instanceof Timestamp
+            ? data.createdAt.toMillis()
+            : data.createdAt,
+        });
+      }
+    });
+
+    // createdAt の降順（新しい順）でソート
+    images.sort((a, b) => b.createdAt - a.createdAt);
+    
+    return images;
+  } catch (error) {
+    console.error("配置図元画像の取得に失敗しました: ", error);
+    throw error;
+  }
+};
+
+// ■ 配置図元画像を1件削除する
+export const removeDiagramImage = async (id: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, DIAGRAM_IMAGES_COLLECTION, id));
+  } catch (error) {
+    console.error("配置図元画像の削除に失敗しました: ", error);
+    throw error;
+  }
+};
+
+// ■ 指定した現場名の配置図元画像を全件削除する（writeBatch使用）
+export const deleteDiagramImagesByProject = async (projectName: string): Promise<void> => {
+  try {
+    const snapshot = await getDocs(collection(db, DIAGRAM_IMAGES_COLLECTION));
+    const batch = writeBatch(db);
+    let count = 0;
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data.projectName === projectName) {
+        batch.delete(docSnap.ref);
+        count++;
+      }
+    });
+
+    if (count > 0) {
+      await batch.commit();
+      console.log(`[deleteDiagramImagesByProject] ${projectName} の配置図元画像 ${count} 件を削除しました`);
+    }
+  } catch (error) {
+    console.error("配置図元画像の一括削除に失敗しました: ", error);
+    throw error;
+  }
+};
+
 // ■ プロジェクト関連データの一括削除
+// ★修正: 一時保存データに加えて、配置図元画像もすべて削除する
 export const deleteDraftsByProject = async (projectName: string): Promise<void> => {
   try {
+    // (1) 一時保存データの削除
     const allDrafts = await getDocs(collection(db, DRAFTS_COLLECTION));
     const batch = writeBatch(db);
     let count = 0;
@@ -177,6 +299,9 @@ export const deleteDraftsByProject = async (projectName: string): Promise<void> 
     if (count > 0) {
       await batch.commit();
     }
+
+    // (2) 配置図元画像の削除
+    await deleteDiagramImagesByProject(projectName);
   } catch (error) {
     console.error("プロジェクト一括削除失敗: ", error);
     throw error;

@@ -63,7 +63,7 @@ const ProjectDeleteModal: React.FC<{
           <strong>【注意】</strong><br />
           この操作を行うと、この工事名で保存されている<br />
           <span className="font-bold underline text-red-600 text-base">
-            すべての一時保存データも同時に削除されます。
+            すべての一時保存データ・配置図データも同時に削除されます。
           </span>
         </div>
         <div className="mb-6">

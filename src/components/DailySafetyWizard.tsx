@@ -7,12 +7,21 @@ import {
   MasterData,
   DailySafetyReportData,
   WorkEntry,
+  DiagramImage,
   INITIAL_DAILY_SAFETY_REPORT,
   INITIAL_MASTER_DATA,
   getJapaneseDayOfWeek,
   getNextBusinessDay,
 } from '../types';
-import { getMasterData, compressImage, saveDraft } from '../services/firebaseService';
+import {
+  getMasterData,
+  compressImage,
+  compressDiagramImage,
+  saveDraft,
+  saveDiagramImage,
+  fetchDiagramImages,
+  removeDiagramImage,
+} from '../services/firebaseService';
 
 // ============================
 // Props
@@ -85,6 +94,132 @@ const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen
         >
           OK（ホームへ戻る）
         </button>
+      </div>
+    </div>
+  );
+};
+
+// ============================
+// 保存済み配置図選択モーダル
+// ============================
+interface DiagramPickerModalProps {
+  isOpen: boolean;
+  images: DiagramImage[];
+  isLoading: boolean;
+  onSelect: (image: DiagramImage) => void;
+  onDelete: (image: DiagramImage) => void;
+  onClose: () => void;
+}
+
+const DiagramPickerModal: React.FC<DiagramPickerModalProps> = ({
+  isOpen,
+  images,
+  isLoading,
+  onSelect,
+  onDelete,
+  onClose,
+}) => {
+  if (!isOpen) return null;
+
+  // 日時フォーマットヘルパー
+  const formatDate = (ms: number): string => {
+    const d = new Date(ms);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${yyyy}/${mm}/${dd} ${hh}:${min}`;
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-gray-900 bg-opacity-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col animate-fade-in">
+        {/* ヘッダー */}
+        <div className="p-4 border-b flex items-center justify-between shrink-0">
+          <h3 className="text-lg font-bold text-gray-800">
+            <i className="fa-solid fa-images mr-2 text-pink-500"></i>
+            保存済みの配置図
+          </h3>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <i className="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        {/* コンテンツ */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {isLoading ? (
+            /* ローディング表示 */
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="w-10 h-10 border-4 border-pink-200 border-t-pink-600 rounded-full animate-spin mb-4"></div>
+              <p className="text-gray-500 text-sm font-bold">読み込み中...</p>
+            </div>
+          ) : images.length === 0 ? (
+            /* 0件の場合 */
+            <div className="text-center py-12">
+              <i className="fa-solid fa-folder-open text-4xl text-gray-300 mb-4 block"></i>
+              <p className="text-gray-400 font-bold text-sm">
+                この現場の保存済み配置図はありません
+              </p>
+            </div>
+          ) : (
+            /* サムネイルグリッド: 2列表示（スマホは1列） */
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {images.map((img) => (
+                <div
+                  key={img.id}
+                  className="border border-gray-200 rounded-lg p-3 hover:border-pink-300 hover:shadow-md transition-all bg-gray-50"
+                >
+                  {/* サムネイル画像 */}
+                  <div className="flex justify-center mb-2">
+                    <img
+                      src={img.imageDataUrl}
+                      alt={img.fileName}
+                      className="w-24 h-24 object-cover rounded border border-gray-200 bg-white"
+                    />
+                  </div>
+                  {/* ファイル名 */}
+                  <p className="text-xs text-gray-700 font-bold truncate text-center mb-1" title={img.fileName}>
+                    {img.fileName}
+                  </p>
+                  {/* アップロード日時 */}
+                  <p className="text-[10px] text-gray-400 text-center mb-2">
+                    {formatDate(img.createdAt)}
+                  </p>
+                  {/* 操作ボタン */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => onSelect(img)}
+                      className="flex-1 py-2 bg-pink-600 text-white rounded font-bold text-xs hover:bg-pink-700 transition-colors"
+                    >
+                      <i className="fa-solid fa-check mr-1"></i>選択
+                    </button>
+                    <button
+                      onClick={() => onDelete(img)}
+                      className="px-3 py-2 bg-gray-200 text-gray-500 rounded font-bold text-xs hover:bg-red-100 hover:text-red-600 transition-colors"
+                      title="削除"
+                    >
+                      <i className="fa-solid fa-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* フッター */}
+        <div className="p-4 border-t shrink-0">
+          <button
+            onClick={onClose}
+            className="w-full py-2 bg-gray-100 text-gray-600 rounded-lg font-bold text-sm hover:bg-gray-200 transition-colors"
+          >
+            閉じる
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -188,6 +323,11 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     rightButtonClass: '',
   });
 
+  // --- STEP2: 保存済み配置図選択モーダル ---
+  const [showDiagramPicker, setShowDiagramPicker] = useState(false);
+  const [diagramImages, setDiagramImages] = useState<DiagramImage[]>([]);
+  const [diagramPickerLoading, setDiagramPickerLoading] = useState(false);
+
   // --- STEP2: HTML Canvas API 関連 ---
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasElRef = useRef<HTMLCanvasElement>(null);
@@ -213,6 +353,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     }
     return '';
   });
+
+  // --- STEP2: アップロード用の隠しinput ref ---
+  const diagramFileInputRef = useRef<HTMLInputElement>(null);
 
   // ============================
   // 一時保存データから復元した際にdiagramLoadedを設定
@@ -682,36 +825,115 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   // ============================
   // STEP2: 配置図アップロード処理
   // 新しい画像アップロード時は currentDiagramSrc を更新してキャンバスを再初期化
+  // さらに compressDiagramImage で圧縮して Firestore に元画像として保存
   // ============================
   const handleDiagramUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+
     try {
-      const compressed = await compressImage(e.target.files[0]);
+      // キャンバス表示用に既存の compressImage で圧縮
+      const compressed = await compressImage(file);
       setReport((prev) => ({ ...prev, baseDiagramUrl: compressed, annotatedDiagramUrl: '' }));
       // currentDiagramSrc を新しい画像のdata URLに更新 → useEffectでキャンバス再初期化
       setCurrentDiagramSrc(compressed);
       setHasUnsavedChanges(true);
       setSaveStatus('idle');
       setDiagramLoaded(true);
+
+      // 工事名が選択されている場合、配置図専用圧縮で元画像をFirestoreに保存
+      if (report.project) {
+        try {
+          const diagramCompressed = await compressDiagramImage(file);
+          await saveDiagramImage(report.project, diagramCompressed, file.name);
+          console.log('[配置図元画像保存] 完了 - 工事名:', report.project, 'ファイル名:', file.name);
+        } catch (saveErr) {
+          console.error('[配置図元画像保存] 失敗:', saveErr);
+          // 元画像の保存に失敗してもキャンバス表示は続行する
+        }
+      }
     } catch (err) {
       console.error('画像圧縮エラー', err);
       alert('画像の読み込みに失敗しました。');
     }
+
+    // input の値をリセット（同じファイルを再アップロード可能にする）
+    if (diagramFileInputRef.current) {
+      diagramFileInputRef.current.value = '';
+    }
   };
 
   // ============================
-  // STEP2: 前回の配置図を使用
-  // currentDiagramSrc を設定してキャンバスを初期化
+  // STEP2: 保存済みの配置図から選択モーダルを開く
   // ============================
-  const handleUsePreviousDiagram = () => {
-    const src = report.annotatedDiagramUrl || report.baseDiagramUrl;
-    if (src) {
-      // currentDiagramSrc を更新してキャンバスを再初期化
-      setCurrentDiagramSrc(src);
-      setDiagramLoaded(true);
-    } else {
-      alert('保存済みの配置図がありません。新しい配置図をアップロードしてください。');
+  const handleOpenDiagramPicker = async () => {
+    // 工事名が未選択の場合はアラートを表示
+    if (!report.project) {
+      alert('先にSTEP1で工事名を選択してください');
+      return;
     }
+
+    setShowDiagramPicker(true);
+    setDiagramPickerLoading(true);
+
+    try {
+      const images = await fetchDiagramImages(report.project);
+      setDiagramImages(images);
+    } catch (err) {
+      console.error('配置図元画像の取得に失敗:', err);
+      setDiagramImages([]);
+    } finally {
+      setDiagramPickerLoading(false);
+    }
+  };
+
+  // ============================
+  // STEP2: 保存済み配置図モーダルから画像を選択
+  // ============================
+  const handleSelectDiagramImage = (image: DiagramImage) => {
+    // 選択した元画像をキャンバスに表示
+    setCurrentDiagramSrc(image.imageDataUrl);
+    setDiagramLoaded(true);
+    setReport((prev) => ({
+      ...prev,
+      baseDiagramUrl: image.imageDataUrl,
+      annotatedDiagramUrl: '',
+    }));
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+    // モーダルを閉じる
+    setShowDiagramPicker(false);
+  };
+
+  // ============================
+  // STEP2: 保存済み配置図モーダルから画像を削除
+  // ============================
+  const handleDeleteDiagramImage = (image: DiagramImage) => {
+    setConfirmModal({
+      isOpen: true,
+      message: 'この配置図を削除しますか？',
+      leftButtonLabel: '削除する',
+      leftButtonClass: 'px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700',
+      onLeftButtonClick: async () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+        try {
+          await removeDiagramImage(image.id);
+          // リストを再読み込み
+          if (report.project) {
+            const updatedImages = await fetchDiagramImages(report.project);
+            setDiagramImages(updatedImages);
+          }
+        } catch (err) {
+          console.error('配置図の削除に失敗:', err);
+          alert('配置図の削除に失敗しました。');
+        }
+      },
+      rightButtonLabel: 'キャンセル',
+      rightButtonClass: 'px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300',
+      onRightButtonClick: () => {
+        setConfirmModal((prev) => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   // ============================
@@ -1090,8 +1312,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   // STEP2 レンダリング
   // ============================
   const renderStep2 = () => {
-    // 配置図の有無を判定（annotatedDiagramUrl または baseDiagramUrl）
-    const hasDiagram = !!(report.annotatedDiagramUrl || report.baseDiagramUrl);
+    // 配置図の有無を判定（diagramLoaded で管理）
+    const hasDiagram = diagramLoaded && !!(currentDiagramSrc);
 
     return (
       <div className="space-y-6">
@@ -1114,6 +1336,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                 新しい配置図をアップロード
               </div>
               <input
+                ref={diagramFileInputRef}
                 type="file"
                 accept="image/jpeg,image/png"
                 className="hidden"
@@ -1121,24 +1344,19 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
               />
             </label>
 
-            {/* 前回の配置図を使用 */}
+            {/* 保存済みの配置図から選択 */}
             <button
-              onClick={handleUsePreviousDiagram}
-              className={`flex-1 py-3 px-4 rounded-lg font-bold text-center text-sm transition-colors ${
-                hasDiagram
-                  ? 'bg-gray-600 text-white hover:bg-gray-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-              disabled={!hasDiagram}
+              onClick={handleOpenDiagramPicker}
+              className="flex-1 py-3 px-4 bg-gray-600 text-white rounded-lg font-bold text-center text-sm hover:bg-gray-700 transition-colors"
             >
-              <i className="fa-solid fa-rotate-left mr-2"></i>
-              前回の配置図を使用
+              <i className="fa-solid fa-images mr-2"></i>
+              保存済みの配置図から選択
             </button>
           </div>
         </div>
 
         {/* 書き込みキャンバス */}
-        {diagramLoaded && hasDiagram ? (
+        {hasDiagram ? (
           <>
             {/* ツールバー */}
             <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
@@ -1369,6 +1587,16 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         rightButtonLabel={confirmModal.rightButtonLabel}
         leftButtonClass={confirmModal.leftButtonClass}
         rightButtonClass={confirmModal.rightButtonClass}
+      />
+
+      {/* 保存済み配置図選択モーダル */}
+      <DiagramPickerModal
+        isOpen={showDiagramPicker}
+        images={diagramImages}
+        isLoading={diagramPickerLoading}
+        onSelect={handleSelectDiagramImage}
+        onDelete={handleDeleteDiagramImage}
+        onClose={() => setShowDiagramPicker(false)}
       />
     </>
   );
