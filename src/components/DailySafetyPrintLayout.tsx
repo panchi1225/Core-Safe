@@ -150,7 +150,7 @@ function renderCircledChoice(
   option1: string,
   option2: string
 ): React.ReactNode {
-  /* 【修正】選択された文字: 赤い枠線のみ、テキストは黒字 */
+  /* 選択された文字: 赤い枠線のみ、テキストは黒字 */
   const circleStyle: React.CSSProperties = {
     border: '2px solid red',
     borderRadius: '50%',
@@ -159,18 +159,18 @@ function renderCircledChoice(
     height: '14px',
     textAlign: 'center' as const,
     lineHeight: '14px',
-    color: 'black',       // ★黒字に変更（以前は 'red'）
+    color: 'black',
     fontWeight: 'bold',
     fontSize: '7px',
   };
-  /* 【修正】未選択の文字: 枠線なし、テキストは黒字 */
+  /* 未選択の文字: 枠線なし、テキストは黒字 */
   const normalStyle: React.CSSProperties = {
     display: 'inline-block',
     width: '14px',
     height: '14px',
     textAlign: 'center' as const,
     lineHeight: '14px',
-    color: 'black',       // ★黒字のまま
+    color: 'black',
     fontSize: '7px',
   };
 
@@ -190,22 +190,47 @@ function renderCircledChoice(
 // メインコンポーネント
 // ============================
 const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
+  // ============================
+  // 【修正】安全なフォールバック変数の定義
+  // data の各プロパティが undefined の場合にエラーにならないよう、
+  // コンポーネント先頭で安全な変数に代入してから使用する
+  // ============================
+  const workEntries = data.workEntries || [];
+  const additionalEntries = data.step3AdditionalWorkEntries || [];
+  const actualWorkers = data.actualWorkers || [];
+  const materialEntries = data.materialEntries || [];
+  const preparationEntries = data.preparationEntries || [];
+  const safetyInstructions = data.safetyInstructions || [];
+  const confirmationItems = data.step3ConfirmationItems || ({} as any);
+  const siteConfirmationItems = data.step3SiteConfirmationItems || ({} as any);
+  const inspectionChecklist = data.step5InspectionChecklist || ({} as any);
+  const dumpTrucks = data.dumpTrucks || { incoming: '', outgoing: '' };
+  const patrolRecord = data.patrolRecord || { coordinationNotes: '', inspector: '', inspectionTime: '', findings: '' };
+  const stageConfirmation = data.stageConfirmation || '';
+  const witnessConfirmation = data.witnessConfirmation || '';
+  const project = data.project || '';
+  const meetingDate = data.meetingDate || '';
+  const workDate = data.workDate || '';
+  const meetingConductor = data.meetingConductor || '';
+  const annotatedDiagramUrl = data.annotatedDiagramUrl || '';
+  const baseDiagramUrl = data.baseDiagramUrl || '';
+
   // --- 作業人数合計（赤字表示用） ---
   const totalWorkers = (() => {
     let total = 0;
-    (data.workEntries || []).forEach((_, index) => {
-      const found = (data.actualWorkers || []).find((aw) => aw.entryIndex === index);
+    workEntries.forEach((_: any, index: number) => {
+      const found = actualWorkers.find((aw: any) => aw.entryIndex === index);
       total += found ? found.count : 0;
     });
-    (data.step3AdditionalWorkEntries || []).forEach((entry) => {
+    additionalEntries.forEach((entry: any) => {
       total += entry.actualWorkers || 0;
     });
     return total;
   })();
 
   // --- ダンプ台数 ---
-  const dumpIncoming = data.dumpTrucks ? data.dumpTrucks.incoming : 0;
-  const dumpOutgoing = data.dumpTrucks ? data.dumpTrucks.outgoing : 0;
+  const dumpIncoming = dumpTrucks.incoming;
+  const dumpOutgoing = dumpTrucks.outgoing;
 
   // --- 統合テーブル用の行データ生成（STEP1 + STEP3追加 → 10行固定に埋める） ---
   type IntegratedRowData = {
@@ -225,16 +250,9 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
   const integratedRows: IntegratedRowData[] = [];
 
-  // STEP1の作業エントリ
-  const workEntries = data.workEntries || [];
-  const step3Additional = data.step3AdditionalWorkEntries || [];
-  const materialEntries = data.materialEntries || [];
-  const preparationEntries = data.preparationEntries || [];
-  const safetyInstructions = data.safetyInstructions || [];
-
   // STEP1の作業行を追加
-  workEntries.forEach((entry, index) => {
-    const found = (data.actualWorkers || []).find((aw) => aw.entryIndex === index);
+  workEntries.forEach((entry: any, index: number) => {
+    const found = actualWorkers.find((aw: any) => aw.entryIndex === index);
     const actualCount = found ? found.count : 0;
     integratedRows.push({
       workContent: entry.workContent || '',
@@ -253,13 +271,13 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   });
 
   // STEP3の追加作業行（全セル赤字）
-  step3Additional.forEach((entry) => {
+  additionalEntries.forEach((entry: any) => {
     integratedRows.push({
       workContent: entry.description || '',
       company: entry.company || '',
       plannedWorkers: '',
       actualWorkers: entry.actualWorkers > 0 ? String(entry.actualWorkers) : '',
-      machine: entry.machines ? entry.machines.filter((m) => m).join(', ') : '',
+      machine: entry.machines ? entry.machines.filter((m: any) => m).join(', ') : '',
       material: '',
       preparation: '',
       safetyInstruction: '',
@@ -294,9 +312,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
     integratedRows[i].safetyInstruction = `${i + 1}. ${instrText}`;
     integratedRows[i].confirmationLabel = `${i + 1}. ${CONFIRMATION_LABELS[i].label}`;
     const confirmKey = CONFIRMATION_LABELS[i].key;
-    integratedRows[i].confirmationResult = data.step3ConfirmationItems
-      ? (data.step3ConfirmationItems[confirmKey] || '')
-      : '';
+    integratedRows[i].confirmationResult = confirmationItems[confirmKey] || '';
   }
 
   // --- 点検チェックリストの表示用フィルタリング ---
@@ -313,9 +329,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
     keys.forEach((key) => {
       const cat = CHECKLIST_CATEGORIES.find((c) => c.key === key);
       if (!cat) return;
-      const items = data.step5InspectionChecklist
-        ? getVisibleItems(data.step5InspectionChecklist[key] || [])
-        : [];
+      /* 【修正】inspectionChecklist 変数を使用（data.step5InspectionChecklist への直接アクセスを排除） */
+      const items = getVisibleItems(inspectionChecklist[key] || []);
 
       // 大分類ヘッダー行: 7.5px太字、height 13px
       rows.push(
@@ -484,23 +499,23 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
         </table>
 
         {/* ==================================================================
-            第2段: 基本情報行 → 変更なし
+            第2段: 基本情報行 → 変更なし（フォールバック変数を使用）
             ================================================================== */}
         <table style={{ ...TABLE_BASE, marginBottom: '1px', fontSize: '10px' }}>
           <tbody>
             <tr>
               <td style={{ ...TH, fontSize: '10px', width: '7%', height: '18px' }}>工事名</td>
-              <td style={{ ...CELL, fontSize: '10px', width: '35%', height: '18px' }}>{data.project || ''}</td>
+              <td style={{ ...CELL, fontSize: '10px', width: '35%', height: '18px' }}>{project}</td>
               <td style={{ ...TH, fontSize: '10px', width: '7%', height: '18px' }}>打合せ日</td>
               <td style={{ ...CELL, fontSize: '10px', width: '15%', height: '18px' }}>
-                {data.meetingDate || ''}{data.meetingDate ? getDayOfWeekLabel(data.meetingDate) : ''}
+                {meetingDate}{meetingDate ? getDayOfWeekLabel(meetingDate) : ''}
               </td>
               <td style={{ ...TH, fontSize: '10px', width: '6%', height: '18px' }}>作業日</td>
               <td style={{ ...CELL, fontSize: '10px', width: '15%', height: '18px' }}>
-                {data.workDate || ''}{data.workDate ? getDayOfWeekLabel(data.workDate) : ''}
+                {workDate}{workDate ? getDayOfWeekLabel(workDate) : ''}
               </td>
               <td style={{ ...TH, fontSize: '10px', width: '7%', height: '18px' }}>打合せ者</td>
-              <td style={{ ...CELL, fontSize: '10px', width: '8%', height: '18px' }}>{data.meetingConductor || ''}</td>
+              <td style={{ ...CELL, fontSize: '10px', width: '8%', height: '18px' }}>{meetingConductor}</td>
             </tr>
           </tbody>
         </table>
@@ -610,7 +625,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                   <td style={baseCellStyle}>{row.preparation || '\u00A0'}</td>
                   <td style={safetyCellStyle}>{row.safetyInstruction || '\u00A0'}</td>
                   <td style={confirmCellStyle}>{row.confirmationLabel || '\u00A0'}</td>
-                  {/* 【修正】結果: 良・否の両方表示＋赤い丸枠線方式（テキストは黒字） */}
+                  {/* 結果: 良・否の両方表示＋赤い丸枠線方式（テキストは黒字） */}
                   <td style={resultCellStyle}>
                     {renderCircledChoice(row.confirmationResult, '良', '否')}
                   </td>
@@ -621,24 +636,24 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
         </table>
 
         {/* ==================================================================
-            【修正】第4段: 左右2カラム（ダンプ・人員・段階・立会（2行構成） ＋ 当現場確認項目）
-            ダンプ台数の行を1行から2行構成に変更し、rowspanで整理
+            第4段: 左右2カラム（ダンプ・人員・段階・立会（2行構成） ＋ 当現場確認項目）
+            ダンプ台数の行を2行構成に変更し、rowspanで整理
             ================================================================== */}
         <table style={{ ...TABLE_BASE, marginBottom: '0px' }}>
           <tbody>
             <tr>
-              {/* === 左セル（50%）: 【修正】ダンプ台数2行構成（rowSpan使用） === */}
+              {/* === 左セル（50%）: ダンプ台数2行構成（rowSpan使用） === */}
               <td style={{ width: '50%', verticalAlign: 'top', padding: 0 }}>
                 <table style={{ ...TABLE_BASE }}>
                   <colgroup>
-                    {/* 【修正】列幅: ダンプ台数ラベル12%、搬入搬出38%、本日の作業人員数30%、段階/立会確認20% */}
+                    {/* 列幅: ダンプ台数ラベル12%、搬入搬出38%、本日の作業人員数30%、段階/立会確認20% */}
                     <col style={{ width: '12%' }} />
                     <col style={{ width: '38%' }} />
                     <col style={{ width: '30%' }} />
                     <col style={{ width: '20%' }} />
                   </colgroup>
                   <tbody>
-                    {/* 【修正】行1: ダンプ台数ラベル(rowSpan=2) | 搬入 | 本日の作業人員数(rowSpan=2) | 段階確認 */}
+                    {/* 行1: ダンプ台数ラベル(rowSpan=2) | 搬入 | 本日の作業人員数(rowSpan=2) | 段階確認 */}
                     <tr>
                       <td
                         rowSpan={2}
@@ -682,7 +697,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         {'　'}
                         <span style={{ ...RED, fontWeight: 'bold' }}>{totalWorkers}</span>名
                       </td>
-                      {/* 【修正】段階確認: 有・無＋赤い丸枠線方式（テキストは黒字） */}
+                      {/* 段階確認: 有・無＋赤い丸枠線方式（テキストは黒字） */}
                       <td
                         style={{
                           border: B,
@@ -696,10 +711,10 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       >
                         <span style={{ fontWeight: 'bold' }}>段階確認</span>
                         {'　'}
-                        {renderCircledChoice(data.stageConfirmation || '', '有', '無')}
+                        {renderCircledChoice(stageConfirmation, '有', '無')}
                       </td>
                     </tr>
-                    {/* 【修正】行2: (ダンプ台数はrowSpanで結合済) | 搬出 | (人員数はrowSpanで結合済) | 立会確認 */}
+                    {/* 行2: (ダンプ台数はrowSpanで結合済) | 搬出 | (人員数はrowSpanで結合済) | 立会確認 */}
                     <tr>
                       <td
                         style={{
@@ -713,7 +728,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       >
                         搬出：<span style={RED}>{dumpOutgoing}</span>台
                       </td>
-                      {/* 【修正】立会確認: 有・無＋赤い丸枠線方式（テキストは黒字） */}
+                      {/* 立会確認: 有・無＋赤い丸枠線方式（テキストは黒字） */}
                       <td
                         style={{
                           border: B,
@@ -727,7 +742,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       >
                         <span style={{ fontWeight: 'bold' }}>立会確認</span>
                         {'　'}
-                        {renderCircledChoice(data.witnessConfirmation || '', '有', '無')}
+                        {renderCircledChoice(witnessConfirmation, '有', '無')}
                       </td>
                     </tr>
                   </tbody>
@@ -738,13 +753,13 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
               <td style={{ width: '50%', verticalAlign: 'top', padding: 0 }}>
                 <table style={{ ...TABLE_BASE }}>
                   <colgroup>
-                    {/* 列幅調整: No.列3%、確認項目列30%、結果列8% × 左右 */}
-                    <col style={{ width: '6%' }} />  {/* No.(左) */}
-                    <col style={{ width: '60%' }} /> {/* 確認項目(左) → 左右分で30%相当 */}
-                    <col style={{ width: '16%' }} /> {/* 結果(左) → 左右分で8%相当 */}
-                    <col style={{ width: '6%' }} />  {/* No.(右) */}
-                    <col style={{ width: '60%' }} /> {/* 確認項目(右) */}
-                    <col style={{ width: '16%' }} /> {/* 結果(右) */}
+                    {/* 列幅調整: No.列、確認項目列、結果列 × 左右 */}
+                    <col style={{ width: '6%' }} />
+                    <col style={{ width: '60%' }} />
+                    <col style={{ width: '16%' }} />
+                    <col style={{ width: '6%' }} />
+                    <col style={{ width: '60%' }} />
+                    <col style={{ width: '16%' }} />
                   </colgroup>
                   <thead>
                     {/* 全幅結合ヘッダー: 当現場確認項目 */}
@@ -774,15 +789,12 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     </tr>
                   </thead>
                   <tbody>
+                    {/* 【修正】siteConfirmationItems 変数を使用（data.step3SiteConfirmationItems への直接アクセスを排除） */}
                     {[0, 1, 2, 3, 4].map((i) => {
                       const left = SITE_CONFIRMATION_LABELS[i];
                       const right = SITE_CONFIRMATION_LABELS[i + 5];
-                      const leftResult = data.step3SiteConfirmationItems
-                        ? data.step3SiteConfirmationItems[left.key]
-                        : '';
-                      const rightResult = data.step3SiteConfirmationItems
-                        ? data.step3SiteConfirmationItems[right.key]
-                        : '';
+                      const leftResult = siteConfirmationItems[left.key] || '';
+                      const rightResult = siteConfirmationItems[right.key] || '';
                       return (
                         <tr key={i}>
                           <td style={{ ...CELL, textAlign: 'center' as const, height: '17px', fontSize: '8px' }}>
@@ -802,7 +814,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                               verticalAlign: 'middle',
                             }}
                           >
-                            {renderCircledChoice(leftResult || '', '良', '否')}
+                            {renderCircledChoice(leftResult, '良', '否')}
                           </td>
                           <td style={{ ...CELL, textAlign: 'center' as const, height: '17px', fontSize: '8px' }}>
                             {i + 6}
@@ -821,7 +833,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                               verticalAlign: 'middle',
                             }}
                           >
-                            {renderCircledChoice(rightResult || '', '良', '否')}
+                            {renderCircledChoice(rightResult, '良', '否')}
                           </td>
                         </tr>
                       );
@@ -834,7 +846,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
         </table>
 
         {/* ==================================================================
-            【修正】第5段: 左右2カラム（作業連絡・巡視・配置図 ＋ 点検チェックリスト）
+            第5段: 左右2カラム（作業連絡・巡視・配置図 ＋ 点検チェックリスト）
             空白スペースを削除し、第4段の直下に隙間なく配置。
             配置図の枠の縦幅を拡大してページ下部まで使う。
             ================================================================== */}
@@ -861,7 +873,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         ＊作業連絡調整事項・打合せ・朝礼等周知事項・その他
                       </td>
                     </tr>
-                    {/* 作業連絡調整事項 データ行: height 28px、fontSize 8px、上寄せ */}
+                    {/* 【修正】作業連絡調整事項 データ行: patrolRecord 変数を使用 */}
                     <tr>
                       <td
                         colSpan={4}
@@ -873,18 +885,18 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           ...RED,
                         }}
                       >
-                        {data.patrolRecord?.coordinationNotes || ''}
+                        {patrolRecord.coordinationNotes}
                       </td>
                     </tr>
-                    {/* 巡視点検者・巡視時間: height 18px、fontSize 8.5px */}
+                    {/* 【修正】巡視点検者・巡視時間: patrolRecord 変数を使用 */}
                     <tr>
                       <td style={{ ...TH, width: '15%', height: '18px', fontSize: '8.5px' }}>巡視点検者</td>
                       <td style={{ ...CELL, width: '35%', height: '18px', fontSize: '8.5px', ...RED }}>
-                        {data.patrolRecord?.inspector || ''}
+                        {patrolRecord.inspector}
                       </td>
                       <td style={{ ...TH, width: '15%', height: '18px', fontSize: '8.5px' }}>巡視時間</td>
                       <td style={{ ...CELL, width: '35%', height: '18px', fontSize: '8.5px', ...RED }}>
-                        {data.patrolRecord?.inspectionTime || ''}
+                        {patrolRecord.inspectionTime}
                       </td>
                     </tr>
                     {/* 巡視所見ヘッダー: 8.5px太字 */}
@@ -900,7 +912,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         巡視所見
                       </td>
                     </tr>
-                    {/* 巡視所見データ: height 28px、fontSize 8px、上寄せ */}
+                    {/* 【修正】巡視所見データ: patrolRecord 変数を使用 */}
                     <tr>
                       <td
                         colSpan={4}
@@ -912,7 +924,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           ...RED,
                         }}
                       >
-                        {data.patrolRecord?.findings || ''}
+                        {patrolRecord.findings}
                       </td>
                     </tr>
                     {/* 配置図・略図 ヘッダー: 8.5px太字 */}
@@ -928,7 +940,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         （配置図・略図）
                       </td>
                     </tr>
-                    {/* 【修正】配置図 画像セル: 縦幅を大幅に拡大（130px → 230px）してページ下部まで活用 */}
+                    {/* 【修正】配置図 画像セル: 縦幅を大幅に拡大（230px）してページ下部まで活用 */}
                     <tr>
                       <td
                         colSpan={4}
@@ -941,9 +953,10 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           whiteSpace: 'normal' as const,
                         }}
                       >
-                        {data.annotatedDiagramUrl ? (
+                        {/* 【修正】annotatedDiagramUrl / baseDiagramUrl 変数を使用 */}
+                        {annotatedDiagramUrl ? (
                           <img
-                            src={data.annotatedDiagramUrl}
+                            src={annotatedDiagramUrl}
                             alt="配置図"
                             style={{
                               maxWidth: '100%',
@@ -953,9 +966,9 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                               margin: '0 auto',
                             }}
                           />
-                        ) : data.baseDiagramUrl ? (
+                        ) : baseDiagramUrl ? (
                           <img
-                            src={data.baseDiagramUrl}
+                            src={baseDiagramUrl}
                             alt="配置図"
                             style={{
                               maxWidth: '100%',
