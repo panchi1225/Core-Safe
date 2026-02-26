@@ -1,6 +1,7 @@
 // src/components/DailySafetyWizard.tsx
 // 安全衛生日誌（作業打合せ及び安全衛生日誌）ウィザード
 // STEP1: 作業内容入力、STEP2: 配置図・略図、STEP3: 当日作業確認、STEP4: 巡視記録、STEP5: 点検チェックリスト
+// 【追加】STEP5プレビュー・印刷機能
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
@@ -28,6 +29,7 @@ import {
   fetchDiagramImages,
   removeDiagramImage,
 } from '../services/firebaseService';
+import DailySafetyPrintLayout from './DailySafetyPrintLayout';
 
 // ============================
 // STEP4: 巡視時間の選択肢（30分刻み 8:00〜16:00 の17個）
@@ -492,6 +494,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   const [showDiagramPicker, setShowDiagramPicker] = useState(false);
   const [diagramImages, setDiagramImages] = useState<DiagramImage[]>([]);
   const [diagramPickerLoading, setDiagramPickerLoading] = useState(false);
+
+  // 【追加】プレビュー表示用state
+  const [showPreview, setShowPreview] = useState(false);
 
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasElRef = useRef<HTMLCanvasElement>(null);
@@ -1318,10 +1323,17 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // STEP5: プレビューボタンのハンドラ
+  // 【修正】STEP5: プレビューボタンのハンドラ — モーダル表示に変更
   // ============================
   const handlePreview = () => {
-    alert('プレビュー機能は次のプロンプトで実装します');
+    setShowPreview(true);
+  };
+
+  // ============================
+  // 【追加】印刷ボタンのハンドラ
+  // ============================
+  const handlePrint = () => {
+    window.print();
   };
 
   // ============================
@@ -2355,6 +2367,26 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   // ============================
   return (
     <>
+      {/* 【追加】印刷用CSS — 操作バー非表示・帳票のみ表示 */}
+      <style>{`
+        @media print {
+          .no-print {
+            display: none !important;
+          }
+          .print-only {
+            display: block !important;
+          }
+          @page {
+            size: A4 landscape;
+            margin: 0;
+          }
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+        }
+      `}</style>
+
       <div className="no-print min-h-screen pb-24 bg-gray-50">
         <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
           <div className="flex items-center gap-3">
@@ -2440,6 +2472,40 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           )}
         </footer>
       </div>
+
+      {/* ============================
+          【追加】プレビューモーダル（フルスクリーン）
+          印刷時は操作バーを非表示にし、帳票部分のみ出力する
+          ============================ */}
+      {showPreview && (
+        <div className="fixed inset-0 z-[80] bg-white flex flex-col">
+          {/* 操作バー（印刷時は非表示） */}
+          <div className="no-print flex items-center justify-between px-4 py-3 bg-slate-800 text-white shadow-md shrink-0">
+            <button
+              onClick={() => setShowPreview(false)}
+              className="flex items-center gap-2 text-white hover:text-gray-300 font-bold text-sm"
+            >
+              <i className="fa-solid fa-arrow-left"></i>
+              閉じる
+            </button>
+            <button
+              onClick={handlePrint}
+              className="px-6 py-2 bg-pink-600 text-white rounded-lg font-bold text-sm hover:bg-pink-700 transition-colors shadow"
+            >
+              <i className="fa-solid fa-print mr-2"></i>印刷
+            </button>
+          </div>
+
+          {/* 帳票プレビュー（スクロール可能・中央寄せ） */}
+          <div className="flex-1 overflow-auto bg-gray-200 p-4">
+            <div className="flex justify-center">
+              <div className="shadow-2xl">
+                <DailySafetyPrintLayout data={report} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <CompleteModal
         isOpen={showCompleteModal}
