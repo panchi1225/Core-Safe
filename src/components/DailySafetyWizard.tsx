@@ -1916,16 +1916,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           ))}
         </div>
 
-        {/* 本日の作業人数合計 */}
-        <div className="mt-4 p-3 bg-pink-50 border border-pink-200 rounded-lg flex items-center justify-between">
-          <span className="text-sm font-bold text-gray-700">
-            <i className="fa-solid fa-users mr-2 text-pink-500"></i>
-            本日の作業人数合計
-          </span>
-          <span className="text-lg font-bold text-pink-600">
-            {totalStep3Workers}人
-          </span>
-        </div>
+        {/* 【修正】本日の作業人数合計 — 元々ここにあった表示を削除（追加作業セクションの下に移動） */}
       </div>
 
       {/* ===== セクション2: 追加作業 ===== */}
@@ -2044,6 +2035,17 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         >
           <i className="fa-solid fa-plus mr-2"></i>追加作業を追加
         </button>
+      </div>
+
+      {/* 【修正】本日の作業人数合計 — 追加作業セクションの下に移動 */}
+      <div className="p-3 bg-pink-50 border border-pink-200 rounded-lg flex items-center justify-between">
+        <span className="text-sm font-bold text-gray-700">
+          <i className="fa-solid fa-users mr-2 text-pink-500"></i>
+          本日の作業人数合計
+        </span>
+        <span className="text-lg font-bold text-pink-600">
+          {totalStep3Workers}人
+        </span>
       </div>
 
       {/* ===== セクション3: 確認事項 ===== */}
