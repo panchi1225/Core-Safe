@@ -621,18 +621,39 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
         </table>
 
         {/* ==================================================================
-            【修正】第4段: 左右2カラム（ダンプ・人員・段階・立会 ＋ 当現場確認項目）
-            旧第4段（ダンプ行）と旧第5段（当現場確認項目）を横並びに統合
+            【修正】第4段: 左右2カラム（ダンプ・人員・段階・立会（2行構成） ＋ 当現場確認項目）
+            ダンプ台数の行を1行から2行構成に変更し、rowspanで整理
             ================================================================== */}
         <table style={{ ...TABLE_BASE, marginBottom: '0px' }}>
           <tbody>
             <tr>
-              {/* === 左セル（50%）: ダンプ台数・人員数・段階確認・立会確認を1行表示 === */}
+              {/* === 左セル（50%）: 【修正】ダンプ台数2行構成（rowSpan使用） === */}
               <td style={{ width: '50%', verticalAlign: 'top', padding: 0 }}>
                 <table style={{ ...TABLE_BASE }}>
+                  <colgroup>
+                    {/* 【修正】列幅: ダンプ台数ラベル12%、搬入搬出38%、本日の作業人員数30%、段階/立会確認20% */}
+                    <col style={{ width: '12%' }} />
+                    <col style={{ width: '38%' }} />
+                    <col style={{ width: '30%' }} />
+                    <col style={{ width: '20%' }} />
+                  </colgroup>
                   <tbody>
+                    {/* 【修正】行1: ダンプ台数ラベル(rowSpan=2) | 搬入 | 本日の作業人員数(rowSpan=2) | 段階確認 */}
                     <tr>
-                      {/* ダンプ台数 */}
+                      <td
+                        rowSpan={2}
+                        style={{
+                          border: B,
+                          padding: '3px 4px',
+                          fontSize: '8px',
+                          height: '17px',
+                          verticalAlign: 'middle',
+                          textAlign: 'center' as const,
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        ダンプ台数
+                      </td>
                       <td
                         style={{
                           border: B,
@@ -643,12 +664,10 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           whiteSpace: 'nowrap' as const,
                         }}
                       >
-                        <span style={{ fontWeight: 'bold' }}>ダンプ台数</span>
-                        {'　'}
-                        搬入：<span style={RED}>{dumpIncoming}</span>台／搬出：<span style={RED}>{dumpOutgoing}</span>台
+                        搬入：<span style={RED}>{dumpIncoming}</span>台
                       </td>
-                      {/* 本日の作業人員数 */}
                       <td
+                        rowSpan={2}
                         style={{
                           border: B,
                           padding: '3px 4px',
@@ -679,6 +698,21 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         {'　'}
                         {renderCircledChoice(data.stageConfirmation || '', '有', '無')}
                       </td>
+                    </tr>
+                    {/* 【修正】行2: (ダンプ台数はrowSpanで結合済) | 搬出 | (人員数はrowSpanで結合済) | 立会確認 */}
+                    <tr>
+                      <td
+                        style={{
+                          border: B,
+                          padding: '3px 4px',
+                          fontSize: '8px',
+                          height: '17px',
+                          verticalAlign: 'middle',
+                          whiteSpace: 'nowrap' as const,
+                        }}
+                      >
+                        搬出：<span style={RED}>{dumpOutgoing}</span>台
+                      </td>
                       {/* 【修正】立会確認: 有・無＋赤い丸枠線方式（テキストは黒字） */}
                       <td
                         style={{
@@ -700,11 +734,11 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                 </table>
               </td>
 
-              {/* === 右セル（50%）: 当現場確認項目（ヘッダー行＋5データ行） === */}
+              {/* === 右セル（50%）: 当現場確認項目（ヘッダー行＋5データ行）→ 変更なし === */}
               <td style={{ width: '50%', verticalAlign: 'top', padding: 0 }}>
                 <table style={{ ...TABLE_BASE }}>
                   <colgroup>
-                    {/* 【修正】列幅調整: No.列3%、確認項目列30%、結果列8% × 左右 */}
+                    {/* 列幅調整: No.列3%、確認項目列30%、結果列8% × 左右 */}
                     <col style={{ width: '6%' }} />  {/* No.(左) */}
                     <col style={{ width: '60%' }} /> {/* 確認項目(左) → 左右分で30%相当 */}
                     <col style={{ width: '16%' }} /> {/* 結果(左) → 左右分で8%相当 */}
@@ -757,7 +791,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           <td style={{ ...CELL_WRAP, height: '17px', fontSize: '8px', padding: '2px 4px' }}>
                             {left.label}
                           </td>
-                          {/* 【修正】結果: 良・否＋赤い丸枠線方式（テキストは黒字） */}
+                          {/* 結果: 良・否＋赤い丸枠線方式（テキストは黒字） */}
                           <td
                             style={{
                               border: B,
@@ -776,7 +810,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           <td style={{ ...CELL_WRAP, height: '17px', fontSize: '8px', padding: '2px 4px' }}>
                             {right.label}
                           </td>
-                          {/* 【修正】結果: 良・否＋赤い丸枠線方式（テキストは黒字） */}
+                          {/* 結果: 良・否＋赤い丸枠線方式（テキストは黒字） */}
                           <td
                             style={{
                               border: B,
@@ -801,7 +835,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
         {/* ==================================================================
             【修正】第5段: 左右2カラム（作業連絡・巡視・配置図 ＋ 点検チェックリスト）
-            上に詰めて配置。配置図はページ下部まで拡大。
+            空白スペースを削除し、第4段の直下に隙間なく配置。
+            配置図の枠の縦幅を拡大してページ下部まで使う。
             ================================================================== */}
         <table style={{ ...TABLE_BASE }}>
           <tbody>
@@ -880,7 +915,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         {data.patrolRecord?.findings || ''}
                       </td>
                     </tr>
-                    {/* 【修正】配置図・略図 ヘッダー: 8.5px太字 */}
+                    {/* 配置図・略図 ヘッダー: 8.5px太字 */}
                     <tr>
                       <td
                         colSpan={4}
@@ -893,7 +928,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         （配置図・略図）
                       </td>
                     </tr>
-                    {/* 【修正】配置図 画像セル: ページ下部まで残りの高さを全て使う */}
+                    {/* 【修正】配置図 画像セル: 縦幅を大幅に拡大（130px → 230px）してページ下部まで活用 */}
                     <tr>
                       <td
                         colSpan={4}
@@ -902,8 +937,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           textAlign: 'center' as const,
                           verticalAlign: 'middle',
                           padding: '2px',
-                          height: 'auto',
-                          minHeight: '180px',
+                          height: '230px',
                           whiteSpace: 'normal' as const,
                         }}
                       >
@@ -913,7 +947,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                             alt="配置図"
                             style={{
                               maxWidth: '100%',
-                              maxHeight: '200px',
+                              maxHeight: '220px',
                               objectFit: 'contain' as const,
                               display: 'block',
                               margin: '0 auto',
@@ -925,7 +959,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                             alt="配置図"
                             style={{
                               maxWidth: '100%',
-                              maxHeight: '200px',
+                              maxHeight: '220px',
                               objectFit: 'contain' as const,
                               display: 'block',
                               margin: '0 auto',
