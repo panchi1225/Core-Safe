@@ -70,6 +70,7 @@ export interface MasterData {
   // --- 安全衛生日誌用マスタ ---
   machines: string[];       // 機械
   equipment: string[];      // 資機材（搬出入資機材・段取り資材等で共通使用）
+  safetyInstructionItems: string[];  // 安全衛生指示事項
 }
 
 export const INITIAL_MASTER_DATA: MasterData = {
@@ -212,6 +213,7 @@ export const INITIAL_MASTER_DATA: MasterData = {
   // --- 安全衛生日誌用マスタ初期値 ---
   machines: [],       // 機械
   equipment: [],      // 資機材
+  safetyInstructionItems: [],  // 安全衛生指示事項
 };
 
 // --- Safety Training Report ---
@@ -521,7 +523,7 @@ export interface DailySafetyReportData {
   workEntries: WorkEntry[];     // 作業内容セット（複数追加可）
   materialEntries: string[];    // 搬出入資機材（資機材マスタから選択、複数追加可）
   preparationEntries: string[]; // 段取り資材等（資機材マスタから選択、複数追加可）
-  safetyInstructions: string[]; // 安全衛生指示事項（cautionsマスタ選択、複数追加可）
+  safetyInstructions: string[]; // 安全衛生指示事項（safetyInstructionItemsマスタ選択、複数追加可）
 
   // --- STEP2: 配置図（前日入力） ---
   baseDiagramUrl: string;       // ベース配置図画像URL

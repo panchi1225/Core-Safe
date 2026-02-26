@@ -218,12 +218,13 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     const loadMaster = async () => {
       try {
         const data = await getMasterData();
-        // getMasterData が equipment フィールドを返さない場合に備えてフォールバック
+        // getMasterData が各フィールドを返さない場合に備えてフォールバック
         setMasterData({
           ...data,
           machines: data.machines || INITIAL_MASTER_DATA.machines,
           equipment: data.equipment || INITIAL_MASTER_DATA.equipment,
           cautions: data.cautions || INITIAL_MASTER_DATA.cautions,
+          safetyInstructionItems: data.safetyInstructionItems || INITIAL_MASTER_DATA.safetyInstructionItems,
         });
       } catch (e) {
         console.error('マスタ取得エラー', e);
@@ -968,7 +969,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </button>
       </div>
 
-      {/* (8) 安全衛生指示事項 — 7個固定表示、masterData.cautions を参照 */}
+      {/* (8) 安全衛生指示事項 — 7個固定表示、masterData.safetyInstructionItems を参照 */}
       <div>
         <label className="block text-sm font-bold text-gray-700 mb-2">
           安全衛生指示事項 <span className="text-red-500 text-xs">*1つ以上選択必須</span>
@@ -986,9 +987,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
               onChange={(e) => updateListEntry('safetyInstructions', idx, e.target.value)}
             >
               <option value="">選択してください</option>
-              {masterData.cautions.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              {masterData.safetyInstructionItems.map((item) => (
+                <option key={item} value={item}>
+                  {item}
                 </option>
               ))}
             </select>

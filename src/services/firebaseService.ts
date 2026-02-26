@@ -79,7 +79,7 @@ export const saveDraft = async (
 };
 
 // ■ マスタデータを取得する
-// ★修正: equipment のフォールバック処理を追加、materials / preparations のフォールバック処理を削除
+// ★修正: equipment のフォールバック処理を追加、safetyInstructionItems のフォールバック処理を追加
 export const getMasterData = async (): Promise<MasterData> => {
   try {
     const docRef = doc(db, MASTER_COLLECTION, MASTER_DOC_ID);
@@ -112,6 +112,7 @@ export const getMasterData = async (): Promise<MasterData> => {
         // --- 安全衛生日誌用マスタ ---
         machines: data.machines || INITIAL_MASTER_DATA.machines,
         equipment: data.equipment || INITIAL_MASTER_DATA.equipment,
+        safetyInstructionItems: data.safetyInstructionItems || INITIAL_MASTER_DATA.safetyInstructionItems,
       };
 
       return mergedData;

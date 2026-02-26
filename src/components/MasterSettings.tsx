@@ -36,50 +36,109 @@ const ConfirmationModal: React.FC<{ isOpen: boolean; message: string; onConfirm:
   );
 };
 
-const ProjectDeleteModal: React.FC<{ isOpen: boolean; projectName: string; onConfirm: () => void; onCancel: () => void }> = ({ isOpen, projectName, onConfirm, onCancel }) => {
+const ProjectDeleteModal: React.FC<{
+  isOpen: boolean;
+  projectName: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}> = ({ isOpen, projectName, onConfirm, onCancel }) => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  useEffect(() => { if (isOpen) { setPassword(""); setError(""); } }, [isOpen]);
+  useEffect(() => {
+    if (isOpen) { setPassword(""); setError(""); }
+  }, [isOpen]);
   if (!isOpen) return null;
-  const handleConfirm = () => { if (password === "4043") onConfirm(); else setError("パスワードが間違っています"); };
+  const handleConfirm = () => {
+    if (password === "4043") onConfirm();
+    else setError("パスワードが間違っています");
+  };
   return (
     <div className="fixed inset-0 z-[80] bg-gray-900 bg-opacity-60 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 animate-fade-in border-l-8 border-red-600">
-        <h3 className="text-xl font-bold text-red-600 mb-4"><i className="fa-solid fa-triangle-exclamation mr-2"></i>重要：削除の確認</h3>
+        <h3 className="text-xl font-bold text-red-600 mb-4">
+          <i className="fa-solid fa-triangle-exclamation mr-2"></i>重要：削除の確認
+        </h3>
         <p className="text-gray-800 font-bold mb-2">工事名「{projectName}」を削除しますか？</p>
-        <div className="bg-red-50 p-3 rounded mb-4 text-sm text-red-800"><strong>【注意】</strong><br/>この操作を行うと、この工事名で保存されている<br/><span className="font-bold underline text-red-600 text-base">すべての一時保存データも同時に削除されます。</span></div>
-        <div className="mb-6"><label className="block text-xs font-bold text-gray-500 mb-1">管理者パスワード (4043)</label><input type="password" className="w-full p-2 border rounded" value={password} onChange={(e) => setPassword(e.target.value)} />{error && <p className="text-red-500 text-xs mt-1 font-bold">{error}</p>}</div>
-        <div className="flex justify-end gap-3"><button onClick={onCancel} className="px-4 py-2 bg-gray-100 rounded font-bold text-gray-600">キャンセル</button><button onClick={handleConfirm} className="px-4 py-2 bg-red-600 text-white rounded font-bold shadow-md">完全削除を実行</button></div>
+        <div className="bg-red-50 p-3 rounded mb-4 text-sm text-red-800">
+          <strong>【注意】</strong><br />
+          この操作を行うと、この工事名で保存されている<br />
+          <span className="font-bold underline text-red-600 text-base">
+            すべての一時保存データも同時に削除されます。
+          </span>
+        </div>
+        <div className="mb-6">
+          <label className="block text-xs font-bold text-gray-500 mb-1">管理者パスワード (4043)</label>
+          <input type="password" className="w-full p-2 border rounded" value={password} onChange={(e) => setPassword(e.target.value)} />
+          {error && <p className="text-red-500 text-xs mt-1 font-bold">{error}</p>}
+        </div>
+        <div className="flex justify-end gap-3">
+          <button onClick={onCancel} className="px-4 py-2 bg-gray-100 rounded font-bold text-gray-600">キャンセル</button>
+          <button onClick={handleConfirm} className="px-4 py-2 bg-red-600 text-white rounded font-bold shadow-md">完全削除を実行</button>
+        </div>
       </div>
     </div>
   );
 };
 
-const MasterSection: React.FC<{ title: string; items: string[]; onUpdate: (items: string[]) => void; onDeleteRequest: (index: number, item: string) => void; onBack: () => void }> = ({ title, items, onUpdate, onDeleteRequest, onBack }) => {
+const MasterSection: React.FC<{
+  title: string;
+  items: string[];
+  onUpdate: (items: string[]) => void;
+  onDeleteRequest: (index: number, item: string) => void;
+  onBack: () => void;
+}> = ({ title, items, onUpdate, onDeleteRequest, onBack }) => {
   const [newItem, setNewItem] = useState("");
   const safeItems = items || [];
-  const handleAdd = () => { if (newItem.trim()) { onUpdate([...safeItems, newItem.trim()]); setNewItem(""); } };
+  const handleAdd = () => {
+    if (newItem.trim()) {
+      onUpdate([...safeItems, newItem.trim()]);
+      setNewItem("");
+    }
+  };
   return (
     <div className="bg-white rounded-lg shadow-sm h-full flex flex-col animate-fade-in">
       <div className="p-4 border-b flex items-center gap-3">
-        <button onClick={onBack} className="text-gray-500 hover:text-blue-600"><i className="fa-solid fa-arrow-left text-xl"></i></button>
-        <h3 className="font-bold text-lg text-gray-800 flex-1">{title} <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-2">{safeItems.length}件</span></h3>
+        <button onClick={onBack} className="text-gray-500 hover:text-blue-600">
+          <i className="fa-solid fa-arrow-left text-xl"></i>
+        </button>
+        <h3 className="font-bold text-lg text-gray-800 flex-1">
+          {title}{" "}
+          <span className="text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-full ml-2">
+            {safeItems.length}件
+          </span>
+        </h3>
       </div>
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
         <ul className="space-y-2">
           {safeItems.map((item, idx) => (
             <li key={idx} className="flex justify-between items-center bg-gray-50 p-3 rounded hover:bg-gray-100 transition-colors">
               <span className="text-sm text-gray-800 break-all mr-2">{item}</span>
-              <button onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }} className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50"><i className="fa-solid fa-trash"></i></button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }}
+                className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50"
+              >
+                <i className="fa-solid fa-trash"></i>
+              </button>
             </li>
           ))}
-          {safeItems.length === 0 && <li className="text-gray-400 text-sm italic text-center py-8">データがありません</li>}
+          {safeItems.length === 0 && (
+            <li className="text-gray-400 text-sm italic text-center py-8">データがありません</li>
+          )}
         </ul>
       </div>
       <div className="p-4 border-t bg-gray-50">
         <div className="flex gap-2">
-          <input type="text" className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500" placeholder="新規項目を追加..." value={newItem} onChange={(e) => setNewItem(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleAdd()} />
-          <button onClick={handleAdd} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md"><i className="fa-solid fa-plus mr-1"></i>追加</button>
+          <input
+            type="text"
+            className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="新規項目を追加..."
+            value={newItem}
+            onChange={(e) => setNewItem(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+          />
+          <button onClick={handleAdd} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md">
+            <i className="fa-solid fa-plus mr-1"></i>追加
+          </button>
         </div>
       </div>
     </div>
@@ -87,12 +146,12 @@ const MasterSection: React.FC<{ title: string; items: string[]; onUpdate: (items
 };
 
 // --- 社員編集フォーム ---
-const EmployeeEditForm: React.FC<{ 
-  employee: EmployeeData; 
-  masterData: MasterData; 
-  onSave: (data: EmployeeData) => void; 
-  onCancel: () => void; 
-  onDelete: () => void 
+const EmployeeEditForm: React.FC<{
+  employee: EmployeeData;
+  masterData: MasterData;
+  onSave: (data: EmployeeData) => void;
+  onCancel: () => void;
+  onDelete: () => void;
 }> = ({ employee, masterData, onSave, onCancel, onDelete }) => {
   const [data, setData] = useState<EmployeeData>(employee);
 
@@ -119,17 +178,21 @@ const EmployeeEditForm: React.FC<{
     <div className="bg-white rounded-lg shadow-sm h-full flex flex-col animate-fade-in">
       <div className="p-4 border-b flex items-center justify-between bg-gray-50">
         <div className="flex items-center gap-3">
-          <button onClick={onCancel} className="text-gray-500 hover:text-blue-600"><i className="fa-solid fa-arrow-left text-xl"></i></button>
+          <button onClick={onCancel} className="text-gray-500 hover:text-blue-600">
+            <i className="fa-solid fa-arrow-left text-xl"></i>
+          </button>
           <h3 className="font-bold text-lg text-gray-800">{data.id ? '社員情報編集' : '新規社員登録'}</h3>
         </div>
         {data.id && (
-          <button onClick={onDelete} className="text-red-500 hover:bg-red-50 px-3 py-1 rounded font-bold text-sm"><i className="fa-solid fa-trash mr-1"></i>削除</button>
+          <button onClick={onDelete} className="text-red-500 hover:bg-red-50 px-3 py-1 rounded font-bold text-sm">
+            <i className="fa-solid fa-trash mr-1"></i>削除
+          </button>
         )}
       </div>
-      
+
       <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
         <div className="space-y-6 max-w-3xl mx-auto">
-          
+
           {/* 基本情報 */}
           <section>
             <h4 className="font-bold text-gray-700 border-l-4 border-blue-500 pl-2 mb-4">基本情報</h4>
@@ -148,7 +211,7 @@ const EmployeeEditForm: React.FC<{
                   <input type="text" className="w-1/2 p-2 border rounded" placeholder="メイ" value={data.furiganaMei} onChange={e => handleChange('furiganaMei', e.target.value)} />
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1">生年月日</label>
                 <div className="flex gap-1 items-center">
@@ -199,10 +262,9 @@ const EmployeeEditForm: React.FC<{
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-gray-500 mb-1">職種</label>
-                {/* 指定リスト + 「その他」選択時は入力欄表示 */}
-                <select 
-                  className="w-full p-2 border rounded bg-white" 
-                  value={isCustomJob ? "その他" : data.jobType} 
+                <select
+                  className="w-full p-2 border rounded bg-white"
+                  value={isCustomJob ? "その他" : data.jobType}
                   onChange={e => {
                     const val = e.target.value;
                     if (val === "その他") {
@@ -218,10 +280,9 @@ const EmployeeEditForm: React.FC<{
                   ))}
                   <option value="その他">その他</option>
                 </select>
-                
-                {/* 「その他」が選択されている、またはリスト外の値が入っている場合に入力欄を表示 */}
+
                 {(isCustomJob || data.jobType === "その他") && (
-                  <input 
+                  <input
                     type="text"
                     className="mt-2 w-full p-2 border rounded bg-white border-blue-400"
                     placeholder="職種を入力してください"
@@ -330,7 +391,7 @@ const EmployeeEditForm: React.FC<{
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.roller} onChange={(e)=>handleQualChange('roller', e.target.checked)} />ローラー運転</label>
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.asbestos} onChange={(e)=>handleQualChange('asbestos', e.target.checked)} />石綿取り扱い</label>
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.foreman} onChange={(e)=>handleQualChange('foreman', e.target.checked)} />職長教育</label>
-              
+
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.license_regular} onChange={(e)=>handleQualChange('license_regular', e.target.checked)} />普通自動車免許</label>
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.license_large} onChange={(e)=>handleQualChange('license_large', e.target.checked)} />大型自動車免許</label>
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.license_large_special} onChange={(e)=>handleQualChange('license_large_special', e.target.checked)} />大型特殊自動車免許</label>
@@ -342,7 +403,9 @@ const EmployeeEditForm: React.FC<{
       </div>
       <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
         <button onClick={onCancel} className="px-6 py-2 bg-gray-200 rounded-lg font-bold text-gray-600 hover:bg-gray-300">キャンセル</button>
-        <button onClick={() => onSave(data)} className="px-8 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md"><i className="fa-solid fa-save mr-2"></i>保存する</button>
+        <button onClick={() => onSave(data)} className="px-8 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md">
+          <i className="fa-solid fa-save mr-2"></i>保存する
+        </button>
       </div>
     </div>
   );
@@ -350,24 +413,25 @@ const EmployeeEditForm: React.FC<{
 
 // ============================
 // マスタ項目の表示名マッピング
-// 修正: 「主要機械」→「機械」、「搬出入資機材」「段取り資材等」を削除、「資機材」を追加
+// 修正: 「安全衛生指示事項」(safetyInstructionItems) を追加
 // ============================
-const LABEL_MAP: Record<string, string> = { 
+const LABEL_MAP: Record<string, string> = {
   projects: "工事名", contractors: "会社名", supervisors: "現場責任者", locations: "場所", workplaces: "作業所名",
   roles: "役職", topics: "安全訓練内容", jobTypes: "工種", goals: "安全衛生目標", predictions: "予想災害", countermeasures: "防止対策",
   processes: "作業工程", cautions: "注意事項",
   // --- 安全衛生日誌用マスタ ---
   machines: "機械",
-  equipment: "資機材"
+  equipment: "資機材",
+  safetyInstructionItems: "安全衛生指示事項"
 };
 
 // ============================
 // マスタグループ定義
-// 修正: TRAINING から materials, preparations を削除し、equipment を追加
+// 修正: TRAINING に safetyInstructionItems を追加
 // ============================
-const MASTER_GROUPS = { 
-  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'], 
-  TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures', 'machines', 'equipment'] 
+const MASTER_GROUPS = {
+  BASIC: ['projects', 'contractors', 'supervisors', 'locations', 'workplaces'],
+  TRAINING: ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures', 'machines', 'equipment', 'safetyInstructionItems']
 };
 
 type TabType = 'BASIC' | 'TRAINING' | 'EMPLOYEES';
@@ -384,17 +448,17 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
   const [isEditingEmployee, setIsEditingEmployee] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<EmployeeData | null>(null);
 
-  useEffect(() => { 
-    const load = async () => { 
-      try { 
-        const data = await getMasterData(); 
-        setMasterData(data); 
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const data = await getMasterData();
+        setMasterData(data);
         // 社員データもロード
         const emps = await fetchEmployees();
         setEmployees(emps);
-      } catch (e) { console.error(e); } 
-    }; 
-    load(); 
+      } catch (e) { console.error(e); }
+    };
+    load();
   }, []);
 
   const handleUpdate = async (key: keyof MasterData, newItems: string[]) => {
@@ -432,10 +496,10 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
       alert("氏名は必須です");
       return;
     }
-    
+
     // 入力時のタイムスタンプを保存（経験年数計算用）
     const dataToSave = { ...data, lastUpdatedExperience: Date.now() };
-    
+
     await saveEmployee(dataToSave);
     const newEmps = await fetchEmployees();
     setEmployees(newEmps);
@@ -468,12 +532,12 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
           <button onClick={onBackToMenu} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500 font-bold text-sm">メニューに戻る</button>
         </div>
       </header>
-      
+
       <div className="p-4 max-w-4xl mx-auto w-full flex-1 flex flex-col">
         {/* 社員編集中ならフォームを表示 */}
         {isEditingEmployee && editingEmployee ? (
           <div className="flex-1 overflow-hidden h-full">
-            <EmployeeEditForm 
+            <EmployeeEditForm
               employee={editingEmployee}
               masterData={masterData}
               onSave={handleSaveEmployee}
@@ -483,43 +547,54 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
           </div>
         ) : selectedMasterKey ? (
           <div className="flex-1 overflow-hidden h-full">
-            <MasterSection 
-              title={LABEL_MAP[selectedMasterKey]} 
-              items={masterData[selectedMasterKey]} 
+            <MasterSection
+              title={LABEL_MAP[selectedMasterKey]}
+              items={masterData[selectedMasterKey]}
               onBack={() => setSelectedMasterKey(null)}
               onUpdate={(items) => handleUpdate(selectedMasterKey, items)}
               onDeleteRequest={(index, item) => {
-                if (selectedMasterKey === 'projects') { 
-                  setProjectDeleteTarget({ index, name: item }); 
-                } else { 
-                  setConfirmModal({ 
-                    isOpen: true, 
-                    message: `「${item}」を削除しますか？`, 
-                    onConfirm: async () => { 
-                      const items = [...masterData[selectedMasterKey]]; 
-                      items.splice(index, 1); 
-                      handleUpdate(selectedMasterKey, items); 
-                      setConfirmModal({ ...confirmModal, isOpen: false }); 
-                    } 
-                  }); 
+                if (selectedMasterKey === 'projects') {
+                  setProjectDeleteTarget({ index, name: item });
+                } else {
+                  setConfirmModal({
+                    isOpen: true,
+                    message: `「${item}」を削除しますか？`,
+                    onConfirm: async () => {
+                      const items = [...masterData[selectedMasterKey]];
+                      items.splice(index, 1);
+                      handleUpdate(selectedMasterKey, items);
+                      setConfirmModal({ ...confirmModal, isOpen: false });
+                    }
+                  });
                 }
-              }} 
+              }}
             />
           </div>
         ) : (
           <>
             <div className="flex gap-2 mb-6 shrink-0 bg-white p-1 rounded-lg shadow-sm border border-gray-200">
-              <button onClick={() => setMasterTab('BASIC')} className={`flex-1 py-3 rounded-md font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-50'}`}><i className="fa-solid fa-house-chimney mr-2"></i>基本・共通</button>
-              <button onClick={() => setMasterTab('TRAINING')} className={`flex-1 py-3 rounded-md font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-50'}`}><i className="fa-solid fa-list-check mr-2"></i>各種項目</button>
-              <button onClick={() => setMasterTab('EMPLOYEES')} className={`flex-1 py-3 rounded-md font-bold transition-colors ${masterTab === 'EMPLOYEES' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-50'}`}><i className="fa-solid fa-users mr-2"></i>社員名簿</button>
+              <button onClick={() => setMasterTab('BASIC')} className={`flex-1 py-3 rounded-md font-bold transition-colors ${masterTab === 'BASIC' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-50'}`}>
+                <i className="fa-solid fa-house-chimney mr-2"></i>基本・共通
+              </button>
+              <button onClick={() => setMasterTab('TRAINING')} className={`flex-1 py-3 rounded-md font-bold transition-colors ${masterTab === 'TRAINING' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-50'}`}>
+                <i className="fa-solid fa-list-check mr-2"></i>各種項目
+              </button>
+              <button onClick={() => setMasterTab('EMPLOYEES')} className={`flex-1 py-3 rounded-md font-bold transition-colors ${masterTab === 'EMPLOYEES' ? 'bg-blue-600 text-white shadow' : 'text-gray-600 hover:bg-gray-50'}`}>
+                <i className="fa-solid fa-users mr-2"></i>社員名簿
+              </button>
             </div>
 
             {/* 社員名簿タブ */}
             {masterTab === 'EMPLOYEES' ? (
               <div className="bg-white rounded-lg shadow-sm h-full flex flex-col animate-fade-in border border-gray-200">
                 <div className="p-4 border-b flex items-center justify-between bg-gray-50">
-                  <h3 className="font-bold text-lg text-gray-800">登録済み社員一覧 <span className="text-xs font-normal text-gray-500 bg-white px-2 py-1 rounded-full ml-2 border">{employees.length}名</span></h3>
-                  <button onClick={handleNewEmployee} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md"><i className="fa-solid fa-plus mr-1"></i>新規登録</button>
+                  <h3 className="font-bold text-lg text-gray-800">
+                    登録済み社員一覧{" "}
+                    <span className="text-xs font-normal text-gray-500 bg-white px-2 py-1 rounded-full ml-2 border">{employees.length}名</span>
+                  </h3>
+                  <button onClick={handleNewEmployee} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md">
+                    <i className="fa-solid fa-plus mr-1"></i>新規登録
+                  </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                   {employees.length === 0 ? (
@@ -553,10 +628,15 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
                   const count = Array.isArray(list) ? list.length : 0;
                   return (
                     <button key={key} onClick={() => setSelectedMasterKey(key as keyof MasterData)} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all text-left flex justify-between items-center group">
-                      <div><h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3><p className="text-xs text-gray-500">{count} 件の登録</p></div>
-                      <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors"><i className="fa-solid fa-chevron-right"></i></div>
+                      <div>
+                        <h3 className="font-bold text-lg text-gray-800 mb-1">{LABEL_MAP[key]}</h3>
+                        <p className="text-xs text-gray-500">{count} 件の登録</p>
+                      </div>
+                      <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-blue-50 group-hover:text-blue-500 transition-colors">
+                        <i className="fa-solid fa-chevron-right"></i>
+                      </div>
                     </button>
-                  )
+                  );
                 })}
               </div>
             )}
@@ -565,8 +645,8 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
       </div>
       <ConfirmationModal isOpen={confirmModal.isOpen} message={confirmModal.message} onConfirm={confirmModal.onConfirm} onCancel={() => setConfirmModal({ ...confirmModal, isOpen: false })} />
       {projectDeleteTarget && (
-        <ProjectDeleteModal 
-          isOpen={!!projectDeleteTarget} 
+        <ProjectDeleteModal
+          isOpen={!!projectDeleteTarget}
           projectName={projectDeleteTarget.name}
           onCancel={() => setProjectDeleteTarget(null)}
           onConfirm={async () => {
