@@ -309,14 +309,24 @@ function createEmptyWorkEntry(): WorkEntry {
 const SAFETY_INSTRUCTIONS_COUNT = 7;
 
 // ============================
-// 【修正2】Firestoreサイズ制限エラー判定ヘルパー
+// 【修正B】画像サイズエラー判定ヘルパー
+// Firestoreドキュメントサイズ制限やペイロードサイズ超過を検出する
 // ============================
-function isFirestoreSizeError(error: unknown): boolean {
-  if (error instanceof Error) {
-    const msg = error.message || '';
-    return msg.includes('exceeds the maximum allowed size') || msg.includes('INVALID_ARGUMENT');
-  }
-  return false;
+function isImageSizeError(error: unknown): boolean {
+  const errorMessage =
+    error instanceof Error
+      ? error.message || error.toString()
+      : typeof error === 'object' && error !== null && 'message' in error
+        ? String((error as any).message)
+        : String(error || '');
+  return (
+    errorMessage.includes('exceeds the maximum allowed size') ||
+    errorMessage.includes('INVALID_ARGUMENT') ||
+    errorMessage.includes('Request payload size exceeds') ||
+    errorMessage.includes('413') ||
+    errorMessage.includes('too large') ||
+    errorMessage.includes('size')
+  );
 }
 
 // ============================
@@ -648,7 +658,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // 【修正2】一時保存処理 — サイズエラーメッセージ改善
+  // 一時保存処理 — 【修正A】JPEG圧縮 + 【修正B】サイズエラーメッセージ改善
   // ============================
   const handleSave = async () => {
     if (!report.project) {
@@ -656,11 +666,12 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       return;
     }
 
-    // STEP2でキャンバスが存在する場合は、キャンバス内容をpng形式で画像化して保存
+    // STEP2でキャンバスが存在する場合は、キャンバス内容を画像化して保存
     let updatedReport = { ...report };
     const canvasEl = canvasElRef.current;
     if (canvasEl && canvasEl.width > 0 && canvasEl.height > 0) {
-      const dataUrl = canvasEl.toDataURL('image/png');
+      // 【修正A】PNGからJPEG（品質60%）に変更し、dataURLのサイズを大幅に削減
+      const dataUrl = canvasEl.toDataURL('image/jpeg', 0.6);
       console.log('[handleSave] toDataURL prefix:', dataUrl.substring(0, 30));
       updatedReport = { ...updatedReport, annotatedDiagramUrl: dataUrl };
       setReport(updatedReport);
@@ -673,14 +684,22 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       setSaveStatus('saved');
       setHasUnsavedChanges(false);
       setShowCompleteModal(true);
-    } catch (e) {
-      console.error(e);
-      // 【修正2】Firestoreサイズ制限エラーを判定して適切なメッセージを表示
-      if (isFirestoreSizeError(e)) {
+    } catch (error: any) {
+      // 【修正B】画像サイズエラーの判定
+      const errorMessage = error?.message || error?.toString() || '';
+      if (
+        errorMessage.includes('exceeds the maximum allowed size') ||
+        errorMessage.includes('INVALID_ARGUMENT') ||
+        errorMessage.includes('Request payload size exceeds') ||
+        errorMessage.includes('413') ||
+        errorMessage.includes('too large') ||
+        errorMessage.includes('size')
+      ) {
         alert('配置図の画像サイズが大きすぎます。より小さい画像を使用してください。');
       } else {
         alert('保存に失敗しました');
       }
+      console.error('保存エラー:', error);
       setSaveStatus('idle');
     }
   };
@@ -758,8 +777,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       // 背景画像を保持（全消去・元に戻す時に再利用）
       backgroundImageRef.current = img;
 
-      // 描画履歴を初期化（背景画像のスナップショットを初期状態として保存）
-      const initialSnapshot = canvasEl.toDataURL('image/png');
+      // 【修正A】描画履歴の初期スナップショットもJPEG圧縮で保存
+      const initialSnapshot = canvasEl.toDataURL('image/jpeg', 0.6);
       setCanvasHistory([initialSnapshot]);
 
       console.log('[キャンバス初期化] 完了 - サイズ:', canvasWidth, 'x', canvasHeight);
@@ -830,10 +849,10 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
 
-    // スナップショットを保存
+    // 【修正A】スナップショットをJPEG圧縮で保存
     const canvasEl = canvasElRef.current;
     if (canvasEl) {
-      const snapshot = canvasEl.toDataURL('image/png');
+      const snapshot = canvasEl.toDataURL('image/jpeg', 0.6);
       setCanvasHistory((prev) => [...prev, snapshot]);
     }
     setHasUnsavedChanges(true);
@@ -884,10 +903,10 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     if (!isDrawingRef.current) return;
     isDrawingRef.current = false;
 
-    // スナップショットを保存
+    // 【修正A】スナップショットをJPEG圧縮で保存
     const canvasEl = canvasElRef.current;
     if (canvasEl) {
-      const snapshot = canvasEl.toDataURL('image/png');
+      const snapshot = canvasEl.toDataURL('image/jpeg', 0.6);
       setCanvasHistory((prev) => [...prev, snapshot]);
     }
     setHasUnsavedChanges(true);
@@ -895,8 +914,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // ============================
-  // 【修正2】STEP2: 配置図アップロード処理
-  // saveDiagramImage のエラーメッセージ改善
+  // STEP2: 配置図アップロード処理
+  // 【修正B】saveDiagramImage のエラーメッセージ改善
   // ============================
   const handleDiagramUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || !e.target.files[0]) return;
@@ -918,10 +937,18 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
           const diagramCompressed = await compressDiagramImage(file);
           await saveDiagramImage(report.project, diagramCompressed, file.name);
           console.log('[配置図元画像保存] 完了 - 工事名:', report.project, 'ファイル名:', file.name);
-        } catch (saveErr) {
+        } catch (saveErr: any) {
           console.error('[配置図元画像保存] 失敗:', saveErr);
-          // 【修正2】Firestoreサイズ制限エラーの場合は専用メッセージを表示
-          if (isFirestoreSizeError(saveErr)) {
+          // 【修正B】画像サイズエラーの判定
+          const errorMessage = saveErr?.message || saveErr?.toString() || '';
+          if (
+            errorMessage.includes('exceeds the maximum allowed size') ||
+            errorMessage.includes('INVALID_ARGUMENT') ||
+            errorMessage.includes('Request payload size exceeds') ||
+            errorMessage.includes('413') ||
+            errorMessage.includes('too large') ||
+            errorMessage.includes('size')
+          ) {
             alert('配置図の画像サイズが大きすぎます。より小さい画像を使用してください。');
           }
           // それ以外のエラーはキャンバス表示を続行する（ログのみ）
@@ -1039,15 +1066,15 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
       ctx.drawImage(bgImg, 0, 0, canvasEl.width, canvasEl.height);
 
-      // 履歴をクリアし、背景画像のスナップショットのみに
-      const bgSnapshot = canvasEl.toDataURL('image/png');
+      // 【修正A】履歴クリア後のスナップショットもJPEG圧縮で保存
+      const bgSnapshot = canvasEl.toDataURL('image/jpeg', 0.6);
       setCanvasHistory([bgSnapshot]);
     }
   };
 
   // ============================
-  // 【修正2】STEP2: キャンバスを画像として書き出し＆保存
-  // saveDraft のサイズエラーメッセージ改善
+  // STEP2: キャンバスを画像として書き出し＆保存
+  // 【修正A】JPEG圧縮 + 【修正B】サイズエラーメッセージ改善
   // ============================
   const handleSaveCanvas = async () => {
     if (!report.project) {
@@ -1062,8 +1089,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       return;
     }
 
-    // png 形式で書き出し
-    const dataUrl = canvasEl.toDataURL('image/png');
+    // 【修正A】PNGからJPEG（品質60%）に変更し、dataURLのサイズを大幅に削減
+    const dataUrl = canvasEl.toDataURL('image/jpeg', 0.6);
     console.log('[handleSaveCanvas] toDataURL prefix:', dataUrl.substring(0, 30));
 
     // annotatedDiagramUrl に保存。currentDiagramSrc は更新しない（再初期化防止）
@@ -1077,14 +1104,22 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       setSaveStatus('saved');
       setHasUnsavedChanges(false);
       setShowCompleteModal(true);
-    } catch (e) {
-      console.error(e);
-      // 【修正2】Firestoreサイズ制限エラーを判定して適切なメッセージを表示
-      if (isFirestoreSizeError(e)) {
+    } catch (error: any) {
+      // 【修正B】画像サイズエラーの判定
+      const errorMessage = error?.message || error?.toString() || '';
+      if (
+        errorMessage.includes('exceeds the maximum allowed size') ||
+        errorMessage.includes('INVALID_ARGUMENT') ||
+        errorMessage.includes('Request payload size exceeds') ||
+        errorMessage.includes('413') ||
+        errorMessage.includes('too large') ||
+        errorMessage.includes('size')
+      ) {
         alert('配置図の画像サイズが大きすぎます。より小さい画像を使用してください。');
       } else {
         alert('保存に失敗しました');
       }
+      console.error('保存エラー:', error);
       setSaveStatus('idle');
     }
   };
