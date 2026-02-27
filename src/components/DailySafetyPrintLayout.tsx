@@ -119,11 +119,12 @@ const TH_WRAP: React.CSSProperties = {
 /** 赤字スタイル */
 const RED: React.CSSProperties = { color: 'red' };
 
-/** 全テーブル共通: border-collapse */
+/** 【修正】全テーブル共通: border-collapse + margin: 0 を明示 */
 const TABLE_BASE: React.CSSProperties = {
   width: '100%',
   borderCollapse: 'collapse' as const,
   tableLayout: 'fixed' as const,
+  margin: 0,
 };
 
 // ============================
@@ -461,6 +462,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                   style={{
                     width: '28mm',
                     borderCollapse: 'collapse' as const,
+                    margin: 0,
                   }}
                 >
                   <tbody>
@@ -523,6 +525,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
         {/* ==================================================================
             第3段: 統合テーブル（10行）→ 変更なし
             ================================================================== */}
+        {/* 【修正】marginBottom: '0px' を明示して第4段との隙間を排除 */}
         <table style={{ ...TABLE_BASE, marginBottom: '0px' }}>
           <colgroup>
             <col style={{ width: '14%' }} /> {/* 作業箇所・作業内容 */}
@@ -638,13 +641,15 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
         {/* ==================================================================
             第4段: 左右2カラム（ダンプ・人員・段階・立会（2行構成） ＋ 当現場確認項目）
             ダンプ台数の行を2行構成に変更し、rowspanで整理
+            【修正】marginBottom: '0px' を明示して第5段との隙間を完全に排除
             ================================================================== */}
-        <table style={{ ...TABLE_BASE, marginBottom: '0px' }}>
+        <table style={{ ...TABLE_BASE, marginBottom: '0px', marginTop: '0px' }}>
           <tbody>
             <tr>
               {/* === 左セル（50%）: ダンプ台数2行構成（rowSpan使用） === */}
               <td style={{ width: '50%', verticalAlign: 'top', padding: 0 }}>
-                <table style={{ ...TABLE_BASE }}>
+                {/* 【修正】内部テーブルにも margin: 0 を明示 */}
+                <table style={{ ...TABLE_BASE, marginBottom: '0px' }}>
                   <colgroup>
                     {/* 列幅: ダンプ台数ラベル12%、搬入搬出38%、本日の作業人員数30%、段階/立会確認20% */}
                     <col style={{ width: '12%' }} />
@@ -847,17 +852,18 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
         {/* ==================================================================
             第5段: 左右2カラム（作業連絡・巡視・配置図 ＋ 点検チェックリスト）
-            空白スペースを削除し、第4段の直下に隙間なく配置。
+            【修正】marginTop: '0px' を明示して第4段との隙間を完全に排除。
+            ダンプ台数の下罫線と作業連絡調整事項の上罫線が隙間なく接する。
             配置図の枠の縦幅を拡大してページ下部まで使う。
             ================================================================== */}
-        <table style={{ ...TABLE_BASE }}>
+        <table style={{ ...TABLE_BASE, marginTop: '0px' }}>
           <tbody>
             <tr>
               {/* ====================================
                   左セル（50%）: 作業連絡調整事項 + 巡視記録 + 配置図
                   ==================================== */}
               <td style={{ width: '50%', verticalAlign: 'top', padding: 0 }}>
-                {/* 作業連絡調整事項 + 巡視記録 + 巡視所見 + 配置図 を1つのテーブルにまとめる */}
+                {/* 作業連絡調整事項 + 巡視記録 + 配置図 を1つのテーブルにまとめる */}
                 <table style={{ ...TABLE_BASE }}>
                   <tbody>
                     {/* 作業連絡調整事項 ヘッダー行: 8.5px太字 */}
@@ -888,43 +894,49 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         {patrolRecord.coordinationNotes}
                       </td>
                     </tr>
-                    {/* 【修正】巡視点検者・巡視時間: patrolRecord 変数を使用 */}
+                    {/* ==================================================
+                        【修正】行3: 巡視点検者＋巡視所見を横並び1行に統合
+                        巡視点検者ラベル(15%) | データ(20%) | 巡視所見ラベル(15%) | データ(50%)
+                        ================================================== */}
                     <tr>
                       <td style={{ ...TH, width: '15%', height: '18px', fontSize: '8.5px' }}>巡視点検者</td>
-                      <td style={{ ...CELL, width: '35%', height: '18px', fontSize: '8.5px', ...RED }}>
+                      <td style={{ ...CELL, width: '20%', height: '18px', fontSize: '8.5px', ...RED }}>
                         {patrolRecord.inspector}
                       </td>
-                      <td style={{ ...TH, width: '15%', height: '18px', fontSize: '8.5px' }}>巡視時間</td>
-                      <td style={{ ...CELL, width: '35%', height: '18px', fontSize: '8.5px', ...RED }}>
-                        {patrolRecord.inspectionTime}
-                      </td>
-                    </tr>
-                    {/* 巡視所見ヘッダー: 8.5px太字 */}
-                    <tr>
+                      <td style={{ ...TH, width: '15%', height: '18px', fontSize: '8.5px' }}>巡視所見</td>
                       <td
-                        colSpan={4}
                         style={{
-                          ...TH,
-                          textAlign: 'left' as const,
-                          fontSize: '8.5px',
-                        }}
-                      >
-                        巡視所見
-                      </td>
-                    </tr>
-                    {/* 【修正】巡視所見データ: patrolRecord 変数を使用 */}
-                    <tr>
-                      <td
-                        colSpan={4}
-                        style={{
-                          ...CELL_WRAP,
-                          height: '28px',
+                          ...CELL,
+                          width: '50%',
+                          height: '18px',
                           fontSize: '8px',
-                          verticalAlign: 'top',
+                          whiteSpace: 'normal' as const,
+                          wordBreak: 'break-all' as const,
                           ...RED,
                         }}
                       >
                         {patrolRecord.findings}
+                      </td>
+                    </tr>
+                    {/* ==================================================
+                        【修正】行4: 巡視時間を下の行に配置
+                        巡視時間ラベル(15%) | データ(20%) | 空白セル(colspan=2, 残り幅)
+                        ================================================== */}
+                    <tr>
+                      <td style={{ ...TH, width: '15%', height: '18px', fontSize: '8.5px' }}>巡視時間</td>
+                      <td style={{ ...CELL, width: '20%', height: '18px', fontSize: '8.5px', ...RED }}>
+                        {patrolRecord.inspectionTime}
+                      </td>
+                      <td
+                        colSpan={2}
+                        style={{
+                          border: B,
+                          padding: '2px 4px',
+                          height: '18px',
+                          verticalAlign: 'middle',
+                        }}
+                      >
+                        {/* 空白セル */}
                       </td>
                     </tr>
                     {/* 配置図・略図 ヘッダー: 8.5px太字 */}
@@ -1024,7 +1036,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           border: B,
                         }}
                       >
-                        <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' as const, margin: 0 }}>
                           <tbody>{renderChecklistColumn(LEFT_CHECKLIST_KEYS)}</tbody>
                         </table>
                       </td>
@@ -1038,7 +1050,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           border: B,
                         }}
                       >
-                        <table style={{ width: '100%', borderCollapse: 'collapse' as const }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' as const, margin: 0 }}>
                           <tbody>{renderChecklistColumn(RIGHT_CHECKLIST_KEYS)}</tbody>
                         </table>
                       </td>
