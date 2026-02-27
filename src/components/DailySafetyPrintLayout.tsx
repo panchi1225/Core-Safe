@@ -119,7 +119,7 @@ const TH_WRAP: React.CSSProperties = {
 /** 赤字スタイル */
 const RED: React.CSSProperties = { color: 'red' };
 
-/** 【修正】全テーブル共通: border-collapse + margin: 0 を明示 */
+/** 全テーブル共通: border-collapse + margin: 0 を明示 */
 const TABLE_BASE: React.CSSProperties = {
   width: '100%',
   borderCollapse: 'collapse' as const,
@@ -142,7 +142,7 @@ interface Props {
 }
 
 // ============================
-// 【修正】丸囲みレンダリングヘルパー
+// 丸囲みレンダリングヘルパー
 // 「良・否」または「有・無」を表示し、選択された方を赤い丸枠線で表示
 // テキストは常に黒字、丸の枠線（border）のみ赤
 // ============================
@@ -192,7 +192,7 @@ function renderCircledChoice(
 // ============================
 const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   // ============================
-  // 【修正】安全なフォールバック変数の定義
+  // 安全なフォールバック変数の定義
   // data の各プロパティが undefined の場合にエラーにならないよう、
   // コンポーネント先頭で安全な変数に代入してから使用する
   // ============================
@@ -330,7 +330,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
     keys.forEach((key) => {
       const cat = CHECKLIST_CATEGORIES.find((c) => c.key === key);
       if (!cat) return;
-      /* 【修正】inspectionChecklist 変数を使用（data.step5InspectionChecklist への直接アクセスを排除） */
+      /* inspectionChecklist 変数を使用（data.step5InspectionChecklist への直接アクセスを排除） */
       const items = getVisibleItems(inspectionChecklist[key] || []);
 
       // 大分類ヘッダー行: 7.5px太字、height 13px
@@ -525,7 +525,6 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
         {/* ==================================================================
             第3段: 統合テーブル（10行）→ 変更なし
             ================================================================== */}
-        {/* 【修正】marginBottom: '0px' を明示して第4段との隙間を排除 */}
         <table style={{ ...TABLE_BASE, marginBottom: '0px' }}>
           <colgroup>
             <col style={{ width: '14%' }} /> {/* 作業箇所・作業内容 */}
@@ -639,27 +638,38 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
         </table>
 
         {/* ==================================================================
-            第4段: 左右2カラム（ダンプ・人員・段階・立会（2行構成） ＋ 当現場確認項目）
-            ダンプ台数の行を2行構成に変更し、rowspanで整理
-            【修正】marginBottom: '0px' を明示して第5段との隙間を完全に排除
+            【修正】第4段＋第5段 統合テーブル
+            従来は第4段（ダンプ＋当現場確認項目）と第5段（作業連絡＋点検チェックリスト）が
+            別々の <table> だったため、ブラウザがテーブル間に隙間を挿入していた。
+            これを1つの外枠 <table>（1行2列）に統合し、
+            左セル・右セルそれぞれの中に1つの内部テーブルで全行を配置することで、
+            ダンプ台数の行と作業連絡調整事項の行の間の隙間を完全に排除する。
             ================================================================== */}
-        <table style={{ ...TABLE_BASE, marginBottom: '0px', marginTop: '0px' }}>
+        <table style={{ ...TABLE_BASE }}>
           <tbody>
             <tr>
-              {/* === 左セル（50%）: ダンプ台数2行構成（rowSpan使用） === */}
+              {/* ====================================
+                  【修正】左セル（50%）: ダンプ台数 + 作業連絡調整事項 + 巡視記録 + 配置図
+                  全て1つの内部テーブルに配置（テーブル間の隙間が発生しない）
+                  ==================================== */}
               <td style={{ width: '50%', verticalAlign: 'top', padding: 0 }}>
-                {/* 【修正】内部テーブルにも margin: 0 を明示 */}
-                <table style={{ ...TABLE_BASE, marginBottom: '0px' }}>
+                <table style={{ ...TABLE_BASE }}>
                   <colgroup>
-                    {/* 列幅: ダンプ台数ラベル12%、搬入搬出38%、本日の作業人員数30%、段階/立会確認20% */}
+                    {/* 【修正】4列構成:
+                        列1(12%): ダンプ台数ラベル / 巡視点検者ラベル / 巡視時間ラベル
+                        列2(23%): 搬入搬出データ / 巡視点検者データ / 巡視時間データ
+                        列3(15%): 本日の作業人員数 / 巡視所見ラベル
+                        列4(50%): 段階確認・立会確認 / 巡視所見データ
+                    */}
                     <col style={{ width: '12%' }} />
-                    <col style={{ width: '38%' }} />
-                    <col style={{ width: '30%' }} />
-                    <col style={{ width: '20%' }} />
+                    <col style={{ width: '23%' }} />
+                    <col style={{ width: '15%' }} />
+                    <col style={{ width: '50%' }} />
                   </colgroup>
                   <tbody>
-                    {/* 行1: ダンプ台数ラベル(rowSpan=2) | 搬入 | 本日の作業人員数(rowSpan=2) | 段階確認 */}
+                    {/* ========== ダンプ台数 行1: 上段 ========== */}
                     <tr>
+                      {/* ダンプ台数ラベル: rowSpan=2、太字、中央寄せ、8px */}
                       <td
                         rowSpan={2}
                         style={{
@@ -674,6 +684,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       >
                         ダンプ台数
                       </td>
+                      {/* 搬入データ: 赤字、8px */}
                       <td
                         style={{
                           border: B,
@@ -686,6 +697,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       >
                         搬入：<span style={RED}>{dumpIncoming}</span>台
                       </td>
+                      {/* 本日の作業人員数: rowSpan=2、人数は赤字太字、中央寄せ、8px */}
                       <td
                         rowSpan={2}
                         style={{
@@ -719,8 +731,9 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         {renderCircledChoice(stageConfirmation, '有', '無')}
                       </td>
                     </tr>
-                    {/* 行2: (ダンプ台数はrowSpanで結合済) | 搬出 | (人員数はrowSpanで結合済) | 立会確認 */}
+                    {/* ========== ダンプ台数 行2: 下段 ========== */}
                     <tr>
+                      {/* 搬出データ: 赤字、8px */}
                       <td
                         style={{
                           border: B,
@@ -750,15 +763,145 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         {renderCircledChoice(witnessConfirmation, '有', '無')}
                       </td>
                     </tr>
+
+                    {/* ========== 【修正】ここからが旧第5段左セルの内容 ==========
+                        ダンプ台数の直下に隙間なく作業連絡調整事項が続く */}
+
+                    {/* 作業連絡調整事項 ヘッダー行: 8.5px太字 */}
+                    <tr>
+                      <td
+                        colSpan={4}
+                        style={{
+                          ...TH_WRAP,
+                          textAlign: 'left' as const,
+                          fontSize: '8.5px',
+                        }}
+                      >
+                        ＊作業連絡調整事項・打合せ・朝礼等周知事項・その他
+                      </td>
+                    </tr>
+                    {/* 作業連絡調整事項 データ行: patrolRecord 変数を使用 */}
+                    <tr>
+                      <td
+                        colSpan={4}
+                        style={{
+                          ...CELL_WRAP,
+                          height: '28px',
+                          fontSize: '8px',
+                          verticalAlign: 'top',
+                          ...RED,
+                        }}
+                      >
+                        {patrolRecord.coordinationNotes}
+                      </td>
+                    </tr>
+                    {/* 【修正】巡視点検者＋巡視所見を横並び1行に統合
+                        巡視点検者ラベル(列1) | データ(列2) | 巡視所見ラベル(列3) | データ(列4) */}
+                    <tr>
+                      <td style={{ ...TH, height: '18px', fontSize: '8.5px' }}>巡視点検者</td>
+                      <td style={{ ...CELL, height: '18px', fontSize: '8.5px', ...RED }}>
+                        {patrolRecord.inspector}
+                      </td>
+                      <td style={{ ...TH, height: '18px', fontSize: '8.5px' }}>巡視所見</td>
+                      <td
+                        style={{
+                          ...CELL,
+                          height: '18px',
+                          fontSize: '8px',
+                          whiteSpace: 'normal' as const,
+                          wordBreak: 'break-all' as const,
+                          ...RED,
+                        }}
+                      >
+                        {patrolRecord.findings}
+                      </td>
+                    </tr>
+                    {/* 【修正】巡視時間を下の行に配置
+                        巡視時間ラベル(列1) | データ(列2) | 空白セル(colSpan=2, 列3+列4) */}
+                    <tr>
+                      <td style={{ ...TH, height: '18px', fontSize: '8.5px' }}>巡視時間</td>
+                      <td style={{ ...CELL, height: '18px', fontSize: '8.5px', ...RED }}>
+                        {patrolRecord.inspectionTime}
+                      </td>
+                      <td
+                        colSpan={2}
+                        style={{
+                          border: B,
+                          padding: '2px 4px',
+                          height: '18px',
+                          verticalAlign: 'middle',
+                        }}
+                      >
+                        {/* 空白セル */}
+                      </td>
+                    </tr>
+                    {/* 配置図・略図 ヘッダー: 8.5px太字 */}
+                    <tr>
+                      <td
+                        colSpan={4}
+                        style={{
+                          ...TH,
+                          textAlign: 'left' as const,
+                          fontSize: '8.5px',
+                        }}
+                      >
+                        （配置図・略図）
+                      </td>
+                    </tr>
+                    {/* 配置図 画像セル: 縦幅230pxでページ下部まで活用 */}
+                    <tr>
+                      <td
+                        colSpan={4}
+                        style={{
+                          ...CELL,
+                          textAlign: 'center' as const,
+                          verticalAlign: 'middle',
+                          padding: '2px',
+                          height: '230px',
+                          whiteSpace: 'normal' as const,
+                        }}
+                      >
+                        {annotatedDiagramUrl ? (
+                          <img
+                            src={annotatedDiagramUrl}
+                            alt="配置図"
+                            style={{
+                              maxWidth: '100%',
+                              maxHeight: '220px',
+                              objectFit: 'contain' as const,
+                              display: 'block',
+                              margin: '0 auto',
+                            }}
+                          />
+                        ) : baseDiagramUrl ? (
+                          <img
+                            src={baseDiagramUrl}
+                            alt="配置図"
+                            style={{
+                              maxWidth: '100%',
+                              maxHeight: '220px',
+                              objectFit: 'contain' as const,
+                              display: 'block',
+                              margin: '0 auto',
+                            }}
+                          />
+                        ) : (
+                          <span>&nbsp;</span>
+                        )}
+                      </td>
+                    </tr>
                   </tbody>
                 </table>
               </td>
 
-              {/* === 右セル（50%）: 当現場確認項目（ヘッダー行＋5データ行）→ 変更なし === */}
+              {/* ====================================
+                  【修正】右セル（50%）: 当現場確認項目 + 点検チェックリスト
+                  全て1つの内部テーブルに配置（テーブル間の隙間が発生しない）
+                  ==================================== */}
               <td style={{ width: '50%', verticalAlign: 'top', padding: 0 }}>
                 <table style={{ ...TABLE_BASE }}>
                   <colgroup>
-                    {/* 列幅調整: No.列、確認項目列、結果列 × 左右 */}
+                    {/* 当現場確認項目の6列構成: No.列、確認項目列、結果列 × 左右 */}
                     <col style={{ width: '6%' }} />
                     <col style={{ width: '60%' }} />
                     <col style={{ width: '16%' }} />
@@ -794,7 +937,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {/* 【修正】siteConfirmationItems 変数を使用（data.step3SiteConfirmationItems への直接アクセスを排除） */}
+                    {/* 当現場確認項目データ行（5行 × 左右） */}
                     {[0, 1, 2, 3, 4].map((i) => {
                       const left = SITE_CONFIRMATION_LABELS[i];
                       const right = SITE_CONFIRMATION_LABELS[i + 5];
@@ -843,171 +986,12 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         </tr>
                       );
                     })}
-                  </tbody>
-                </table>
-              </td>
-            </tr>
-          </tbody>
-        </table>
 
-        {/* ==================================================================
-            第5段: 左右2カラム（作業連絡・巡視・配置図 ＋ 点検チェックリスト）
-            【修正】marginTop: '0px' を明示して第4段との隙間を完全に排除。
-            ダンプ台数の下罫線と作業連絡調整事項の上罫線が隙間なく接する。
-            配置図の枠の縦幅を拡大してページ下部まで使う。
-            ================================================================== */}
-        <table style={{ ...TABLE_BASE, marginTop: '0px' }}>
-          <tbody>
-            <tr>
-              {/* ====================================
-                  左セル（50%）: 作業連絡調整事項 + 巡視記録 + 配置図
-                  ==================================== */}
-              <td style={{ width: '50%', verticalAlign: 'top', padding: 0 }}>
-                {/* 作業連絡調整事項 + 巡視記録 + 配置図 を1つのテーブルにまとめる */}
-                <table style={{ ...TABLE_BASE }}>
-                  <tbody>
-                    {/* 作業連絡調整事項 ヘッダー行: 8.5px太字 */}
+                    {/* ========== 【修正】点検チェックリスト ヘッダー ==========
+                        colSpan=6 で当現場確認項目と同じ列数に合わせて全幅結合 */}
                     <tr>
                       <td
-                        colSpan={4}
-                        style={{
-                          ...TH_WRAP,
-                          textAlign: 'left' as const,
-                          fontSize: '8.5px',
-                        }}
-                      >
-                        ＊作業連絡調整事項・打合せ・朝礼等周知事項・その他
-                      </td>
-                    </tr>
-                    {/* 【修正】作業連絡調整事項 データ行: patrolRecord 変数を使用 */}
-                    <tr>
-                      <td
-                        colSpan={4}
-                        style={{
-                          ...CELL_WRAP,
-                          height: '28px',
-                          fontSize: '8px',
-                          verticalAlign: 'top',
-                          ...RED,
-                        }}
-                      >
-                        {patrolRecord.coordinationNotes}
-                      </td>
-                    </tr>
-                    {/* ==================================================
-                        【修正】行3: 巡視点検者＋巡視所見を横並び1行に統合
-                        巡視点検者ラベル(15%) | データ(20%) | 巡視所見ラベル(15%) | データ(50%)
-                        ================================================== */}
-                    <tr>
-                      <td style={{ ...TH, width: '15%', height: '18px', fontSize: '8.5px' }}>巡視点検者</td>
-                      <td style={{ ...CELL, width: '20%', height: '18px', fontSize: '8.5px', ...RED }}>
-                        {patrolRecord.inspector}
-                      </td>
-                      <td style={{ ...TH, width: '15%', height: '18px', fontSize: '8.5px' }}>巡視所見</td>
-                      <td
-                        style={{
-                          ...CELL,
-                          width: '50%',
-                          height: '18px',
-                          fontSize: '8px',
-                          whiteSpace: 'normal' as const,
-                          wordBreak: 'break-all' as const,
-                          ...RED,
-                        }}
-                      >
-                        {patrolRecord.findings}
-                      </td>
-                    </tr>
-                    {/* ==================================================
-                        【修正】行4: 巡視時間を下の行に配置
-                        巡視時間ラベル(15%) | データ(20%) | 空白セル(colspan=2, 残り幅)
-                        ================================================== */}
-                    <tr>
-                      <td style={{ ...TH, width: '15%', height: '18px', fontSize: '8.5px' }}>巡視時間</td>
-                      <td style={{ ...CELL, width: '20%', height: '18px', fontSize: '8.5px', ...RED }}>
-                        {patrolRecord.inspectionTime}
-                      </td>
-                      <td
-                        colSpan={2}
-                        style={{
-                          border: B,
-                          padding: '2px 4px',
-                          height: '18px',
-                          verticalAlign: 'middle',
-                        }}
-                      >
-                        {/* 空白セル */}
-                      </td>
-                    </tr>
-                    {/* 配置図・略図 ヘッダー: 8.5px太字 */}
-                    <tr>
-                      <td
-                        colSpan={4}
-                        style={{
-                          ...TH,
-                          textAlign: 'left' as const,
-                          fontSize: '8.5px',
-                        }}
-                      >
-                        （配置図・略図）
-                      </td>
-                    </tr>
-                    {/* 【修正】配置図 画像セル: 縦幅を大幅に拡大（230px）してページ下部まで活用 */}
-                    <tr>
-                      <td
-                        colSpan={4}
-                        style={{
-                          ...CELL,
-                          textAlign: 'center' as const,
-                          verticalAlign: 'middle',
-                          padding: '2px',
-                          height: '230px',
-                          whiteSpace: 'normal' as const,
-                        }}
-                      >
-                        {/* 【修正】annotatedDiagramUrl / baseDiagramUrl 変数を使用 */}
-                        {annotatedDiagramUrl ? (
-                          <img
-                            src={annotatedDiagramUrl}
-                            alt="配置図"
-                            style={{
-                              maxWidth: '100%',
-                              maxHeight: '220px',
-                              objectFit: 'contain' as const,
-                              display: 'block',
-                              margin: '0 auto',
-                            }}
-                          />
-                        ) : baseDiagramUrl ? (
-                          <img
-                            src={baseDiagramUrl}
-                            alt="配置図"
-                            style={{
-                              maxWidth: '100%',
-                              maxHeight: '220px',
-                              objectFit: 'contain' as const,
-                              display: 'block',
-                              margin: '0 auto',
-                            }}
-                          />
-                        ) : (
-                          <span>&nbsp;</span>
-                        )}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </td>
-
-              {/* ====================================
-                  右セル（50%）: 点検チェックリスト（変更なし）
-                  ==================================== */}
-              <td style={{ width: '50%', verticalAlign: 'top', padding: 0 }}>
-                {/* 点検チェックリスト ヘッダー: 7.5px太字 */}
-                <table style={{ ...TABLE_BASE }}>
-                  <tbody>
-                    <tr>
-                      <td
+                        colSpan={6}
                         style={{
                           border: B,
                           padding: '2px 3px',
@@ -1020,17 +1004,14 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         ② 点検チェックリスト　記号　○適正　△一部適正　×不適切　◎是正済　無印は該当無
                       </td>
                     </tr>
-                  </tbody>
-                </table>
 
-                {/* 点検チェックリスト本体: 左右2列 */}
-                <table style={{ ...TABLE_BASE }}>
-                  <tbody>
+                    {/* ========== 【修正】点検チェックリスト本体: 左右2列 ==========
+                        colSpan=3（左列）+ colSpan=3（右列）の2セル構成 */}
                     <tr>
                       {/* 左列: 管理、重機・機械、電気 */}
                       <td
+                        colSpan={3}
                         style={{
-                          width: '50%',
                           verticalAlign: 'top',
                           padding: 0,
                           border: B,
@@ -1043,8 +1024,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
                       {/* 右列: 墜落転落、飛来・落下崩壊・転倒、作業環境、その他 */}
                       <td
+                        colSpan={3}
                         style={{
-                          width: '50%',
                           verticalAlign: 'top',
                           padding: 0,
                           border: B,
