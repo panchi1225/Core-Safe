@@ -233,7 +233,7 @@ const CATEGORY_TITLES: Record<string, string> = {
 // 共通スタイル定数
 // ============================
 const B = '1px solid black';
-const B2 = '2px solid black'; // 太線用
+const B2 = '1px solid black'; // 修正17: 全罫線を細線(1px)に統一
 
 // 標準行高さ: 14px（ヘッダー行以外すべて。例外なし）
 const ROW_H = '14px';
@@ -619,11 +619,11 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
               <col style={{ width: '8%' }} />
               <col style={{ width: '4%' }} />
               <col style={{ width: '4%' }} />
-              <col style={{ width: '10%' }} />
-              <col style={{ width: '8%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '6%' }} />
               <col style={{ width: '25%' }} />
-              <col style={{ width: '23%' }} />
-              <col style={{ width: '5%' }} />
+              <col style={{ width: '21%' }} />
+              <col style={{ width: '7%' }} />
             </colgroup>
             <thead>
               <tr style={{ height: ROW_H }}>
@@ -692,7 +692,34 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       <col style={{ width: '38%' }} />
                     </colgroup>
                     <tbody>
-                      {/* 行1: ダンプ台数（搬入）+ 作業人員数 + 段階確認 */}
+                      {/* 修正18: 行順序入れ替え — 作業連絡調整事項を上に移動 */}
+
+                      {/* 行1: 作業連絡調整事項ヘッダー（14px） colSpan=5 */}
+                      <tr style={{ height: ROW_H }}>
+                        <td colSpan={5} style={{
+                          border: B, fontSize: FONT, fontWeight: 'bold',
+                          textAlign: 'left' as const, height: ROW_H, maxHeight: ROW_H,
+                          padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
+                          boxSizing: 'border-box' as const,
+                        }}>
+                          ＊作業連絡調整事項・打合せ・朝礼等周知事項・その他
+                        </td>
+                      </tr>
+
+                      {/* 行2-3: 作業連絡調整事項データ（2行分 = 28px）1行で高さ28px固定 */}
+                      <tr style={{ height: ROW_H2 }}>
+                        <td colSpan={5} style={{
+                          border: B, whiteSpace: 'normal' as const,
+                          height: ROW_H2, maxHeight: ROW_H2,
+                          verticalAlign: 'top', fontSize: FONT, padding: '1px 2px',
+                          overflow: 'hidden', lineHeight: '12px',
+                          boxSizing: 'border-box' as const, ...RED,
+                        }}>
+                          {workNotes || '\u00A0'}
+                        </td>
+                      </tr>
+
+                      {/* 行4: ダンプ台数（搬入）+ 作業人員数 + 段階確認 */}
                       <tr style={{ height: ROW_H }}>
                         {/* 列1: ダンプ台数ラベル rowSpan=2 */}
                         <td rowSpan={2} style={{
@@ -720,7 +747,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         }}>
                           本日の作業<br />人員数（実施）
                         </td>
-                        {/* 列4: ○名 rowSpan=2 修正11: 8pxに統一 */}
+                        {/* 列4: ○名 rowSpan=2 */}
                         <td rowSpan={2} style={{
                           border: B, textAlign: 'center' as const, verticalAlign: 'middle',
                           fontSize: FONT, fontWeight: 'bold', padding: '1px 2px',
@@ -740,7 +767,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           {circledChoice(stageConfirmation, '有', '無')}
                         </td>
                       </tr>
-                      {/* 行2: 搬出 + 立会確認 */}
+                      {/* 行5: 搬出 + 立会確認 */}
                       <tr style={{ height: ROW_H }}>
                         <td style={{
                           border: B, fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
@@ -757,31 +784,6 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           <span style={{ fontWeight: 'bold' }}>立会確認</span>
                           {'　'}
                           {circledChoice(witnessConfirmation, '有', '無')}
-                        </td>
-                      </tr>
-
-                      {/* 行3: 作業連絡調整事項ヘッダー（14px） colSpan=5 */}
-                      <tr style={{ height: ROW_H }}>
-                        <td colSpan={5} style={{
-                          border: B, fontSize: FONT, fontWeight: 'bold',
-                          textAlign: 'left' as const, height: ROW_H, maxHeight: ROW_H,
-                          padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const,
-                        }}>
-                          ＊作業連絡調整事項・打合せ・朝礼等周知事項・その他
-                        </td>
-                      </tr>
-
-                      {/* 修正12改: 行4-5: 作業連絡調整事項データ（2行分 = 28px）rowSpan廃止→1行で高さ28px固定 */}
-                      <tr style={{ height: ROW_H2 }}>
-                        <td colSpan={5} style={{
-                          border: B, whiteSpace: 'normal' as const,
-                          height: ROW_H2, maxHeight: ROW_H2,
-                          verticalAlign: 'top', fontSize: FONT, padding: '1px 2px',
-                          overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const, ...RED,
-                        }}>
-                          {workNotes || '\u00A0'}
                         </td>
                       </tr>
 
