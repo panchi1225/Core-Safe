@@ -311,8 +311,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   const workNotes = data?.workNotes || '';
   // 修正4: annotatedDiagramUrl優先、baseDiagramUrlフォールバック
   const diagramUrl = (data as any)?.annotatedDiagramUrl || (data as any)?.baseDiagramUrl || '';
-  const presenter = data?.presenter || '';
-  const projectName = data?.projectName || '';
+  const presenter = (data as any)?.presenter || data?.meetingConductor || '';
+  const projectName = (data as any)?.projectName || data?.project || '';
   const meetingDate = data?.meetingDate || '';
   const workDate = data?.workDate || '';
 
