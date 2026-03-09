@@ -41,13 +41,14 @@ const PATROL_TIME_OPTIONS: string[] = [
 
 // ============================
 // STEP5: 点検チェックリストの大分類定義
+// 【修正】タイトル表示名を仕様に合わせて変更
 // ============================
 const STEP5_CATEGORIES: { key: keyof Step5InspectionChecklist; title: string }[] = [
   { key: 'management', title: '管理' },
   { key: 'machinery', title: '重機・機械' },
   { key: 'electrical', title: '電気' },
-  { key: 'falling', title: '墜落転落' },
-  { key: 'debris', title: '飛来・落下崩壊・転倒' },
+  { key: 'falling', title: '墜落・転落' },           // 【修正】「墜落転落」→「墜落・転落」
+  { key: 'debris', title: '飛来・落下・崩壊・転倒' }, // 【修正】「飛来・落下崩壊・転倒」→「飛来・落下・崩壊・転倒」
   { key: 'environment', title: '作業環境' },
   { key: 'others', title: 'その他' },
 ];

@@ -532,14 +532,15 @@ export interface Step5InspectionItem {
 }
 
 /** STEP5 点検チェックリスト（7大分類） */
+/* 【修正】コメントの項目数を実際の構成に合わせて修正 */
 export interface Step5InspectionChecklist {
-  management: Step5InspectionItem[];       // 管理（固定10項目 + 自由2項目 = 12項目）
-  machinery: Step5InspectionItem[];        // 重機・機械（固定5項目 + 自由2項目 = 7項目）
-  electrical: Step5InspectionItem[];       // 電気（固定5項目 + 自由2項目 = 7項目）
-  falling: Step5InspectionItem[];          // 墜落転落（固定5項目 + 自由2項目 = 7項目）
-  debris: Step5InspectionItem[];           // 飛来・落下崩壊・転倒（固定5項目 + 自由2項目 = 7項目）
-  environment: Step5InspectionItem[];      // 作業環境（固定5項目 + 自由2項目 = 7項目）
-  others: Step5InspectionItem[];           // その他（固定5項目 + 自由3項目 = 8項目）
+  management: Step5InspectionItem[];       // 管理（固定10項目 + 自由1項目 = 11項目）
+  machinery: Step5InspectionItem[];        // 重機・機械（固定5項目 + 自由1項目 = 6項目）
+  electrical: Step5InspectionItem[];       // 電気（固定5項目 + 自由1項目 = 6項目）
+  falling: Step5InspectionItem[];          // 墜落・転落（固定5項目 + 自由1項目 = 6項目）
+  debris: Step5InspectionItem[];           // 飛来・落下・崩壊・転倒（固定5項目 + 自由1項目 = 6項目）
+  environment: Step5InspectionItem[];      // 作業環境（固定5項目 + 自由1項目 = 6項目）
+  others: Step5InspectionItem[];           // その他（固定5項目 + 自由2項目 = 7項目）
 }
 
 // ============================
@@ -879,74 +880,74 @@ function createInitialInspectionChecklist(): InspectionCategory[] {
 }
 
 /** STEP5 点検チェックリストの初期値を生成する（新規追加） */
+/* 【修正】全7大分類の固定項目ラベルを変更、自由記入欄を「その他」のみ2つ・他は全て1つに変更 */
 function createInitialStep5InspectionChecklist(): Step5InspectionChecklist {
   return {
+    // 【修正】管理: 固定11項目 + 自由1項目 = 計12項目
     management: [
-      { label: '朝（夕）礼・ＫＹミーティングの実施状況', value: '', isCustom: false },
-      { label: '各作業間の連絡・調整', value: '', isCustom: false },
-      { label: '作業主任者・有資格者の配置状況', value: '', isCustom: false },
-      { label: '保護具（保安帽・安全帯・マスク・メガネ等）の使用', value: '', isCustom: false },
-      { label: '救命胴衣の着用・浮き輪の常備', value: '', isCustom: false },
-      { label: '標識類（立入禁止・足場積載荷重・作業主任者）', value: '', isCustom: false },
-      { label: '建設廃棄物（許可証・契約書・マニュフェスト）', value: '', isCustom: false },
-      { label: '各種点検状況の確認・記録状況', value: '', isCustom: false },
+      { label: '朝礼・KYの実施', value: '', isCustom: false },
+      { label: '各作業間の連絡調整', value: '', isCustom: false },
+      { label: '作業主任者・有資格者の配置', value: '', isCustom: false },
+      { label: '保護具（保安帽・安全帯・マスク・メガネ等）の着用', value: '', isCustom: false },
+      { label: '救命胴衣・浮き輪の備え', value: '', isCustom: false },
+      { label: '標識類の設置（立入禁止・足場積載荷重・作業主任者）', value: '', isCustom: false },
+      { label: '廃棄物書類の整備（許可証・契約書・マニュフェスト）', value: '', isCustom: false },
+      { label: '各種点検・記録の確認', value: '', isCustom: false },
       { label: '建設業許可・労災成立・確認申請・占用許可等掲示', value: '', isCustom: false },
-      { label: 'その他掲示物管理（有効期限・汚れ等）', value: '', isCustom: false },
-      { label: '', value: '', isCustom: true },
+      { label: '掲示物の期限・汚損確認', value: '', isCustom: false },
+      { label: '新規入場者教育・作業内容の周知', value: '', isCustom: false },     
       { label: '', value: '', isCustom: true },
     ],
+    // 【修正】重機・機械: 固定5項目 + 自由1項目 = 計6項目
     machinery: [
-      { label: '始業点検記録・自主検査済証の確認', value: '', isCustom: false },
-      { label: '合図者・合図の方法・玉掛用具・玉掛方法・ワイヤー', value: '', isCustom: false },
-      { label: 'クレーン・重機の設置状況　立入禁止措置状況', value: '', isCustom: false },
-      { label: '安全装置（外れ止め・過巻防止装置等）', value: '', isCustom: false },
-      { label: '敷板・アウトリガ－・用途外使用', value: '', isCustom: false },
-      { label: '', value: '', isCustom: true },
+      { label: '始業点検・検査済証の確認', value: '', isCustom: false },
+      { label: '合図者・合図の方法・玉掛用具・ワイヤーの確認', value: '', isCustom: false },
+      { label: '重機・クレーンの設置状況、立ち入り禁止措置', value: '', isCustom: false },
+      { label: '安全装置の作動確認（外れ止め・過巻防止装置等）', value: '', isCustom: false },
+      { label: '敷板・アウトリガー・用途外使用', value: '', isCustom: false },
       { label: '', value: '', isCustom: true },
     ],
+    // 【修正】電気: 固定5項目 + 自由1項目 = 計6項目
     electrical: [
-      { label: '分電盤（取扱者表示・アース・行先表示）', value: '', isCustom: false },
-      { label: '配線（充電部養生・活線損傷・水浸し等）', value: '', isCustom: false },
-      { label: '電工ドラム・アース・ホルダー', value: '', isCustom: false },
-      { label: '架空電線防護措置', value: '', isCustom: false },
-      { label: '電動工具類の使用状況（カバー・刃の取付）', value: '', isCustom: false },
-      { label: '', value: '', isCustom: true },
+      { label: '分電盤の表示・アース確認', value: '', isCustom: false },
+      { label: '配線の損傷・漏電・水濡れ確認', value: '', isCustom: false },
+      { label: '電工ドラム・ホルダーの使用状況', value: '', isCustom: false },
+      { label: '架空電線の防護措置', value: '', isCustom: false },
+      { label: '電動工具のカバー・刃の確認', value: '', isCustom: false },
       { label: '', value: '', isCustom: true },
     ],
+    // 【修正】墜落・転落: 固定5項目 + 自由1項目 = 計6項目
     falling: [
-      { label: '手すり（足場・桟橋・開口部・床端等）', value: '', isCustom: false },
-      { label: '脚立・梯子・ローリングタワー使用状況', value: '', isCustom: false },
-      { label: '安全ネット・防網・親綱', value: '', isCustom: false },
-      { label: '昇降設備・安全通路', value: '', isCustom: false },
+      { label: '手すりの設置状況（足場・桟橋・開口部・床端等）', value: '', isCustom: false },
+      { label: '脚立・はしご・ローリングタワーの使用状況', value: '', isCustom: false },
+      { label: '安全ネット・親綱の設置', value: '', isCustom: false },
+      { label: '昇降設備・通路の確保', value: '', isCustom: false },
       { label: '足場・作業床の整理状況', value: '', isCustom: false },
       { label: '', value: '', isCustom: true },
-      { label: '', value: '', isCustom: true },
     ],
+    // 【修正】飛来・落下・崩壊・転倒: 固定5項目 + 自由1項目 = 計6項目
     debris: [
-      { label: '支保工（土止め・型枠・ずい道等）', value: '', isCustom: false },
-      { label: '切土・盛土・掘削・勾配', value: '', isCustom: false },
-      { label: '湧き水・浮石・落石・亀裂', value: '', isCustom: false },
-      { label: '足場（ヤラズ・壁つなぎ等）・作業構台', value: '', isCustom: false },
-      { label: '幅木の有無・足場上の資材・養生シート等', value: '', isCustom: false },
-      { label: '', value: '', isCustom: true },
+      { label: '支保工の設置状況', value: '', isCustom: false },
+      { label: '切土・盛土・掘削面の状況', value: '', isCustom: false },
+      { label: '湧水・浮石・亀裂の有無', value: '', isCustom: false },
+      { label: '足場・作業構台の安全状況', value: '', isCustom: false },
+      { label: '幅木・資材・シートの管理', value: '', isCustom: false },
       { label: '', value: '', isCustom: true },
     ],
+    // 【修正】作業環境: 固定5項目 + 自由1項目 = 計6項目
     environment: [
-      { label: '整理・整頓（事務所内・休憩所・通路・資材置場）', value: '', isCustom: false },
-      { label: '照明・採光・粉塵換気・有機溶剤換気', value: '', isCustom: false },
-      { label: '有機溶剤・アセ・酸素ボンベ・燃料等管理状況', value: '', isCustom: false },
-      { label: '火気使用状況（消火器・作業場所・休憩所）・タバコ', value: '', isCustom: false },
+      { label: '整理整頓の状況（事務所内・休憩所・通路・資材置場）', value: '', isCustom: false },
+      { label: '照明・換気の状況', value: '', isCustom: false },
+      { label: 'ボンベ・燃料類の管理', value: '', isCustom: false },
+      { label: '火気使用・消火器の管理、喫煙状況', value: '', isCustom: false },
       { label: '仮設トイレの衛生状況', value: '', isCustom: false },
       { label: '', value: '', isCustom: true },
-      { label: '', value: '', isCustom: true },
     ],
+    // 【修正】その他: 固定3項目 + 自由2項目 = 計5項目
     others: [
-      { label: '騒音・振動・水質汚濁・粉じん飛散等防止措置条項', value: '', isCustom: false },
-      { label: '過積載防止・運行速度管理', value: '', isCustom: false },
-      { label: '機械と作業員の分離措置及び誘導員、合図員の配置', value: '', isCustom: false },
-      { label: 'ウイルス対策', value: '', isCustom: false },
-      { label: '熱中症対策', value: '', isCustom: false },
-      { label: '', value: '', isCustom: true },
+      { label: '騒音・振動・粉じん・濁水対策', value: '', isCustom: false },
+      { label: '過積載防止・速度管理', value: '', isCustom: false },
+      { label: '重機と作業員の分離・誘導（合図者）配置', value: '', isCustom: false },
       { label: '', value: '', isCustom: true },
       { label: '', value: '', isCustom: true },
     ],
