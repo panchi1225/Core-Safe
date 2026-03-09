@@ -573,20 +573,20 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
           </table>
 
           {/* ==================================================================
-              修正14: 第2段基本情報行（1行9列、外枠太線、日付・実施者中央表示）
-              列幅: 6%, 32%, 6%, 7%, 5%, 7%, 9%, 7%, 21%
+              修正15: 第2段基本情報行（1行8列、外枠太線、日付・実施者中央表示）
+              列幅: 6%, 30%, 6%, 13%, 5%, 13%, 9%, 18%
+              打合せ日TD・作業日TDを1.5倍に拡大、右端空白セルを削除
               ================================================================== */}
           <table style={{ ...TABLE_BASE, border: B2 }}>
             <colgroup>
               <col style={{ width: '6%' }} />
-              <col style={{ width: '32%' }} />
+              <col style={{ width: '30%' }} />
               <col style={{ width: '6%' }} />
-              <col style={{ width: '7%' }} />
+              <col style={{ width: '13%' }} />
               <col style={{ width: '5%' }} />
-              <col style={{ width: '7%' }} />
+              <col style={{ width: '13%' }} />
               <col style={{ width: '9%' }} />
-              <col style={{ width: '7%' }} />
-              <col style={{ width: '21%' }} />
+              <col style={{ width: '18%' }} />
             </colgroup>
             <tbody>
               <tr style={{ height: ROW_H }}>
@@ -601,14 +601,9 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                   {toWareki(workDate)}{getWeekdayLabel(workDate)}
                 </td>
                 <th style={{ ...TH, borderTop: B2, borderBottom: B2 }}>打合せ実施者</th>
-                <td style={{ ...CELL, textAlign: 'center' as const, borderTop: B2, borderBottom: B2, ...RED }}>
+                <td style={{ ...CELL, textAlign: 'center' as const, borderTop: B2, borderBottom: B2, borderRight: B2, ...RED }}>
                   {presenter}
                 </td>
-                {/* 右端の空白セル（枠なし） */}
-                <td style={{
-                  border: 'none', height: ROW_H, maxHeight: ROW_H, padding: 0,
-                  boxSizing: 'border-box' as const,
-                }}>{'\u00A0'}</td>
               </tr>
             </tbody>
           </table>
@@ -777,9 +772,9 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         </td>
                       </tr>
 
-                      {/* 修正12: 行4-5: 作業連絡調整事項データ（2行分 = 28px） */}
-                      <tr style={{ height: ROW_H }}>
-                        <td colSpan={5} rowSpan={2} style={{
+                      {/* 修正12改: 行4-5: 作業連絡調整事項データ（2行分 = 28px）rowSpan廃止→1行で高さ28px固定 */}
+                      <tr style={{ height: ROW_H2 }}>
+                        <td colSpan={5} style={{
                           border: B, whiteSpace: 'normal' as const,
                           height: ROW_H2, maxHeight: ROW_H2,
                           verticalAlign: 'top', fontSize: FONT, padding: '1px 2px',
@@ -789,8 +784,6 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           {workNotes || '\u00A0'}
                         </td>
                       </tr>
-                      {/* rowSpan=2の2行目（空tr） */}
-                      <tr style={{ height: ROW_H }} />
 
                       {/* 修正3: 行6: 巡視点検者 + 巡視所見（rowSpan=2） */}
                       <tr style={{ height: ROW_H }}>
