@@ -255,6 +255,9 @@ const TABLE_BASE: React.CSSProperties = {
   padding: 0,
 };
 
+// 修正21: インデント2em用の定数
+const INDENT2 = '2em';
+
 /** 全セル共通スタイル（14px強制、8px統一） */
 const CELL: React.CSSProperties = {
   border: B,
@@ -464,6 +467,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
               textAlign: 'left' as const, height: ROW_H, maxHeight: ROW_H,
               lineHeight: '12px', overflow: 'hidden', textOverflow: 'ellipsis',
               whiteSpace: 'nowrap' as const, boxSizing: 'border-box' as const,
+              textIndent: INDENT2,
             }}>
               {item.label || '\u00A0'}
             </td>
@@ -488,7 +492,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
               border: B, padding: '0px 1px', fontSize: FONT, height: ROW_H,
               maxHeight: ROW_H, lineHeight: '12px', overflow: 'hidden',
               textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
-              boxSizing: 'border-box' as const,
+              boxSizing: 'border-box' as const, textIndent: INDENT2,
             }}>
               {blankData.label || '\u00A0'}
             </td>
@@ -658,14 +662,14 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
                 return (
                   <tr key={idx} style={{ height: ROW_H }}>
-                    <td style={dataCell}>{row.workContent || '\u00A0'}</td>
-                    <td style={dataCell}>{row.company || '\u00A0'}</td>
+                    <td style={{ ...dataCell, textIndent: INDENT2 }}>{row.workContent || '\u00A0'}</td>
+                    <td style={{ ...dataCell, textIndent: INDENT2 }}>{row.company || '\u00A0'}</td>
                     <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.plannedWorkers || '\u00A0'}</td>
                     <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.actualWorkersVal || '\u00A0'}</td>
-                    <td style={{ ...dataCell, whiteSpace: 'nowrap' as const }}>{renderMachineContent()}</td>
+                    <td style={{ ...dataCell, whiteSpace: 'nowrap' as const, textIndent: INDENT2 }}>{renderMachineContent()}</td>
                     <td style={dataCell}>{row.material || '\u00A0'}</td>
-                    <td style={{ ...dataCell, whiteSpace: 'normal' as const }}>{row.safetyInstruction || '\u00A0'}</td>
-                    <td style={{ ...dataCell, whiteSpace: 'normal' as const }}>{row.confirmationLabel || '\u00A0'}</td>
+                    <td style={{ ...dataCell, whiteSpace: 'normal' as const, textIndent: INDENT2 }}>{row.safetyInstruction || '\u00A0'}</td>
+                    <td style={{ ...dataCell, whiteSpace: 'normal' as const, textIndent: INDENT2 }}>{row.confirmationLabel || '\u00A0'}</td>
                     <td style={{ ...CELL, textAlign: 'center' as const }}>
                       {circledChoice(row.confirmationResult, '良', '否')}
                     </td>
@@ -924,7 +928,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                               border: B, fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
                               padding: '1px 2px', whiteSpace: 'normal' as const,
                               overflow: 'hidden', lineHeight: '12px',
-                              boxSizing: 'border-box' as const, ...RED,
+                              boxSizing: 'border-box' as const, textIndent: INDENT2, ...RED,
                             }}>
                               {left?.label || '\u00A0'}
                             </td>
@@ -940,7 +944,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                               border: B, fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
                               padding: '1px 2px', whiteSpace: 'normal' as const,
                               overflow: 'hidden', lineHeight: '12px',
-                              boxSizing: 'border-box' as const, ...RED,
+                              boxSizing: 'border-box' as const, textIndent: INDENT2, ...RED,
                             }}>
                               {right?.label || '\u00A0'}
                             </td>
