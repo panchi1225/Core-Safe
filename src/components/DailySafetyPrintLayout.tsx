@@ -315,7 +315,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   const patrolRecord = data?.patrolRecord || ({} as any);
   const stageConfirmation = data?.stageConfirmation || '';
   const witnessConfirmation = data?.witnessConfirmation || '';
-  const workNotes = data?.workNotes || '';
+  // 修正22: workNotesフィールド名修正（patrolRecord.coordinationNotesが正しいフィールド名）
+  const workNotes = (data as any)?.workNotes || patrolRecord?.coordinationNotes || '';
   // 修正4: annotatedDiagramUrl優先、baseDiagramUrlフォールバック
   const diagramUrl = (data as any)?.annotatedDiagramUrl || (data as any)?.baseDiagramUrl || '';
   const presenter = (data as any)?.presenter || data?.meetingConductor || '';
@@ -897,7 +898,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     ==================================== */}
                 <td style={{ width: '53%', verticalAlign: 'top', padding: 0, border: 'none', height: '100%' }}>
                   {/* Part A: 当現場確認項目（ヘッダー1行 + データ5行 = 6行） */}
-                  <table style={{ ...TABLE_BASE }}>
+                  <table style={{ ...TABLE_BASE, marginLeft: '-1px', width: 'calc(100% + 1px)' }}>
                     <colgroup>
                       <col style={{ width: '37%' }} />
                       <col style={{ width: '13%' }} />
@@ -963,7 +964,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                   </table>
 
                   {/* Part B: 巡視点検チェックリスト（タイトル1行 + 27行 = 28行） */}
-                  <table style={{ ...TABLE_BASE, marginTop: '-1px' }}>
+                  <table style={{ ...TABLE_BASE, marginTop: '-1px', marginLeft: '-1px', width: 'calc(100% + 1px)' }}>
                     <tbody>
                       {/* タイトル行（14px） */}
                       <tr style={{ height: ROW_H }}>
@@ -979,7 +980,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       {/* チェックリスト本体: 左右2列（各50%） */}
                       <tr>
                         <td colSpan={2} style={{
-                          width: '50%', verticalAlign: 'top', padding: 0, border: B,
+                          width: '50%', verticalAlign: 'top', padding: 0,
+                          border: 'none',
                         }}>
                           <table style={{
                             width: '100%', borderCollapse: 'collapse' as const,
@@ -993,11 +995,13 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           </table>
                         </td>
                         <td colSpan={2} style={{
-                          width: '50%', verticalAlign: 'top', padding: 0, border: B,
+                          width: '50%', verticalAlign: 'top', padding: 0,
+                          border: 'none',
                         }}>
                           <table style={{
                             width: '100%', borderCollapse: 'collapse' as const,
                             tableLayout: 'fixed' as const, margin: 0,
+                            marginLeft: '-1px',
                           }}>
                             <colgroup>
                               <col style={{ width: '80%' }} />
