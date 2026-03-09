@@ -487,7 +487,8 @@ export interface WorkEntry {
   company: string;           // 会社名（contractorsマスタ選択）
   plannedWorkers: number;    // 人数（予定）
   actualWorkers: number;     // 人数（実施）（STEP3で入力）
-  machine: string;           // 機械（machinesマスタ選択）
+  machine: string;           // 【修正1】機械1（machinesマスタ選択）
+  machine2: string;          // 【修正1】機械2（machinesマスタ選択）
   isAdditional: boolean;     // 追加作業フラグ（当日追加は true）
 }
 
@@ -621,7 +622,8 @@ export interface DailySafetyReportData {
   // --- STEP1: 作業内容（前日入力） ---
   workEntries: WorkEntry[];     // 作業内容セット（複数追加可）
   materialEntries: string[];    // 搬出入資機材（資機材マスタから選択、複数追加可）
-  preparationEntries: string[]; // 段取り資材等（資機材マスタから選択、複数追加可）
+  // 【修正2】preparationEntries をオプショナルに変更（後方互換性のため残す）
+  preparationEntries?: string[];
   safetyInstructions: string[]; // 安全衛生指示事項（safetyInstructionItemsマスタ選択、複数追加可）
 
   // --- STEP2: 配置図（前日入力） ---
@@ -975,7 +977,7 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
   // --- STEP1: 作業内容（前日入力） ---
   workEntries: [],
   materialEntries: [],
-  preparationEntries: [],
+  // 【修正2】preparationEntries を削除（オプショナルのため省略可）
   // 【修正】安全衛生指示事項: 7個→10個に変更
   safetyInstructions: ['', '', '', '', '', '', '', '', '', ''],
 

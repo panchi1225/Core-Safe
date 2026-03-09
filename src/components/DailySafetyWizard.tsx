@@ -306,7 +306,7 @@ function generateId(): string {
 }
 
 // ============================
-// 空の作業内容エントリ生成
+// 【修正1】空の作業内容エントリ生成 — machine2 を追加
 // ============================
 function createEmptyWorkEntry(): WorkEntry {
   return {
@@ -316,6 +316,7 @@ function createEmptyWorkEntry(): WorkEntry {
     plannedWorkers: 1,
     actualWorkers: 0,
     machine: '',
+    machine2: '',  // 【修正1】機械2の初期値
     isAdditional: false,
   };
 }
@@ -438,6 +439,13 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       if (!restored.step5InspectionChecklist) {
         restored.step5InspectionChecklist = INITIAL_DAILY_SAFETY_REPORT.step5InspectionChecklist;
       }
+      /* 【修正1】既存データの workEntries に machine2 がない場合のフォールバック */
+      if (restored.workEntries) {
+        restored.workEntries = restored.workEntries.map((entry: any) => ({
+          ...entry,
+          machine2: entry.machine2 ?? '',
+        }));
+      }
       return restored;
     }
     const init = { ...INITIAL_DAILY_SAFETY_REPORT };
@@ -447,9 +455,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     if (init.materialEntries.length === 0) {
       init.materialEntries = [''];
     }
-    if (init.preparationEntries.length === 0) {
-      init.preparationEntries = [''];
-    }
+    // 【修正2】preparationEntries の初期化を削除
     // 【修正】10個に合わせて初期化
     init.safetyInstructions = Array(SAFETY_INSTRUCTIONS_COUNT).fill('');
     return init;
@@ -693,8 +699,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     });
   };
 
+  // 【修正2】updateListEntry から 'preparationEntries' を除外
   const updateListEntry = (
-    field: 'materialEntries' | 'preparationEntries' | 'safetyInstructions',
+    field: 'materialEntries' | 'safetyInstructions',
     index: number,
     value: string
   ) => {
@@ -707,7 +714,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     setSaveStatus('idle');
   };
 
-  const addListEntry = (field: 'materialEntries' | 'preparationEntries') => {
+  // 【修正2】addListEntry から 'preparationEntries' を除外
+  const addListEntry = (field: 'materialEntries') => {
     setReport((prev) => ({
       ...prev,
       [field]: [...prev[field], ''],
@@ -716,8 +724,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     setSaveStatus('idle');
   };
 
+  // 【修正2】removeListEntry から 'preparationEntries' を除外
   const removeListEntry = (
-    field: 'materialEntries' | 'preparationEntries',
+    field: 'materialEntries',
     index: number
   ) => {
     setReport((prev) => {
@@ -1488,12 +1497,30 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   </select>
                 </div>
 
+                {/* 【修正1】主要機械①（machine） */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">機械</label>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">主要機械①</label>
                   <select
                     className="w-full p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
                     value={entry.machine}
                     onChange={(e) => updateWorkEntry(entry.id, 'machine', e.target.value)}
+                  >
+                    <option value="">選択してください</option>
+                    {masterData.machines.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 【修正1】主要機械②（machine2）— 任意入力 */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">主要機械②</label>
+                  <select
+                    className="w-full p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
+                    value={entry.machine2}
+                    onChange={(e) => updateWorkEntry(entry.id, 'machine2', e.target.value)}
                   >
                     <option value="">選択してください</option>
                     {masterData.machines.map((m) => (
@@ -1550,39 +1577,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         </button>
       </div>
 
-      {/* (7) 段取り資材等 */}
-      <div>
-        <label className="block text-sm font-bold text-gray-700 mb-2">段取り資材等（任意）</label>
-        {report.preparationEntries.map((val, idx) => (
-          <div key={idx} className="flex items-center gap-2 mb-2">
-            <select
-              className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
-              value={val}
-              onChange={(e) => updateListEntry('preparationEntries', idx, e.target.value)}
-            >
-              <option value="">選択してください</option>
-              {masterData.equipment.map((eq) => (
-                <option key={eq} value={eq}>
-                  {eq}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => removeListEntry('preparationEntries', idx)}
-              className="text-gray-400 hover:text-red-500 p-1 transition-colors shrink-0"
-              title="削除"
-            >
-              <i className="fa-solid fa-xmark"></i>
-            </button>
-          </div>
-        ))}
-        <button
-          onClick={() => addListEntry('preparationEntries')}
-          className="text-sm text-pink-600 font-bold hover:underline"
-        >
-          <i className="fa-solid fa-plus mr-1"></i>追加
-        </button>
-      </div>
+      {/* 【修正2】段取り資材等の入力UIを完全削除 */}
 
       {/* (8) 安全衛生指示事項 — 【修正】10個固定表示 */}
       <div>
@@ -1803,10 +1798,18 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   </div>
                 </div>
 
+                {/* 【修正1】主要機械①・②を表示 */}
                 <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">主要機械</label>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">主要機械①</label>
                   <div className="w-full p-2 border border-gray-200 rounded bg-gray-100 text-gray-700 text-sm">
                     {entry.machine || '（未選択）'}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 mb-1">主要機械②</label>
+                  <div className="w-full p-2 border border-gray-200 rounded bg-gray-100 text-gray-700 text-sm">
+                    {entry.machine2 || '（未選択）'}
                   </div>
                 </div>
 

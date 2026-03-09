@@ -200,7 +200,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   const additionalEntries = data.step3AdditionalWorkEntries || [];
   const actualWorkers = data.actualWorkers || [];
   const materialEntries = data.materialEntries || [];
-  const preparationEntries = data.preparationEntries || [];
+  // 【修正2】preparationEntries を削除（フォールバック変数も不要）
   const safetyInstructions = data.safetyInstructions || [];
   const confirmationItems = data.step3ConfirmationItems || ({} as any);
   const siteConfirmationItems = data.step3SiteConfirmationItems || ({} as any);
@@ -233,15 +233,15 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   const dumpIncoming = dumpTrucks.incoming;
   const dumpOutgoing = dumpTrucks.outgoing;
 
-  // --- 統合テーブル用の行データ生成（STEP1 + STEP3追加 → 10行固定に埋める） ---
+  // --- 【修正1】【修正2】統合テーブル用の行データ生成（段取り資材等を削除、machine2を追加） ---
   type IntegratedRowData = {
     workContent: string;
     company: string;
     plannedWorkers: string;
     actualWorkers: string;
-    machine: string;
+    machine: string;       // 【修正1】機械1
+    machine2: string;      // 【修正1】機械2
     material: string;
-    preparation: string;
     safetyInstruction: string;
     confirmationLabel: string;
     confirmationResult: string;
@@ -261,8 +261,9 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
       plannedWorkers: String(entry.plannedWorkers || ''),
       actualWorkers: actualCount > 0 ? String(actualCount) : '',
       machine: entry.machine || '',
+      machine2: entry.machine2 || '',   // 【修正1】機械2を取得
       material: materialEntries[index] || '',
-      preparation: preparationEntries[index] || '',
+      // 【修正2】preparation フィールドを削除
       safetyInstruction: '',
       confirmationLabel: '',
       confirmationResult: '',
@@ -279,8 +280,9 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
       plannedWorkers: '',
       actualWorkers: entry.actualWorkers > 0 ? String(entry.actualWorkers) : '',
       machine: entry.machines ? entry.machines.filter((m: any) => m).join(', ') : '',
+      machine2: '',   // 【修正1】追加作業にはmachine2はなし
       material: '',
-      preparation: '',
+      // 【修正2】preparation フィールドを削除
       safetyInstruction: '',
       confirmationLabel: '',
       confirmationResult: '',
@@ -297,8 +299,9 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
       plannedWorkers: '',
       actualWorkers: '',
       machine: '',
+      machine2: '',    // 【修正1】空行にもmachine2を設定
       material: '',
-      preparation: '',
+      // 【修正2】preparation フィールドを削除
       safetyInstruction: '',
       confirmationLabel: '',
       confirmationResult: '',
@@ -523,20 +526,21 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
         </table>
 
         {/* ==================================================================
-            第3段: 統合テーブル（10行）→ 変更なし
+            【修正2】第3段: 統合テーブル（10行）— 9列構成（段取り資材等を削除）
+            【修正1】主要機械列: machine + machine2 を改行で表示
             ================================================================== */}
         <table style={{ ...TABLE_BASE, marginBottom: '0px' }}>
           <colgroup>
-            <col style={{ width: '14%' }} /> {/* 作業箇所・作業内容 */}
+            {/* 【修正2】9列に再調整（段取り資材等の列を削除） */}
+            <col style={{ width: '15%' }} /> {/* 作業箇所・作業内容 */}
             <col style={{ width: '8%' }} />  {/* 会社名 */}
             <col style={{ width: '5%' }} />  {/* 人数(予定) */}
             <col style={{ width: '5%' }} />  {/* 人数(実施) */}
-            <col style={{ width: '10%' }} /> {/* 主要機械 */}
+            <col style={{ width: '11%' }} /> {/* 主要機械 */}
             <col style={{ width: '8%' }} />  {/* 搬出入資機材 */}
-            <col style={{ width: '8%' }} />  {/* 段取り資材等 */}
-            <col style={{ width: '22%' }} /> {/* 安全衛生指示事項 */}
-            <col style={{ width: '16%' }} /> {/* 基本確認事項 */}
-            <col style={{ width: '4%' }} />  {/* 結果 */}
+            <col style={{ width: '24%' }} /> {/* 安全衛生指示事項 */}
+            <col style={{ width: '19%' }} /> {/* 基本確認事項 */}
+            <col style={{ width: '5%' }} />  {/* 結果 */}
           </colgroup>
           <thead>
             <tr>
@@ -554,9 +558,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
               <th style={{ ...TH, fontSize: '8px', height: '17px', whiteSpace: 'normal' as const, lineHeight: 1.1 }}>
                 搬出入<br />資機材
               </th>
-              <th style={{ ...TH, fontSize: '8px', height: '17px', whiteSpace: 'normal' as const, lineHeight: 1.1 }}>
-                段取り<br />資材等
-              </th>
+              {/* 【修正2】段取り資材等のヘッダーを削除 */}
               <th style={{ ...TH, fontSize: '8px', height: '17px' }}>安全衛生指示事項</th>
               <th style={{ ...TH, fontSize: '8px', height: '17px' }}>基本確認事項</th>
               <th style={{ ...TH, fontSize: '8px', height: '17px' }}>結果</th>
@@ -614,6 +616,39 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                 textAlign: 'center' as const,
               };
 
+              // 【修正1】主要機械セルのスタイル: 折り返し許可、lineHeight 1.2
+              const machineCellStyle: React.CSSProperties = {
+                border: B,
+                padding: '3px 4px',
+                fontSize: '7.5px',
+                height: '17px',
+                lineHeight: 1.2,
+                verticalAlign: 'middle',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'normal' as const,  // 【修正1】折り返し許可
+                ...(isAdd ? RED : {}),
+              };
+
+              // 【修正1】主要機械の表示内容を生成
+              const renderMachineContent = () => {
+                const m1 = row.machine || '';
+                const m2 = row.machine2 || '';
+                if (m1 && m2) {
+                  // 両方ある場合: 改行で区切って上下2行表示
+                  return <>{m1}<br />{m2}</>;
+                } else if (m1) {
+                  // machine1のみ
+                  return <>{m1}</>;
+                } else if (m2) {
+                  // machine2のみ
+                  return <>{m2}</>;
+                } else {
+                  // 両方空の場合
+                  return <>{'\u00A0'}</>;
+                }
+              };
+
               return (
                 <tr key={idx}>
                   <td style={baseCellStyle}>{row.workContent || '\u00A0'}</td>
@@ -622,9 +657,10 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     {isAdd ? '\u00A0' : (row.plannedWorkers || '\u00A0')}
                   </td>
                   <td style={actualCellStyle}>{row.actualWorkers || '\u00A0'}</td>
-                  <td style={baseCellStyle}>{row.machine || '\u00A0'}</td>
+                  {/* 【修正1】主要機械: machine + machine2 を改行で表示 */}
+                  <td style={machineCellStyle}>{renderMachineContent()}</td>
                   <td style={baseCellStyle}>{row.material || '\u00A0'}</td>
-                  <td style={baseCellStyle}>{row.preparation || '\u00A0'}</td>
+                  {/* 【修正2】段取り資材等のデータセルを削除 */}
                   <td style={safetyCellStyle}>{row.safetyInstruction || '\u00A0'}</td>
                   <td style={confirmCellStyle}>{row.confirmationLabel || '\u00A0'}</td>
                   {/* 結果: 良・否の両方表示＋赤い丸枠線方式（テキストは黒字） */}
