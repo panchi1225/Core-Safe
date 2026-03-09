@@ -255,7 +255,8 @@ const TABLE_BASE: React.CSSProperties = {
   padding: 0,
 };
 
-// 修正21: インデント2em用の定数
+// 修正21: インデント用の定数
+const INDENT1 = '1em';
 const INDENT2 = '2em';
 
 /** 全セル共通スタイル（14px強制、8px統一） */
@@ -663,12 +664,12 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
                 return (
                   <tr key={idx} style={{ height: ROW_H }}>
-                    <td style={{ ...dataCell, textIndent: INDENT2 }}>{row.workContent || '\u00A0'}</td>
-                    <td style={{ ...dataCell, textIndent: INDENT2 }}>{row.company || '\u00A0'}</td>
+                    <td style={{ ...dataCell, textIndent: INDENT1 }}>{row.workContent || '\u00A0'}</td>
+                    <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.company || '\u00A0'}</td>
                     <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.plannedWorkers || '\u00A0'}</td>
                     <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.actualWorkersVal || '\u00A0'}</td>
-                    <td style={{ ...dataCell, whiteSpace: 'nowrap' as const, textIndent: INDENT2 }}>{renderMachineContent()}</td>
-                    <td style={dataCell}>{row.material || '\u00A0'}</td>
+                    <td style={{ ...dataCell, whiteSpace: 'nowrap' as const, textAlign: 'center' as const }}>{renderMachineContent()}</td>
+                    <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.material || '\u00A0'}</td>
                     <td style={{ ...dataCell, whiteSpace: 'normal' as const, textIndent: INDENT2 }}>{row.safetyInstruction || '\u00A0'}</td>
                     <td style={{ ...dataCell, whiteSpace: 'normal' as const, textIndent: INDENT2 }}>{row.confirmationLabel || '\u00A0'}</td>
                     <td style={{ ...CELL, textAlign: 'center' as const }}>
@@ -747,7 +748,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           height: ROW_H2, maxHeight: ROW_H2,
                           verticalAlign: 'top', fontSize: FONT, padding: '1px 2px',
                           overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const, ...RED,
+                          boxSizing: 'border-box' as const, textIndent: INDENT1, ...RED,
                         }}>
                           {workNotes || '\u00A0'}
                         </td>
@@ -764,7 +765,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         <td style={{
                           border: B, fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const,
+                          boxSizing: 'border-box' as const, textAlign: 'center' as const,
                         }}>
                           搬入：<span style={RED}>{dumpIncoming}</span>台
                         </td>
@@ -786,7 +787,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         <td style={{
                           border: B, fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const,
+                          boxSizing: 'border-box' as const, textAlign: 'center' as const,
                         }}>
                           搬出：<span style={RED}>{dumpOutgoing}</span>台
                         </td>
@@ -827,7 +828,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         <td style={{
                           border: B, fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const, ...RED,
+                          boxSizing: 'border-box' as const, textAlign: 'center' as const, ...RED,
                         }}>
                           {patrolRecord.inspector || '\u00A0'}
                         </td>
@@ -843,7 +844,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           border: B, fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', whiteSpace: 'normal' as const,
                           overflow: 'hidden', lineHeight: '12px', verticalAlign: 'top',
-                          boxSizing: 'border-box' as const, ...RED,
+                          boxSizing: 'border-box' as const, textIndent: INDENT1, ...RED,
                         }}>
                           {patrolRecord.findings || '\u00A0'}
                         </td>
@@ -862,7 +863,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         <td style={{
                           border: B, fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const, ...RED,
+                          boxSizing: 'border-box' as const, textAlign: 'center' as const, ...RED,
                         }}>
                           {patrolRecord.inspectionTime || '\u00A0'}
                         </td>
@@ -985,10 +986,10 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                   {/* Part B: 巡視点検チェックリスト（タイトル1行 + 27行 = 28行） */}
                   <table style={{ ...TABLE_BASE, marginTop: '-1px', marginLeft: '-1px', width: 'calc(100% + 1px)' }}>
                     <tbody>
-                      {/* タイトル行（14px） */}
+                      {/* タイトル行（14px）修正25: borderBottomをnoneにして内側テーブルの上辺との二重罫線防止 */}
                       <tr style={{ height: ROW_H }}>
                         <td colSpan={4} style={{
-                          border: B, fontSize: FONT, fontWeight: 'bold',
+                          border: B, borderBottom: 'none', fontSize: FONT, fontWeight: 'bold',
                           textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
                           padding: '0px 1px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const,
