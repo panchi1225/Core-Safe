@@ -235,6 +235,10 @@ const CATEGORY_TITLES: Record<string, string> = {
 const B = '1px solid black';
 const B2 = '1px solid black'; // 修正17: 全罫線を細線(1px)に統一
 
+// 隣接テーブル間のボーダー重複を防止するスタイル
+// 上辺ボーダーなし（上のテーブルの下辺と重複を避ける）
+const NO_TOP_BORDER = '0px solid black';
+
 // 標準行高さ: 14px（ヘッダー行以外すべて。例外なし）
 const ROW_H = '14px';
 const ROW_H2 = '28px'; // rowSpan=2用
@@ -610,10 +614,11 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
           {/* ==================================================================
               第3段: 統合作業テーブル（9列×ヘッダー1行(14px)＋データ10行(14px)）
-              列幅: 13+8+4+4+10+8=47% | 25+23+5=53%
+              列幅: 13+8+4+4+12+6=47% | 25+21+7=53%
               修正11: 全フォント8px
+              修正19: 上辺ボーダー削除（第2段の下辺と重複防止）
               ================================================================== */}
-          <table style={{ ...TABLE_BASE }}>
+          <table style={{ ...TABLE_BASE, marginTop: '-1px' }}>
             <colgroup>
               <col style={{ width: '13%' }} />
               <col style={{ width: '8%' }} />
@@ -673,8 +678,9 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
           {/* ==================================================================
               第4段〜第5段: 左右独立レイアウト
               修正5: 左47%・右53%
+              修正19: 上辺重複防止
               ================================================================== */}
-          <table style={{ ...TABLE_BASE }}>
+          <table style={{ ...TABLE_BASE, marginTop: '-1px' }}>
             <tbody>
               <tr>
                 {/* ====================================
@@ -682,8 +688,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     修正2: 5列構成
                     列幅: 13% + 15% + 25% + 9% + 38% = 100%
                     ==================================== */}
-                <td style={{ width: '47%', verticalAlign: 'top', padding: 0, border: 'none' }}>
-                  <table style={{ ...TABLE_BASE }}>
+                <td style={{ width: '47%', verticalAlign: 'top', padding: 0, border: 'none', height: '100%' }}>
+                  <table style={{ ...TABLE_BASE, height: '100%' }}>
                     <colgroup>
                       <col style={{ width: '13%' }} />
                       <col style={{ width: '15%' }} />
@@ -855,12 +861,13 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         </td>
                       </tr>
 
-                      {/* 修正8,13: 行9: 配置図画像 colSpan=5 高さ指定なし */}
-                      <tr>
+                      {/* 修正8,13,20: 行9: 配置図画像 colSpan=5 — 残り全高さを占有して右側最下部と揃える */}
+                      <tr style={{ height: '100%' }}>
                         <td colSpan={5} style={{
                           border: B, textAlign: 'center' as const,
                           verticalAlign: 'top', padding: '1px',
                           whiteSpace: 'normal' as const, overflow: 'hidden',
+                          height: '100%',
                         }}>
                           {diagramUrl ? (
                             <img
@@ -884,7 +891,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                 {/* ====================================
                     右側セル（53%）修正6: 完全半分50%:50%
                     ==================================== */}
-                <td style={{ width: '53%', verticalAlign: 'top', padding: 0, border: 'none' }}>
+                <td style={{ width: '53%', verticalAlign: 'top', padding: 0, border: 'none', height: '100%' }}>
                   {/* Part A: 当現場確認項目（ヘッダー1行 + データ5行 = 6行） */}
                   <table style={{ ...TABLE_BASE }}>
                     <colgroup>
@@ -952,7 +959,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                   </table>
 
                   {/* Part B: 巡視点検チェックリスト（タイトル1行 + 27行 = 28行） */}
-                  <table style={{ ...TABLE_BASE }}>
+                  <table style={{ ...TABLE_BASE, marginTop: '-1px' }}>
                     <tbody>
                       {/* タイトル行（14px） */}
                       <tr style={{ height: ROW_H }}>
