@@ -426,6 +426,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       }
       if (!restored.stageConfirmation) restored.stageConfirmation = '';
       if (!restored.witnessConfirmation) restored.witnessConfirmation = '';
+      if (!restored.machineryEntries || !Array.isArray(restored.machineryEntries)) restored.machineryEntries = [''];
       if (!restored.dumpTrucks) restored.dumpTrucks = { incoming: 0, outgoing: 0 };
       if (!restored.patrolRecord) {
         restored.patrolRecord = {
