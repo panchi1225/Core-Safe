@@ -455,6 +455,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
     if (init.materialEntries.length === 0) {
       init.materialEntries = [''];
     }
+    if (!init.machineryEntries || init.machineryEntries.length === 0) {
+      init.machineryEntries = [''];
+    }
     // 【修正2】preparationEntries の初期化を削除
     // 【修正】10個に合わせて初期化
     init.safetyInstructions = Array(SAFETY_INSTRUCTIONS_COUNT).fill('');
@@ -701,7 +704,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
 
   // 【修正2】updateListEntry から 'preparationEntries' を除外
   const updateListEntry = (
-    field: 'materialEntries' | 'safetyInstructions',
+    field: 'materialEntries' | 'machineryEntries' | 'safetyInstructions',
     index: number,
     value: string
   ) => {
@@ -715,7 +718,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   };
 
   // 【修正2】addListEntry から 'preparationEntries' を除外
-  const addListEntry = (field: 'materialEntries') => {
+  const addListEntry = (field: 'materialEntries' | 'machineryEntries') => {
+    if (field === 'machineryEntries' && report.machineryEntries.length >= 10) return; // 最大10個
     setReport((prev) => ({
       ...prev,
       [field]: [...prev[field], ''],
@@ -726,7 +730,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
 
   // 【修正2】removeListEntry から 'preparationEntries' を除外
   const removeListEntry = (
-    field: 'materialEntries',
+    field: 'materialEntries' | 'machineryEntries',
     index: number
   ) => {
     setReport((prev) => {
@@ -1497,39 +1501,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   </select>
                 </div>
 
-                {/* 【修正1】主要機械①（machine） */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">主要機械①</label>
-                  <select
-                    className="w-full p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
-                    value={entry.machine}
-                    onChange={(e) => updateWorkEntry(entry.id, 'machine', e.target.value)}
-                  >
-                    <option value="">選択してください</option>
-                    {masterData.machines.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* 【修正1】主要機械②（machine2）— 任意入力 */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">主要機械②</label>
-                  <select
-                    className="w-full p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
-                    value={entry.machine2}
-                    onChange={(e) => updateWorkEntry(entry.id, 'machine2', e.target.value)}
-                  >
-                    <option value="">選択してください</option>
-                    {masterData.machines.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
             </div>
           ))}
@@ -1541,6 +1512,42 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         >
           <i className="fa-solid fa-plus mr-2"></i>作業を追加
         </button>
+      </div>
+
+      {/* (5.5) 主要機械（独立入力） */}
+      <div>
+        <label className="block text-sm font-bold text-gray-700 mb-2">主要機械（任意）</label>
+        {(report.machineryEntries || ['']).map((val, idx) => (
+          <div key={idx} className="flex items-center gap-2 mb-2">
+            <select
+              className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
+              value={val}
+              onChange={(e) => updateListEntry('machineryEntries', idx, e.target.value)}
+            >
+              <option value="">選択してください</option>
+              {masterData.machines.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => removeListEntry('machineryEntries', idx)}
+              className="text-gray-400 hover:text-red-500 p-1 transition-colors shrink-0"
+              title="削除"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        ))}
+        {(report.machineryEntries || []).length < 10 && (
+          <button
+            onClick={() => addListEntry('machineryEntries')}
+            className="text-sm text-pink-600 font-bold hover:underline"
+          >
+            <i className="fa-solid fa-plus mr-1"></i>追加
+          </button>
+        )}
       </div>
 
       {/* (6) 搬出入資機材 */}
@@ -1798,20 +1805,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                   </div>
                 </div>
 
-                {/* 【修正1】主要機械①・②を表示 */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">主要機械①</label>
-                  <div className="w-full p-2 border border-gray-200 rounded bg-gray-100 text-gray-700 text-sm">
-                    {entry.machine || '（未選択）'}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 mb-1">主要機械②</label>
-                  <div className="w-full p-2 border border-gray-200 rounded bg-gray-100 text-gray-700 text-sm">
-                    {entry.machine2 || '（未選択）'}
-                  </div>
-                </div>
+                {/* 主要機械は独立セクションに移動済み */}
 
                 <div>
                   <label className="block text-xs font-bold text-gray-600 mb-1">

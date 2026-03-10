@@ -385,6 +385,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   const workEntries = data?.workEntries || [];
   const actualWorkers = data?.actualWorkers || [];
   const materialEntries = data?.materialEntries || [];
+  const machineryEntries = ((data as any)?.machineryEntries || []).filter((m: string) => m);
   const safetyInstructions = data?.safetyInstructions || [];
   const confirmationItems = data?.step3ConfirmationItems || ({} as any);
   const siteConfirmationItems = data?.step3SiteConfirmationItems || ({} as any);
@@ -428,8 +429,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
     company: string;
     plannedWorkers: string;
     actualWorkersVal: string;
-    machine: string;
-    machine2: string;
+    machinery: string;
     material: string;
     safetyInstruction: string;
     confirmationLabel: string;
@@ -447,8 +447,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
       company: entry.company || '',
       plannedWorkers: String(entry.plannedWorkers || ''),
       actualWorkersVal: actualCount > 0 ? String(actualCount) : '',
-      machine: entry.machine || '',
-      machine2: entry.machine2 || '',
+      machinery: '',
       material: materialEntries[index] || '',
       safetyInstruction: '',
       confirmationLabel: '',
@@ -463,8 +462,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
       company: entry.company || '',
       plannedWorkers: '',
       actualWorkersVal: entry.actualWorkers > 0 ? String(entry.actualWorkers) : '',
-      machine: entry.machines ? entry.machines.filter((m: any) => m).join(', ') : '',
-      machine2: '',
+      machinery: '',
       material: '',
       safetyInstruction: '',
       confirmationLabel: '',
@@ -476,9 +474,14 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   while (integratedRows.length < WORK_ROWS) {
     integratedRows.push({
       workContent: '', company: '', plannedWorkers: '', actualWorkersVal: '',
-      machine: '', machine2: '', material: '', safetyInstruction: '',
+      machinery: '', material: '', safetyInstruction: '',
       confirmationLabel: '', confirmationResult: '', isAdditional: false,
     });
+  }
+
+  // 主要機械を上から順に1セル1項目で割り当て
+  for (let i = 0; i < WORK_ROWS && i < machineryEntries.length; i++) {
+    integratedRows[i].machinery = machineryEntries[i] || '';
   }
 
   for (let i = 0; i < WORK_ROWS; i++) {
@@ -700,8 +703,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
               <col style={{ width: '8%' }} />
               <col style={{ width: '4%' }} />
               <col style={{ width: '4%' }} />
-              <col style={{ width: '18%' }} />
-              <col style={{ width: '6%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '10%' }} />
               <col style={{ width: '23%' }} />
               <col style={{ width: '17%' }} />
               <col style={{ width: '5%' }} />
@@ -713,7 +716,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, whiteSpace: 'normal' as const, lineHeight: '12px' }}>人数<br /><span style={{ fontSize: FONT }}>（予定）</span></th>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, whiteSpace: 'normal' as const, lineHeight: '12px' }}>人数<br /><span style={{ fontSize: FONT }}>（実施）</span></th>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H }}>主要機械</th>
-                <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, whiteSpace: 'normal' as const, lineHeight: '12px' }}>搬出入<br />資機材</th>
+                <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, whiteSpace: 'normal' as const, lineHeight: '12px' }}>搬出入資機材</th>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H }}>安全衛生指示事項</th>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H }}>基本確認事項</th>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H }}>結果</th>
@@ -723,22 +726,13 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
               {integratedRows.slice(0, WORK_ROWS).map((row, idx) => {
                 const dataCell: React.CSSProperties = { ...CELL, ...RED };
 
-                const renderMachineContent = (): string => {
-                  const m1 = row.machine || '';
-                  const m2 = row.machine2 || '';
-                  if (m1 && m2) return `${m1}, ${m2}`;
-                  if (m1) return m1;
-                  if (m2) return m2;
-                  return '\u00A0';
-                };
-
                 return (
                   <tr key={idx} style={{ height: ROW_H }}>
                     <td style={{ ...dataCell, textIndent: INDENT1 }}>{row.workContent || '\u00A0'}</td>
                     <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.company || '\u00A0'}</td>
                     <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.plannedWorkers || '\u00A0'}</td>
                     <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.actualWorkersVal || '\u00A0'}</td>
-                    <td style={{ ...dataCell, whiteSpace: 'nowrap' as const, textAlign: 'center' as const }}>{renderMachineContent()}</td>
+                    <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.machinery || '\u00A0'}</td>
                     <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.material || '\u00A0'}</td>
                     <td style={{ ...dataCell, whiteSpace: 'normal' as const, textIndent: INDENT2 }}>{row.safetyInstruction || '\u00A0'}</td>
                     <td style={{ ...dataCell, whiteSpace: 'normal' as const, textIndent: INDENT2 }}>{row.confirmationLabel || '\u00A0'}</td>
