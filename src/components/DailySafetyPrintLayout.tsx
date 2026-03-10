@@ -870,7 +870,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     </table>
 
                     {/* === 行4〜6: 巡視記録 === */}
-                    <table style={{ ...TABLE_BASE }}>
+                    <table style={{ ...TABLE_BASE, height: '100%' }}>
                       <colgroup>
                         <col style={{ width: '27.27%' }} />
                         <col style={{ width: '21.82%' }} />
