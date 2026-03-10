@@ -631,15 +631,15 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
               ================================================================== */}
           <table style={{ ...TABLE_BASE, marginTop: '-1px' }}>
             <colgroup>
-              <col style={{ width: '13%' }} />
+              <col style={{ width: '15%' }} />
               <col style={{ width: '8%' }} />
               <col style={{ width: '4%' }} />
               <col style={{ width: '4%' }} />
-              <col style={{ width: '12%' }} />
+              <col style={{ width: '18%' }} />
               <col style={{ width: '6%' }} />
-              <col style={{ width: '25%' }} />
-              <col style={{ width: '21%' }} />
-              <col style={{ width: '7%' }} />
+              <col style={{ width: '23%' }} />
+              <col style={{ width: '17%' }} />
+              <col style={{ width: '5%' }} />
             </colgroup>
             <thead>
               <tr style={{ height: ROW_H2 }}>
