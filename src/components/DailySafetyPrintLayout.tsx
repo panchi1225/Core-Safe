@@ -756,14 +756,14 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     修正2: 5列構成
                     列幅: 13% + 15% + 25% + 9% + 38% = 100%
                     ==================================== */}
-                <td style={{ width: '47%', verticalAlign: 'top', padding: 0, border: 'none', height: '100%' }}>
+                <td style={{ width: '55%', verticalAlign: 'top', padding: 0, border: 'none', height: '100%' }}>
                   {/* === 行1〜3: 4列構成 (25%+4%+9%+9%=47%) === */}
                   <table style={{ ...TABLE_BASE }}>
                     <colgroup>
-                      <col style={{ width: '53.19%' }} />{/* 25/47*100 */}
-                      <col style={{ width: '8.51%' }} />{/* 4/47*100 */}
-                      <col style={{ width: '19.15%' }} />{/* 9/47*100 */}
-                      <col style={{ width: '19.15%' }} />{/* 9/47*100 */}
+                      <col style={{ width: '49.09%' }} />{/* 27/55*100 */}
+                      <col style={{ width: '7.27%' }} />{/* 4/55*100 */}
+                      <col style={{ width: '21.82%' }} />{/* 12/55*100 */}
+                      <col style={{ width: '21.82%' }} />{/* 12/55*100 */}
                     </colgroup>
                     <tbody>
                       {/* 行1: ヘッダー（28px） */}
@@ -812,12 +812,11 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         <td rowSpan={2} style={{
                           border: B, whiteSpace: 'normal' as const,
                           height: ROW_H2, maxHeight: ROW_H2,
-                          verticalAlign: 'middle', padding: '1px 2px',
-                          overflow: 'hidden',
-                          boxSizing: 'border-box' as const, ...RED,
-                          position: 'relative' as const,
+                          verticalAlign: 'top', fontSize: FONT, padding: '1px 2px',
+                          overflow: 'hidden', lineHeight: '12px',
+                          boxSizing: 'border-box' as const, textIndent: INDENT1, ...RED,
                         }}>
-                          <AutoFitText text={workNotes} />
+                          {workNotes || '\u00A0'}
                         </td>
                         {/* 人数（合計）表示欄 rowSpan=2 */}
                         <td rowSpan={2} style={{
@@ -875,9 +874,9 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                   {/* === 行4〜6: 巡視記録（行4=ヘッダー、行5-6=データ結合）marginTop:-1px === */}
                   <table style={{ ...TABLE_BASE, marginTop: '-1px' }}>
                     <colgroup>
-                      <col style={{ width: '26.60%' }} />{/* 巡視点検者 = 53.19%の半分 */}
-                      <col style={{ width: '26.60%' }} />{/* 巡視時間 = 53.19%の半分 */}
-                      <col style={{ width: '46.80%' }} />{/* 巡視所見 = 残り */}
+                      <col style={{ width: '27.27%' }} />{/* 15/55*100 = 巡視点検者 */}
+                      <col style={{ width: '21.82%' }} />{/* 12/55*100 = 巡視時間 */}
+                      <col style={{ width: '50.91%' }} />{/* 28/55*100 = 巡視所見 */}
                     </colgroup>
                     <tbody>
                       {/* 行4: ヘッダー行（14px） */}
@@ -927,13 +926,12 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           {patrolRecord.inspectionTime || '\u00A0'}
                         </td>
                         <td style={{
-                          border: B, height: ROW_H2, maxHeight: ROW_H2,
-                          padding: '1px 2px', overflow: 'hidden',
-                          verticalAlign: 'middle',
-                          boxSizing: 'border-box' as const, ...RED,
-                          position: 'relative' as const,
+                          border: B, fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
+                          padding: '1px 2px', whiteSpace: 'normal' as const,
+                          overflow: 'hidden', lineHeight: '12px', verticalAlign: 'top',
+                          boxSizing: 'border-box' as const, textIndent: INDENT1, ...RED,
                         }}>
-                          <AutoFitText text={patrolRecord.findings || ''} />
+                          {patrolRecord.findings || '\u00A0'}
                         </td>
                       </tr>
                     </tbody>
@@ -996,14 +994,14 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                 {/* ====================================
                     右側セル（53%）修正6: 完全半分50%:50%
                     ==================================== */}
-                <td style={{ width: '53%', verticalAlign: 'top', padding: 0, border: 'none', height: '100%' }}>
+                <td style={{ width: '45%', verticalAlign: 'top', padding: 0, border: 'none', height: '100%' }}>
                   {/* Part A: 当現場確認項目（ヘッダー1行 + データ5行 = 6行） */}
                   <table style={{ ...TABLE_BASE, marginLeft: '-1px', width: 'calc(100% + 1px)' }}>
                     <colgroup>
-                      <col style={{ width: '37%' }} />
-                      <col style={{ width: '13%' }} />
-                      <col style={{ width: '37%' }} />
-                      <col style={{ width: '13%' }} />
+                      <col style={{ width: '38.89%' }} />
+                      <col style={{ width: '11.11%' }} />
+                      <col style={{ width: '38.89%' }} />
+                      <col style={{ width: '11.11%' }} />
                     </colgroup>
                     <thead>
                       <tr style={{ height: ROW_H2 }}>
@@ -1088,8 +1086,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                             tableLayout: 'fixed' as const, margin: 0,
                           }}>
                             <colgroup>
-                              <col style={{ width: '80%' }} />
-                              <col style={{ width: '20%' }} />
+                              <col style={{ width: '77.78%' }} />
+                              <col style={{ width: '22.22%' }} />
                             </colgroup>
                             <tbody>{renderChecklistColumn(LEFT_CHECKLIST_KEYS)}</tbody>
                           </table>
@@ -1104,8 +1102,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                             marginLeft: '-1px',
                           }}>
                             <colgroup>
-                              <col style={{ width: '80%' }} />
-                              <col style={{ width: '20%' }} />
+                              <col style={{ width: '77.78%' }} />
+                              <col style={{ width: '22.22%' }} />
                             </colgroup>
                             <tbody>{renderChecklistColumn(RIGHT_CHECKLIST_KEYS)}</tbody>
                           </table>
