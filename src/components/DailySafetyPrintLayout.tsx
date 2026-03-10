@@ -882,36 +882,61 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     </tbody>
                   </table>
 
-                  {/* === 行4〜5: 巡視記録 4列構成（作業連絡調整と同じ列幅で揃える）marginTop:-1px === */}
+                  {/* === 行4〜6: 巡視記録（行4=ヘッダー、行5-6=データ結合）marginTop:-1px === */}
                   <table style={{ ...TABLE_BASE, marginTop: '-1px' }}>
                     <colgroup>
-                      <col style={{ width: '53.19%' }} />{/* 25/47*100 = 作業連絡調整col1と同じ */}
-                      <col style={{ width: '8.51%' }} />{/* 4/47*100 = 人数(合計)col2と同じ */}
-                      <col style={{ width: '19.15%' }} />{/* 9/47*100 */}
-                      <col style={{ width: '19.15%' }} />{/* 9/47*100 */}
+                      <col style={{ width: '26.60%' }} />{/* 巡視点検者 = 53.19%の半分 */}
+                      <col style={{ width: '26.60%' }} />{/* 巡視時間 = 53.19%の半分 */}
+                      <col style={{ width: '46.80%' }} />{/* 巡視所見 = 残り */}
                     </colgroup>
                     <tbody>
-                      {/* 行4: 巡視点検者 + 巡視所見（rowSpan=2） */}
+                      {/* 行4: ヘッダー行（14px） */}
                       <tr style={{ height: ROW_H }}>
-                        <td style={{
-                          border: B, fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
-                          padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const,
-                        }}>
-                          <span style={{ fontWeight: 'bold' }}>巡視点検者</span>
-                          {'　'}
-                          <span style={RED}>{patrolRecord.inspector || '\u00A0'}</span>
-                        </td>
-                        <th rowSpan={2} style={{
+                        <th style={{
                           border: B, fontSize: FONT, fontWeight: 'bold',
-                          textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
+                          textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          verticalAlign: 'middle', boxSizing: 'border-box' as const,
-                          backgroundColor: BG_HEADER,
+                          boxSizing: 'border-box' as const, backgroundColor: BG_HEADER,
+                        }}>
+                          巡視点検者
+                        </th>
+                        <th style={{
+                          border: B, fontSize: FONT, fontWeight: 'bold',
+                          textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
+                          padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
+                          boxSizing: 'border-box' as const, backgroundColor: BG_HEADER,
+                        }}>
+                          巡視時間
+                        </th>
+                        <th style={{
+                          border: B, fontSize: FONT, fontWeight: 'bold',
+                          textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
+                          padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
+                          boxSizing: 'border-box' as const, backgroundColor: BG_HEADER,
                         }}>
                           巡視所見
                         </th>
-                        <td rowSpan={2} colSpan={2} style={{
+                      </tr>
+
+                      {/* 行5-6: データ行（2行結合=28px） */}
+                      <tr style={{ height: ROW_H2 }}>
+                        <td style={{
+                          border: B, fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
+                          padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
+                          boxSizing: 'border-box' as const, textAlign: 'center' as const,
+                          verticalAlign: 'middle', ...RED,
+                        }}>
+                          {patrolRecord.inspector || '\u00A0'}
+                        </td>
+                        <td style={{
+                          border: B, fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
+                          padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
+                          boxSizing: 'border-box' as const, textAlign: 'center' as const,
+                          verticalAlign: 'middle', ...RED,
+                        }}>
+                          {patrolRecord.inspectionTime || '\u00A0'}
+                        </td>
+                        <td style={{
                           border: B, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden',
                           verticalAlign: 'middle',
@@ -919,19 +944,6 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           position: 'relative' as const,
                         }}>
                           <AutoFitText text={patrolRecord.findings || ''} />
-                        </td>
-                      </tr>
-
-                      {/* 行5: 巡視時間 */}
-                      <tr style={{ height: ROW_H }}>
-                        <td style={{
-                          border: B, fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
-                          padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const,
-                        }}>
-                          <span style={{ fontWeight: 'bold' }}>巡視時間</span>
-                          {'　'}
-                          <span style={RED}>{patrolRecord.inspectionTime || '\u00A0'}</span>
                         </td>
                       </tr>
                     </tbody>
@@ -956,7 +968,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       {/* 配置図画像: 28行分固定(392px) - 画像サイズに依存しない */}
                       <tr style={{ height: DIAGRAM_IMG_H }}>
                         <td style={{
-                          border: B, textAlign: 'center' as const,
+                          border: B, borderTop: 'none', textAlign: 'center' as const,
                           verticalAlign: 'top', padding: 0,
                           overflow: 'hidden',
                           height: DIAGRAM_IMG_H, maxHeight: DIAGRAM_IMG_H,
