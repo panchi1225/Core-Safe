@@ -247,6 +247,7 @@ const ROW_H2 = '28px'; // rowSpan=2用
 const FONT = '8px';
 // ヘッダー用フォントサイズ（1サイズ大きい）
 const FONT_H = '9px';
+const DIAGRAM_IMG_H = '392px';  // 配置図画像エリア固定高さ = 28行 × 14px
 // ヘッダーセル背景色（薄い黄色）
 const BG_HEADER = '#FFFFCC';
 
@@ -881,9 +882,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     </tbody>
                   </table>
 
-                  {/* === 配置図ヘッダー（2行結合=28px）+ 画像 === */}
-                  {/* 左側固定: 行1-3=56px + 行4-5=28px(-1px) = 83px。配置図テーブル=残り全部 */}
-                  <table style={{ ...TABLE_BASE, marginTop: '-1px', height: 'calc(100% - 83px + 1px)' }}>
+                  {/* === 配置図ヘッダー（28px）+ 画像（28行×14px=392px固定） === */}
+                  <table style={{ ...TABLE_BASE, marginTop: '-1px' }}>
                     <tbody>
                       {/* 配置図ヘッダー: 2行結合(28px) */}
                       <tr style={{ height: ROW_H2 }}>
@@ -898,24 +898,35 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         </td>
                       </tr>
 
-                      {/* 配置図画像: 残り全高さを占有 */}
-                      <tr style={{ height: '100%' }}>
+                      {/* 配置図画像: 28行分固定(392px) - 画像サイズに依存しない */}
+                      <tr style={{ height: DIAGRAM_IMG_H }}>
                         <td style={{
                           border: B, textAlign: 'center' as const,
-                          verticalAlign: 'top', padding: '1px',
-                          whiteSpace: 'normal' as const, overflow: 'hidden',
-                          height: '100%',
+                          verticalAlign: 'top', padding: 0,
+                          overflow: 'hidden',
+                          height: DIAGRAM_IMG_H, maxHeight: DIAGRAM_IMG_H,
+                          boxSizing: 'border-box' as const,
+                          position: 'relative' as const,
                         }}>
                           {diagramUrl ? (
-                            <img
-                              src={diagramUrl}
-                              alt="配置図"
-                              style={{
-                                maxWidth: '100%', maxHeight: '100%',
-                                objectFit: 'contain' as const,
-                                display: 'block', margin: '0 auto',
-                              }}
-                            />
+                            <div style={{
+                              position: 'absolute' as const,
+                              top: '1px', left: '1px', right: '1px', bottom: '1px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              overflow: 'hidden',
+                            }}>
+                              <img
+                                src={diagramUrl}
+                                alt="配置図"
+                                style={{
+                                  maxWidth: '100%', maxHeight: '100%',
+                                  objectFit: 'contain' as const,
+                                  display: 'block',
+                                }}
+                              />
+                            </div>
                           ) : (
                             '\u00A0'
                           )}
