@@ -28,6 +28,7 @@ import {
   saveDiagramImage,
   fetchDiagramImages,
   removeDiagramImage,
+  fetchEmployees,
 } from '../services/firebaseService';
 import DailySafetyPrintLayout from './DailySafetyPrintLayout';
 
@@ -516,6 +517,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
 
   // 【追加】プレビュー表示用state
   const [showPreview, setShowPreview] = useState(initialStep === 99);
+  const isDirectPreview = initialStep === 99;
+  const [showSealModal, setShowSealModal] = useState(false);
+  const [sealEmployees, setSealEmployees] = useState<any[]>([]);
 
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasElRef = useRef<HTMLCanvasElement>(null);
@@ -2581,21 +2585,40 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
           ============================ */}
       {showPreview && (
         <div className="fixed inset-0 z-[80] bg-white flex flex-col">
-          {/* 操作バー（印刷時は非表示） */}
           <div className="no-print flex items-center justify-between px-4 py-3 bg-slate-800 text-white shadow-md shrink-0">
             <button
-              onClick={() => setShowPreview(false)}
+              onClick={() => {
+                if (isDirectPreview) {
+                  onBackToMenu();
+                } else {
+                  setShowPreview(false);
+                }
+              }}
               className="flex items-center gap-2 text-white hover:text-gray-300 font-bold text-sm"
             >
-              <i className="fa-solid fa-arrow-left"></i>
-              閉じる
+              <i className={`fa-solid ${isDirectPreview ? 'fa-house' : 'fa-arrow-left'}`}></i>
+              {isDirectPreview ? 'ホームに戻る' : '閉じる'}
             </button>
-            <button
-              onClick={handlePrint}
-              className="px-6 py-2 bg-pink-600 text-white rounded-lg font-bold text-sm hover:bg-pink-700 transition-colors shadow"
-            >
-              <i className="fa-solid fa-print mr-2"></i>印刷
-            </button>
+            <div className="flex items-center gap-3">
+              {isDirectPreview && (
+                <button
+                  onClick={async () => {
+                    const emps = await fetchEmployees();
+                    setSealEmployees(emps.filter((e: any) => e.sealImage));
+                    setShowSealModal(true);
+                  }}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-lg font-bold text-sm hover:bg-purple-700 transition-colors shadow"
+                >
+                  <i className="fa-solid fa-stamp mr-2"></i>押印
+                </button>
+              )}
+              <button
+                onClick={handlePrint}
+                className="px-6 py-2 bg-pink-600 text-white rounded-lg font-bold text-sm hover:bg-pink-700 transition-colors shadow"
+              >
+                <i className="fa-solid fa-print mr-2"></i>印刷
+              </button>
+            </div>
           </div>
 
           {/* 帳票プレビュー（スクロール可能・中央寄せ） */}
@@ -2606,6 +2629,57 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
               </div>
             </div>
           </div>
+
+          {/* 押印社員選択モーダル */}
+          {showSealModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[90]">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+                <div className="p-4 border-b bg-purple-50">
+                  <h3 className="font-bold text-lg text-purple-800 text-center">
+                    <i className="fa-solid fa-stamp mr-2"></i>作業所長を選択
+                  </h3>
+                </div>
+                <div className="p-4 max-h-96 overflow-y-auto">
+                  {sealEmployees.length === 0 ? (
+                    <div className="text-center py-8 text-gray-400">
+                      <i className="fa-solid fa-exclamation-circle text-2xl mb-2 block"></i>
+                      電子印が登録された社員がいません
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {sealEmployees.map((emp: any) => (
+                        <button
+                          key={emp.id}
+                          onClick={async () => {
+                            const updated = { ...report, sealImage: emp.sealImage };
+                            setReport(updated);
+                            if (initialDraftId) {
+                              await saveDraft(initialDraftId, 'DAILY_SAFETY', updated);
+                            }
+                            setShowSealModal(false);
+                            alert(`${emp.nameSei} ${emp.nameMei} の電子印を押印しました`);
+                          }}
+                          className="w-full text-left border rounded-lg p-3 hover:bg-purple-50 transition-colors flex items-center gap-3"
+                        >
+                          <img src={emp.sealImage} alt="電子印" style={{ width: '40px', height: '40px', objectFit: 'contain', border: '1px solid #ccc', borderRadius: '4px' }} />
+                          <div className="font-bold text-gray-800">{emp.nameSei} {emp.nameMei}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="p-4 border-t bg-gray-50">
+                  <button
+                    onClick={() => setShowSealModal(false)}
+                    className="w-full py-2 bg-gray-200 rounded-lg font-bold text-gray-600 hover:bg-gray-300"
+                  >
+                    キャンセル
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}    
+                
         </div>
       )}
 
