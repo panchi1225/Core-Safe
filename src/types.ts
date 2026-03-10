@@ -646,6 +646,7 @@ export interface DailySafetyReportData {
   // --- STEP3: 当日作業確認データ（追加フィールド） ---
   actualWorkers: { entryIndex: number; count: number }[];
   step3AdditionalWorkEntries: AdditionalWorkEntry[];
+  step3MachineryEntries: string[];  // STEP3追加主要機械（STEP1と合計10個まで）
   step3ConfirmationItems: Step3ConfirmationItems;
   step3SiteConfirmationItems: Step3SiteConfirmationItems;
   stageConfirmation: '有' | '無' | '';     // 段階確認
@@ -1018,6 +1019,7 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
   // --- STEP3: 当日作業確認データ（追加フィールド初期値） ---
   actualWorkers: [],
   step3AdditionalWorkEntries: [],
+  step3MachineryEntries: [],
   step3ConfirmationItems: {
     item1: '', item2: '', item3: '', item4: '', item5: '',
     item6: '', item7: '', item8: '', item9: '', item10: '',

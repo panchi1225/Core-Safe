@@ -408,6 +408,8 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       );
       if (!restored.actualWorkers) restored.actualWorkers = [];
       if (!restored.step3AdditionalWorkEntries) restored.step3AdditionalWorkEntries = [];
+      if (!restored.step3MachineryEntries || !Array.isArray(restored.step3MachineryEntries)) restored.step3MachineryEntries = [];
+      if (!restored.step3MachineryEntries || !Array.isArray(restored.step3MachineryEntries)) restored.step3MachineryEntries = [];
       /* 【修正】基本確認事項: 10項目対応のフォールバック（item8〜item10を補完） */
       if (!restored.step3ConfirmationItems) {
         restored.step3ConfirmationItems = { item1: '', item2: '', item3: '', item4: '', item5: '', item6: '', item7: '', item8: '', item9: '', item10: '' };
@@ -805,6 +807,38 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       },
     });
   };
+  // STEP3: 独立した主要機械の追加・更新・削除（STEP1と合計10個まで）
+  const addStep3Machinery = () => {
+    const total = (report.machineryEntries || []).filter(m => m).length + (report.step3MachineryEntries || []).length;
+    if (total >= 10) return;
+    setReport((prev) => ({
+      ...prev,
+      step3MachineryEntries: [...(prev.step3MachineryEntries || []), ''],
+    }));
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
+  const updateStep3Machinery = (index: number, value: string) => {
+    setReport((prev) => {
+      const arr = [...(prev.step3MachineryEntries || [])];
+      arr[index] = value;
+      return { ...prev, step3MachineryEntries: arr };
+    });
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
+  const removeStep3Machinery = (index: number) => {
+    setReport((prev) => {
+      const arr = [...(prev.step3MachineryEntries || [])];
+      arr.splice(index, 1);
+      return { ...prev, step3MachineryEntries: arr };
+    });
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
 
   const addMachineToAdditionalWork = (id: string) => {
     setReport((prev) => ({
@@ -1940,6 +1974,46 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
         >
           <i className="fa-solid fa-plus mr-2"></i>追加作業を追加
         </button>
+      </div>
+
+      {/* STEP3: 独立した主要機械入力欄（STEP1と合計10個まで） */}
+      <div className="bg-white rounded-lg shadow p-4 mb-4">
+        <h3 className="text-base font-bold text-gray-800 mb-3">
+          <i className="fa-solid fa-truck-monster mr-2 text-pink-500"></i>
+          追加 主要機械（STEP1と合計10個まで）
+        </h3>
+        <p className="text-xs text-gray-500 mb-2">
+          STEP1で{(report.machineryEntries || []).filter(m => m).length}個選択済み / 残り{Math.max(0, 10 - (report.machineryEntries || []).filter(m => m).length - (report.step3MachineryEntries || []).length)}個追加可能
+        </p>
+        {(report.step3MachineryEntries || []).map((val, idx) => (
+          <div key={idx} className="flex items-center gap-2 mb-2">
+            <select
+              className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
+              value={val}
+              onChange={(e) => updateStep3Machinery(idx, e.target.value)}
+            >
+              <option value="">選択してください</option>
+              {masterData.machines.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => removeStep3Machinery(idx)}
+              className="text-gray-400 hover:text-red-500 p-1 transition-colors shrink-0"
+              title="削除"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        ))}
+        {((report.machineryEntries || []).filter(m => m).length + (report.step3MachineryEntries || []).length) < 10 && (
+          <button
+            onClick={addStep3Machinery}
+            className="text-sm text-pink-600 font-bold hover:underline"
+          >
+            <i className="fa-solid fa-plus mr-1"></i>追加
+          </button>
+        )}
       </div>
 
       {/* 本日の作業人数合計 */}

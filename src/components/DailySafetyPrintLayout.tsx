@@ -385,7 +385,10 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   const workEntries = data?.workEntries || [];
   const actualWorkers = data?.actualWorkers || [];
   const materialEntries = data?.materialEntries || [];
-  const machineryEntries = ((data as any)?.machineryEntries || []).filter((m: string) => m);
+  const machineryEntries = [
+    ...((data as any)?.machineryEntries || []).filter((m: string) => m),
+    ...((data as any)?.step3MachineryEntries || []).filter((m: string) => m),
+  ];
   const safetyInstructions = data?.safetyInstructions || [];
   const confirmationItems = data?.step3ConfirmationItems || ({} as any);
   const siteConfirmationItems = data?.step3SiteConfirmationItems || ({} as any);
