@@ -385,10 +385,10 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   const workEntries = data?.workEntries || [];
   const actualWorkers = data?.actualWorkers || [];
   const materialEntries = data?.materialEntries || [];
-  const machineryEntries = [
-    ...((data as any)?.machineryEntries || []).filter((m: string) => m),
-    ...((data as any)?.step3MachineryEntries || []).filter((m: string) => m),
-  ];
+  const step1Machinery = ((data as any)?.machineryEntries || []).filter((m: string) => m);
+  const step3Machinery = ((data as any)?.step3MachineryEntries || []).filter((m: string) => m);
+  const machineryEntries = [...step1Machinery, ...step3Machinery];
+  const step1MachineryCount = step1Machinery.length;
   const safetyInstructions = data?.safetyInstructions || [];
   const confirmationItems = data?.step3ConfirmationItems || ({} as any);
   const siteConfirmationItems = data?.step3SiteConfirmationItems || ({} as any);
@@ -433,6 +433,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
     plannedWorkers: string;
     actualWorkersVal: string;
     machinery: string;
+    isMachineryFromStep3: boolean;
     material: string;
     safetyInstruction: string;
     confirmationLabel: string;
@@ -455,6 +456,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
       safetyInstruction: '',
       confirmationLabel: '',
       confirmationResult: '',
+      isMachineryFromStep3: false,
       isAdditional: false,
     });
   });
@@ -469,6 +471,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
       safetyInstruction: '',
       confirmationLabel: '',
       confirmationResult: '',
+      isMachineryFromStep3: false,
       isAdditional: true,
     });
   });
@@ -477,13 +480,14 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
     integratedRows.push({
       workContent: '', company: '', plannedWorkers: '', actualWorkersVal: '',
       machinery: '', material: '', safetyInstruction: '',
-      confirmationLabel: '', confirmationResult: '', isAdditional: false,
+      confirmationLabel: '', confirmationResult: '', isMachineryFromStep3: false, isAdditional: false,
     });
   }
 
   // 主要機械を上から順に1セル1項目で割り当て
   for (let i = 0; i < WORK_ROWS && i < machineryEntries.length; i++) {
     integratedRows[i].machinery = machineryEntries[i] || '';
+    integratedRows[i].isMachineryFromStep3 = i >= step1MachineryCount;
   }
 
   for (let i = 0; i < WORK_ROWS; i++) {
@@ -678,19 +682,19 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
           }}>
             <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>工事名</span>
             <span>：</span>
-            <span style={RED}>{projectName}</span>
+            <span>{projectName}</span>
             <span style={{ margin: '0 8px' }}>{'\u00A0'}</span>
             <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>打合せ日</span>
             <span>：</span>
-            <span style={RED}>{toWareki(meetingDate)}{getWeekdayLabel(meetingDate)}</span>
+            <span>{toWareki(meetingDate)}{getWeekdayLabel(meetingDate)}</span>
             <span style={{ margin: '0 8px' }}>{'\u00A0'}</span>
             <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>作業日</span>
             <span>：</span>
-            <span style={RED}>{toWareki(workDate)}{getWeekdayLabel(workDate)}</span>
+            <span>{toWareki(workDate)}{getWeekdayLabel(workDate)}</span>
             <span style={{ margin: '0 8px' }}>{'\u00A0'}</span>
             <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>打合せ実施者</span>
             <span>：</span>
-            <span style={RED}>{presenter}</span>
+            <span>{presenter}</span>
           </div>
 
           {/* ==================================================================
@@ -737,7 +741,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     <td style={{ ...(isAdd ? redCell : baseCell), textAlign: 'center' as const }}>{row.company || '\u00A0'}</td>
                     <td style={{ ...baseCell, textAlign: 'center' as const }}>{row.plannedWorkers || '\u00A0'}</td>
                     <td style={{ ...redCell, textAlign: 'center' as const }}>{row.actualWorkersVal || '\u00A0'}</td>
-                    <td style={{ ...(isAdd ? redCell : baseCell), textAlign: 'center' as const }}>{row.machinery || '\u00A0'}</td>
+                    <td style={{ ...((isAdd || row.isMachineryFromStep3) ? redCell : baseCell), textAlign: 'center' as const }}>{row.machinery || '\u00A0'}</td>
                     <td style={{ ...baseCell, textAlign: 'center' as const }}>{row.material || '\u00A0'}</td>
                     <td style={{ ...baseCell, whiteSpace: 'normal' as const, textIndent: INDENT2 }}>{row.safetyInstruction || '\u00A0'}</td>
                     <td style={{ ...baseCell, whiteSpace: 'normal' as const, textIndent: INDENT2 }}>{row.confirmationLabel || '\u00A0'}</td>
@@ -832,7 +836,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           overflow: 'hidden', height: ROW_H2, maxHeight: ROW_H2,
                           boxSizing: 'border-box' as const, lineHeight: '12px', ...RED,
                         }}>
-                          {totalWorkers}名
+                          <span style={RED}>{totalWorkers}</span><span style={{ color: 'black' }}>{' '}名</span>
                         </td>
                         {/* ダンプ台数：搬入 */}
                         <td style={{
@@ -979,7 +983,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                               border: B, fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
                               padding: '1px 2px', whiteSpace: 'normal' as const,
                               overflow: 'hidden', lineHeight: '12px',
-                              boxSizing: 'border-box' as const, textIndent: INDENT2, ...RED,
+                              boxSizing: 'border-box' as const, textIndent: INDENT2,
                             }}>
                               {left?.label || '\u00A0'}
                             </td>
@@ -995,7 +999,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                               border: B, fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
                               padding: '1px 2px', whiteSpace: 'normal' as const,
                               overflow: 'hidden', lineHeight: '12px',
-                              boxSizing: 'border-box' as const, textIndent: INDENT2, ...RED,
+                              boxSizing: 'border-box' as const, textIndent: INDENT2,
                             }}>
                               {right?.label || '\u00A0'}
                             </td>
