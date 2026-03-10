@@ -1032,7 +1032,7 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
   actualWorkers: [],
   step3AdditionalWorkEntries: [],
   step3MachineryEntries: [],
-  step3MaterialEntries: string[];   // STEP3追加搬出入資機材（STEP1と合計10個まで）
+  step3MaterialEntries: [],
   step3ConfirmationItems: {
     item1: '', item2: '', item3: '', item4: '', item5: '',
     item6: '', item7: '', item8: '', item9: '', item10: '',
