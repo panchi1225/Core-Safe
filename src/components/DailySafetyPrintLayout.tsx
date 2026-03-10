@@ -248,8 +248,8 @@ const FONT = '8px';
 // ヘッダー用フォントサイズ（1サイズ大きい）
 const FONT_H = '9px';
 const DIAGRAM_IMG_H = '392px';  // 配置図画像エリア固定高さ = 28行 × 14px
-// ヘッダーセル背景色（薄い黄色）
-const BG_HEADER = '#FFFFCC';
+// ヘッダーセル背景色（なし）
+const BG_HEADER = 'transparent';
 
 /** 全テーブル共通スタイル */
 const TABLE_BASE: React.CSSProperties = {
@@ -287,10 +287,9 @@ const TH: React.CSSProperties = {
   backgroundColor: BG_HEADER,
 };
 
-/** 赤字スタイル */
+/** データ入力スタイル（全文字黒統一。後で赤字指定箇所を変更予定） */
 const RED: React.CSSProperties = {
-  color: 'red',
-  WebkitPrintColorAdjust: 'exact' as any,
+  color: 'black',
 };
 
 // 固定行数定数
@@ -347,8 +346,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   })();
 
   // ダンプ台数
-  const dumpIncoming = dumpTrucks.incoming || '';
-  const dumpOutgoing = dumpTrucks.outgoing || '';
+  const dumpIncoming = dumpTrucks.incoming ?? 0;
+  const dumpOutgoing = dumpTrucks.outgoing ?? 0;
 
   // 統合テーブル用の行データ生成
   type IntegratedRowData = {
@@ -649,7 +648,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, whiteSpace: 'normal' as const, lineHeight: '12px' }}>人数<br /><span style={{ fontSize: FONT }}>（予定）</span></th>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, whiteSpace: 'normal' as const, lineHeight: '12px' }}>人数<br /><span style={{ fontSize: FONT }}>（実施）</span></th>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H }}>主要機械</th>
-                <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H }}>搬出入資機材</th>
+                <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, whiteSpace: 'normal' as const, lineHeight: '12px' }}>搬出入<br />資機材</th>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H }}>安全衛生指示事項</th>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H }}>基本確認事項</th>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H }}>結果</th>
@@ -815,32 +814,25 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     </tbody>
                   </table>
 
-                  {/* === 行4〜5: 巡視記録 5列構成（既存維持）marginTop:-1px === */}
+                  {/* === 行4〜5: 巡視記録 4列構成（作業連絡調整と同じ列幅で揃える）marginTop:-1px === */}
                   <table style={{ ...TABLE_BASE, marginTop: '-1px' }}>
                     <colgroup>
-                      <col style={{ width: '13%' }} />
-                      <col style={{ width: '15%' }} />
-                      <col style={{ width: '25%' }} />
-                      <col style={{ width: '9%' }} />
-                      <col style={{ width: '38%' }} />
+                      <col style={{ width: '53.19%' }} />{/* 25/47*100 = 作業連絡調整col1と同じ */}
+                      <col style={{ width: '8.51%' }} />{/* 4/47*100 = 人数(合計)col2と同じ */}
+                      <col style={{ width: '19.15%' }} />{/* 9/47*100 */}
+                      <col style={{ width: '19.15%' }} />{/* 9/47*100 */}
                     </colgroup>
                     <tbody>
                       {/* 行4: 巡視点検者 + 巡視所見（rowSpan=2） */}
                       <tr style={{ height: ROW_H }}>
-                        <th style={{
-                          border: B, fontSize: FONT, fontWeight: 'bold',
-                          textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
-                          padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const, backgroundColor: BG_HEADER,
-                        }}>
-                          巡視点検者
-                        </th>
                         <td style={{
                           border: B, fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const, textAlign: 'center' as const, ...RED,
+                          boxSizing: 'border-box' as const,
                         }}>
-                          {patrolRecord.inspector || '\u00A0'}
+                          <span style={{ fontWeight: 'bold' }}>巡視点検者</span>
+                          {'　'}
+                          <span style={RED}>{patrolRecord.inspector || '\u00A0'}</span>
                         </td>
                         <th rowSpan={2} style={{
                           border: B, fontSize: FONT, fontWeight: 'bold',
@@ -863,20 +855,14 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
                       {/* 行5: 巡視時間 */}
                       <tr style={{ height: ROW_H }}>
-                        <th style={{
-                          border: B, fontSize: FONT, fontWeight: 'bold',
-                          textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
-                          padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const, backgroundColor: BG_HEADER,
-                        }}>
-                          巡視時間
-                        </th>
                         <td style={{
                           border: B, fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const, textAlign: 'center' as const, ...RED,
+                          boxSizing: 'border-box' as const,
                         }}>
-                          {patrolRecord.inspectionTime || '\u00A0'}
+                          <span style={{ fontWeight: 'bold' }}>巡視時間</span>
+                          {'　'}
+                          <span style={RED}>{patrolRecord.inspectionTime || '\u00A0'}</span>
                         </td>
                       </tr>
                     </tbody>
