@@ -834,8 +834,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const, textAlign: 'center' as const,
                         }}>
-                          搬入：<span style={RED}>{dumpIncoming}</span>台
-                        </td>
+                          <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}><span style={{ width: '40%', textAlign: 'right' }}>搬入：</span><span style={{ width: '30%', textAlign: 'center', ...RED }}>{dumpIncoming}</span><span style={{ width: '30%', textAlign: 'left' }}>台</span></span>                        </td>
                         {/* 段階確認 */}
                         <td style={{
                           border: B, fontSize: FONT, textAlign: 'center' as const,
@@ -856,8 +855,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const, textAlign: 'center' as const,
                         }}>
-                          搬出：<span style={RED}>{dumpOutgoing}</span>台
-                        </td>
+                          <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}><span style={{ width: '40%', textAlign: 'right' }}>搬出：</span><span style={{ width: '30%', textAlign: 'center', ...RED }}>{dumpOutgoing}</span><span style={{ width: '30%', textAlign: 'left' }}>台</span></span>                        </td>
                         {/* 立合確認 */}
                         <td style={{
                           border: B, fontSize: FONT, textAlign: 'center' as const,
