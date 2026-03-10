@@ -1023,6 +1023,13 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
         ...cat,
         items: cat.items?.map((item: any) => ({ ...item, result: '' })),
       })) || [],
+      // STEP5 step5InspectionChecklistリセット
+      step5InspectionChecklist: Object.fromEntries(
+       Object.entries(prev.step5InspectionChecklist || {}).map(([key, items]: [string, any]) => [
+       key,
+       items.map((item: any) => ({ ...item, value: '' })),
+      ])
+     ) as any,
       // 押印リセット
       sealImage: '',
     }));
@@ -2475,6 +2482,14 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
           STEP 5: 点検チェックリスト
         </h2>
 
+        <div className="bg-gray-100 rounded p-2 text-sm text-center mb-4">
+          <span className="font-bold">○</span> 適正　　
+          <span className="font-bold">△</span> 一部適正　　
+          <span className="font-bold">×</span> 不適切　　
+          <span className="font-bold">◎</span> 是正済　　
+          <span className="font-bold">無印</span> 該当無
+        </div>
+        
         {/* 各大分類セクション */}
         {STEP5_CATEGORIES.map((category) => {
           // この大分類の固定項目番号をリセット
