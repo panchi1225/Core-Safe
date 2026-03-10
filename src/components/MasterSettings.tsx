@@ -399,6 +399,50 @@ const EmployeeEditForm: React.FC<{
             </div>
           </section>
 
+          {/* 電子印 */}
+          <section>
+            <h4 className="font-bold text-gray-700 border-l-4 border-blue-500 pl-2 mb-4">電子印</h4>
+            <div className="space-y-3">
+              {data.sealImage ? (
+                <div className="flex items-center gap-4">
+                  <img
+                    src={data.sealImage}
+                    alt="電子印プレビュー"
+                    style={{ width: '80px', height: '80px', objectFit: 'contain', border: '1px solid #ccc', borderRadius: '4px', padding: '4px' }}
+                  />
+                  <button
+                    onClick={() => handleChange('sealImage', '')}
+                    className="px-3 py-1 bg-red-100 text-red-600 rounded font-bold text-sm hover:bg-red-200"
+                  >
+                    <i className="fa-solid fa-trash mr-1"></i>削除
+                  </button>
+                </div>
+              ) : (
+                <div className="text-sm text-gray-400">未登録</div>
+              )}
+              <label className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg cursor-pointer hover:bg-blue-100 font-bold text-sm">
+                <i className="fa-solid fa-upload"></i>
+                画像をアップロード
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (ev) => {
+                        handleChange('sealImage', ev.target?.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            </div>
+          </section>
+
         </div>
       </div>
       <div className="p-4 border-t bg-gray-50 flex justify-end gap-3">
@@ -478,7 +522,8 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
       emergencyContactSei: '', emergencyContactMei: '', emergencyContactRelation: '', emergencyContactPhone: '',
       jobType: '', experienceYears: 0, experienceMonths: 0, lastUpdatedExperience: Date.now(),
       healthCheckYear: 0, healthCheckMonth: 0, healthCheckDay: 0,
-      qualifications: { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications }
+      qualifications: { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications },
+      sealImage: ''
     });
     setIsEditingEmployee(true);
   };

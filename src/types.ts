@@ -45,6 +45,8 @@ export interface EmployeeData {
   healthCheckMonth: number;
   healthCheckDay: number;
   qualifications: Qualifications;
+  sealImage: string;              // 電子印画像（Base64データURL）
+
 }
 
 export const EMPLOYEE_MASTER_DATA: Record<string, EmployeeData> = {};
