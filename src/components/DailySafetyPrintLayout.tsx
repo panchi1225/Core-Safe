@@ -646,8 +646,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
               <tr style={{ height: ROW_H2 }}>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H }}>作業内容</th>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H }}>会社名</th>
-                <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, whiteSpace: 'normal' as const, lineHeight: '12px' }}>人数<br />（予定）</th>
-                <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, whiteSpace: 'normal' as const, lineHeight: '12px' }}>人数<br />（実施）</th>
+                <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, whiteSpace: 'normal' as const, lineHeight: '12px' }}>人数<br /><span style={{ fontSize: FONT }}>（予定）</span></th>
+                <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, whiteSpace: 'normal' as const, lineHeight: '12px' }}>人数<br /><span style={{ fontSize: FONT }}>（実施）</span></th>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H }}>主要機械</th>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H }}>搬出入資機材</th>
                 <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H }}>安全衛生指示事項</th>
@@ -719,7 +719,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           boxSizing: 'border-box' as const, whiteSpace: 'nowrap' as const,
                           verticalAlign: 'middle', backgroundColor: BG_HEADER,
                         }}>
-                          ＊作業連絡調整事項・打合せ・朝礼等周知事項・その他
+                          作業連絡調整事項・朝礼周知事項等
                         </td>
                         <td style={{
                           border: B, fontSize: FONT_H, fontWeight: 'bold',
@@ -728,7 +728,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           boxSizing: 'border-box' as const, whiteSpace: 'normal' as const,
                           verticalAlign: 'middle', backgroundColor: BG_HEADER,
                         }}>
-                          人数<br />（合計）
+                          人数<br /><span style={{ fontSize: FONT }}>（合計）</span>
                         </td>
                         <td style={{
                           border: B, fontSize: FONT_H, fontWeight: 'bold',
