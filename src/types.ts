@@ -614,6 +614,9 @@ export interface DailySafetyReportData {
   // --- 基本情報 ---
   project: string;              // 工事名（マスタ選択）
   meetingConductor: string;     // 打合せ実施者（supervisorsマスタ選択）
+  participantsPrimeCount: number;       // 打合せ参加者：元請人数
+  participantsSubCompanyCount: number;  // 打合せ参加者：協力会社数
+  participantsSubWorkerCount: number;   // 打合せ参加者：協力会社人数
   meetingDate: string;          // 打合せ日（自動：今日の日付）
   meetingDayOfWeek: string;     // 打合せ日の曜日（自動算出）
   workDate: string;             // 作業日（自動：翌営業日、カレンダーで変更可）
@@ -971,6 +974,9 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
   // --- 基本情報 ---
   project: '',
   meetingConductor: '',
+  participantsPrimeCount: 0,
+  participantsSubCompanyCount: 0,
+  participantsSubWorkerCount: 0,
   meetingDate: todayISO,
   meetingDayOfWeek: getJapaneseDayOfWeek(today),
   workDate: nextBizDayISO,

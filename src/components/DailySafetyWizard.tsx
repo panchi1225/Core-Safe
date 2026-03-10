@@ -429,6 +429,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
       if (!restored.stageConfirmation) restored.stageConfirmation = '';
       if (!restored.witnessConfirmation) restored.witnessConfirmation = '';
       if (!restored.machineryEntries || !Array.isArray(restored.machineryEntries)) restored.machineryEntries = [''];
+      if (restored.participantsPrimeCount === undefined) restored.participantsPrimeCount = 0;
+      if (restored.participantsSubCompanyCount === undefined) restored.participantsSubCompanyCount = 0;
+      if (restored.participantsSubWorkerCount === undefined) restored.participantsSubWorkerCount = 0;
       if (!restored.dumpTrucks) restored.dumpTrucks = { incoming: 0, outgoing: 0 };
       if (!restored.patrolRecord) {
         restored.patrolRecord = {
@@ -1433,6 +1436,61 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
             </option>
           ))}
         </select>
+      </div>
+
+      {/* (2.5) 打合せ参加者 */}
+      <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+        <label className="block text-sm font-bold text-gray-700 mb-2">打合せ参加者</label>
+        <div className="grid grid-cols-3 gap-3">
+          {/* 元請 ○名 */}
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">元請</label>
+            <div className="flex items-center gap-1">
+              <select
+                className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
+                value={report.participantsPrimeCount}
+                onChange={(e) => updateReport('participantsPrimeCount', parseInt(e.target.value))}
+              >
+                {Array.from({ length: 51 }, (_, i) => i).map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+              <span className="text-sm text-gray-700">名</span>
+            </div>
+          </div>
+          {/* 協力会社 ○社 */}
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">協力会社</label>
+            <div className="flex items-center gap-1">
+              <select
+                className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
+                value={report.participantsSubCompanyCount}
+                onChange={(e) => updateReport('participantsSubCompanyCount', parseInt(e.target.value))}
+              >
+                {Array.from({ length: 51 }, (_, i) => i).map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+              <span className="text-sm text-gray-700">社</span>
+            </div>
+          </div>
+          {/* 協力会社 ○名 */}
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">協力会社人数</label>
+            <div className="flex items-center gap-1">
+              <select
+                className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
+                value={report.participantsSubWorkerCount}
+                onChange={(e) => updateReport('participantsSubWorkerCount', parseInt(e.target.value))}
+              >
+                {Array.from({ length: 201 }, (_, i) => i).map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+              <span className="text-sm text-gray-700">名</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* (3) 打合せ日 */}

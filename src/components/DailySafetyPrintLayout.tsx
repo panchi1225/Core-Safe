@@ -676,6 +676,16 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
             <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>打合せ実施者</span>
             <span>：</span>
             <span>{presenter}</span>
+            <span style={{ margin: '0 8px' }}>{'\u00A0'}</span>
+            <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>打合せ参加者</span>
+            <span>：</span>
+            <span>元請 </span>
+            <span style={RED}>{(data as any)?.participantsPrimeCount || 0}</span>
+            <span>名 / 協力会社 </span>
+            <span style={RED}>{(data as any)?.participantsSubCompanyCount || 0}</span>
+            <span>社 </span>
+            <span style={RED}>{(data as any)?.participantsSubWorkerCount || 0}</span>
+            <span>名</span>
           </div>
 
           {/* 【外枠修正】帳票罫線エリアを1つのdivで囲む */}
