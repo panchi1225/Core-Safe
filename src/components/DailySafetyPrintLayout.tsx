@@ -636,7 +636,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
               <tr style={{ height: '20px' }}>
                 <td style={{ width: '25%', border: 'none', padding: 0, height: '20px' }}>{'\u00A0'}</td>
                 <td style={{
-                  width: '50%', border: 'none', fontSize: '13.5px', fontWeight: 'bold',
+                  width: '50%', border: 'none', fontSize: '17.5px', fontWeight: 'bold',
                   textAlign: 'center' as const, padding: 0, height: '20px',
                 }}>
                   作業打合せ及び安全衛生日誌
@@ -648,7 +648,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                   <div style={{ display: 'inline-block', textAlign: 'center' }}>
                     <div style={{ fontSize: FONT, marginBottom: '1px' }}>所長確認欄</div>
                     <div style={{
-                      border: '1px solid black', height: '30px', width: '30px',
+                      border: '1px solid black', height: '45px', width: '45px',
                       display: 'inline-block',
                     }} />
                   </div>
