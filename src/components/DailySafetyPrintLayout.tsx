@@ -247,6 +247,8 @@ const ROW_H2 = '28px'; // rowSpan=2用
 const FONT = '8px';
 // ヘッダー用フォントサイズ（1サイズ大きい）
 const FONT_H = '9px';
+// ヘッダーセル背景色（薄い黄色）
+const BG_HEADER = '#FFFFCC';
 
 /** 全テーブル共通スタイル */
 const TABLE_BASE: React.CSSProperties = {
@@ -281,7 +283,7 @@ const TH: React.CSSProperties = {
   ...CELL,
   fontWeight: 'bold',
   textAlign: 'center' as const,
-  backgroundColor: 'white',
+  backgroundColor: BG_HEADER,
 };
 
 /** 赤字スタイル */
@@ -456,6 +458,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
             border: B, padding: '0px 1px', fontWeight: 'bold', fontSize: FONT,
             textAlign: 'left' as const, height: ROW_H, maxHeight: ROW_H,
             lineHeight: '12px', overflow: 'hidden', boxSizing: 'border-box' as const,
+            backgroundColor: BG_HEADER,
           }}>
             【{title}】
           </td>
@@ -713,7 +716,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const, whiteSpace: 'nowrap' as const,
-                          verticalAlign: 'middle',
+                          verticalAlign: 'middle', backgroundColor: BG_HEADER,
                         }}>
                           ＊作業連絡調整事項・打合せ・朝礼等周知事項・その他
                         </td>
@@ -722,7 +725,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const, whiteSpace: 'normal' as const,
-                          verticalAlign: 'middle',
+                          verticalAlign: 'middle', backgroundColor: BG_HEADER,
                         }}>
                           人数<br />（合計）
                         </td>
@@ -731,7 +734,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const,
-                          verticalAlign: 'middle',
+                          verticalAlign: 'middle', backgroundColor: BG_HEADER,
                         }}>
                           ダンプ台数
                         </td>
@@ -740,7 +743,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const,
-                          verticalAlign: 'middle',
+                          verticalAlign: 'middle', backgroundColor: BG_HEADER,
                         }}>
                           発注者確認
                         </td>
@@ -827,7 +830,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           border: B, fontSize: FONT, fontWeight: 'bold',
                           textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const,
+                          boxSizing: 'border-box' as const, backgroundColor: BG_HEADER,
                         }}>
                           巡視点検者
                         </th>
@@ -843,6 +846,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           verticalAlign: 'middle', boxSizing: 'border-box' as const,
+                          backgroundColor: BG_HEADER,
                         }}>
                           巡視所見
                         </th>
@@ -862,7 +866,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           border: B, fontSize: FONT, fontWeight: 'bold',
                           textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const,
+                          boxSizing: 'border-box' as const, backgroundColor: BG_HEADER,
                         }}>
                           巡視時間
                         </th>
@@ -888,6 +892,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           verticalAlign: 'middle', boxSizing: 'border-box' as const,
+                          backgroundColor: BG_HEADER,
                         }}>
                           配置図・略図
                         </td>
@@ -938,7 +943,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           border: B, fontSize: FONT_H, fontWeight: 'bold',
                           textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const,
+                          boxSizing: 'border-box' as const, backgroundColor: BG_HEADER,
                         }}>
                           当現場確認項目
                         </th>
@@ -999,7 +1004,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           border: B, borderBottom: 'none', fontSize: FONT_H, fontWeight: 'bold',
                           textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '0px 1px', overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const,
+                          boxSizing: 'border-box' as const, backgroundColor: BG_HEADER,
                         }}>
                           巡視点検チェックリスト　（ ○適正　△一部適正　×不適切　◎是正済　無印は該当無 ）
                         </td>
