@@ -295,15 +295,17 @@ const RED: React.CSSProperties = {
 /**
  * AutoFitText: セル内にテキストが収まるようフォントサイズを自動縮小するコンポーネント
  * - 改行（\n）に対応
- * - 水平・垂直ともに中央表示
- * - maxFontSizeから1pxずつ縮小してオーバーフローしないサイズを探す
+ * - align: 'left'で左寄せ+インデント、'center'で中央表示
+ * - maxFontSizeから0.5pxずつ縮小してオーバーフローしないサイズを探す
  */
 const AutoFitText: React.FC<{
   text: string;
   maxFontSize?: number;
   minFontSize?: number;
+  align?: 'left' | 'center';
+  indent?: string;
   style?: React.CSSProperties;
-}> = ({ text, maxFontSize = 8, minFontSize = 4, style }) => {
+}> = ({ text, maxFontSize = 8, minFontSize = 4, align = 'center', indent, style }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const textRef = React.useRef<HTMLDivElement>(null);
   const [fontSize, setFontSize] = React.useState(maxFontSize);
@@ -333,8 +335,12 @@ const AutoFitText: React.FC<{
       ref={containerRef}
       style={{
         width: '100%', height: '100%',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: align === 'left' ? 'flex-start' : 'center',
         overflow: 'hidden',
+        paddingLeft: align === 'left' && indent ? indent : undefined,
+        boxSizing: 'border-box' as const,
         ...style,
       }}
     >
@@ -343,7 +349,7 @@ const AutoFitText: React.FC<{
         style={{
           fontSize: `${fontSize}px`,
           lineHeight: 1.3,
-          textAlign: 'center',
+          textAlign: align,
           whiteSpace: 'pre-wrap',
           wordBreak: 'break-all',
         }}
@@ -666,15 +672,15 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
             <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>工事名</span>
             <span>：</span>
             <span style={RED}>{projectName}</span>
-            <span style={{ margin: '0 6px' }}>、</span>
+            <span style={{ margin: '0 8px' }}>{'\u00A0'}</span>
             <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>打合せ日</span>
             <span>：</span>
             <span style={RED}>{toWareki(meetingDate)}{getWeekdayLabel(meetingDate)}</span>
-            <span style={{ margin: '0 6px' }}>、</span>
+            <span style={{ margin: '0 8px' }}>{'\u00A0'}</span>
             <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>作業日</span>
             <span>：</span>
             <span style={RED}>{toWareki(workDate)}{getWeekdayLabel(workDate)}</span>
-            <span style={{ margin: '0 6px' }}>、</span>
+            <span style={{ margin: '0 8px' }}>{'\u00A0'}</span>
             <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>打合せ実施者</span>
             <span>：</span>
             <span style={RED}>{presenter}</span>
@@ -812,11 +818,11 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         <td rowSpan={2} style={{
                           border: B, whiteSpace: 'normal' as const,
                           height: ROW_H2, maxHeight: ROW_H2,
-                          verticalAlign: 'top', fontSize: FONT, padding: '1px 2px',
-                          overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const, textIndent: INDENT1, ...RED,
+                          verticalAlign: 'middle', padding: '1px 2px',
+                          overflow: 'hidden',
+                          boxSizing: 'border-box' as const, ...RED,
                         }}>
-                          {workNotes || '\u00A0'}
+                          <AutoFitText text={workNotes} align="left" indent={INDENT1} />
                         </td>
                         {/* 人数（合計）表示欄 rowSpan=2 */}
                         <td rowSpan={2} style={{
@@ -926,65 +932,12 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           {patrolRecord.inspectionTime || '\u00A0'}
                         </td>
                         <td style={{
-                          border: B, fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
-                          padding: '1px 2px', whiteSpace: 'normal' as const,
-                          overflow: 'hidden', lineHeight: '12px', verticalAlign: 'top',
-                          boxSizing: 'border-box' as const, textIndent: INDENT1, ...RED,
+                          border: B, height: ROW_H2, maxHeight: ROW_H2,
+                          padding: '1px 2px', overflow: 'hidden',
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box' as const, ...RED,
                         }}>
-                          {patrolRecord.findings || '\u00A0'}
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-
-                  {/* === 配置図ヘッダー（28px）+ 画像（28行×14px=392px固定） === */}
-                  <table style={{ ...TABLE_BASE, marginTop: '-1px' }}>
-                    <tbody>
-                      {/* 配置図ヘッダー: 2行結合(28px) */}
-                      <tr style={{ height: ROW_H2 }}>
-                        <td style={{
-                          border: B, borderBottom: 'none', fontSize: FONT_H, fontWeight: 'bold',
-                          textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
-                          padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
-                          verticalAlign: 'middle', boxSizing: 'border-box' as const,
-                          backgroundColor: BG_HEADER,
-                        }}>
-                          配置図・略図
-                        </td>
-                      </tr>
-
-                      {/* 配置図画像: 28行分固定(392px) - 画像サイズに依存しない */}
-                      <tr style={{ height: DIAGRAM_IMG_H }}>
-                        <td style={{
-                          border: B, borderTop: 'none', textAlign: 'center' as const,
-                          verticalAlign: 'top', padding: 0,
-                          overflow: 'hidden',
-                          height: DIAGRAM_IMG_H, maxHeight: DIAGRAM_IMG_H,
-                          boxSizing: 'border-box' as const,
-                          position: 'relative' as const,
-                        }}>
-                          {diagramUrl ? (
-                            <div style={{
-                              position: 'absolute' as const,
-                              top: '1px', left: '1px', right: '1px', bottom: '1px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              overflow: 'hidden',
-                            }}>
-                              <img
-                                src={diagramUrl}
-                                alt="配置図"
-                                style={{
-                                  maxWidth: '100%', maxHeight: '100%',
-                                  objectFit: 'contain' as const,
-                                  display: 'block',
-                                }}
-                              />
-                            </div>
-                          ) : (
-                            '\u00A0'
-                          )}
+                          <AutoFitText text={patrolRecord.findings || ''} align="left" indent={INDENT1} />
                         </td>
                       </tr>
                     </tbody>
@@ -992,7 +945,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                 </td>
 
                 {/* ====================================
-                    右側セル（53%）修正6: 完全半分50%:50%
+                    右側セル（45%）当現場確認項目のみ
                     ==================================== */}
                 <td style={{ width: '45%', verticalAlign: 'top', padding: 0, border: 'none', height: '100%' }}>
                   {/* Part A: 当現場確認項目（ヘッダー1行 + データ5行 = 6行） */}
@@ -1060,11 +1013,77 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       })}
                     </tbody>
                   </table>
+                </td>
+              </tr>
+            </tbody>
+          </table>
 
-                  {/* Part B: 巡視点検チェックリスト（タイトル1行 + 27行 = 28行） */}
-                  <table style={{ ...TABLE_BASE, marginTop: '-1px', marginLeft: '-1px', width: 'calc(100% + 1px)' }}>
+          {/* ==================================================================
+              第5段: 配置図・略図（43%）＋ 巡視点検チェックリスト（57%）
+              ================================================================== */}
+          <table style={{ ...TABLE_BASE, marginTop: '-1px' }}>
+            <tbody>
+              <tr>
+                {/* 左側: 配置図・略図（43%） */}
+                <td style={{ width: '43%', verticalAlign: 'top', padding: 0, border: 'none' }}>
+                  <table style={{ ...TABLE_BASE }}>
                     <tbody>
-                      {/* タイトル行（28px）修正25: borderBottomをnoneにして内側テーブルの上辺との二重罫線防止 */}
+                      {/* 配置図ヘッダー: 2行結合(28px) */}
+                      <tr style={{ height: ROW_H2 }}>
+                        <td style={{
+                          border: B, borderBottom: 'none', fontSize: FONT_H, fontWeight: 'bold',
+                          textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
+                          padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
+                          verticalAlign: 'middle', boxSizing: 'border-box' as const,
+                          backgroundColor: BG_HEADER,
+                        }}>
+                          配置図・略図
+                        </td>
+                      </tr>
+
+                      {/* 配置図画像: 固定高さ */}
+                      <tr style={{ height: DIAGRAM_IMG_H }}>
+                        <td style={{
+                          border: B, borderTop: 'none', textAlign: 'center' as const,
+                          verticalAlign: 'top', padding: 0,
+                          overflow: 'hidden',
+                          height: DIAGRAM_IMG_H, maxHeight: DIAGRAM_IMG_H,
+                          boxSizing: 'border-box' as const,
+                          position: 'relative' as const,
+                        }}>
+                          {diagramUrl ? (
+                            <div style={{
+                              position: 'absolute' as const,
+                              top: '1px', left: '1px', right: '1px', bottom: '1px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              overflow: 'hidden',
+                            }}>
+                              <img
+                                src={diagramUrl}
+                                alt="配置図"
+                                style={{
+                                  maxWidth: '100%', maxHeight: '100%',
+                                  objectFit: 'contain' as const,
+                                  display: 'block',
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            '\u00A0'
+                          )}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </td>
+
+                {/* 右側: 巡視点検チェックリスト（57%） */}
+                <td style={{ width: '57%', verticalAlign: 'top', padding: 0, border: 'none' }}>
+                  <table style={{ ...TABLE_BASE, marginLeft: '-1px', width: 'calc(100% + 1px)' }}>
+                    <tbody>
+                      {/* タイトル行（28px） */}
                       <tr style={{ height: ROW_H2 }}>
                         <td colSpan={4} style={{
                           border: B, borderBottom: 'none', fontSize: FONT_H, fontWeight: 'bold',
