@@ -642,15 +642,21 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                   作業打合せ及び安全衛生日誌
                 </td>
                 <td style={{
-                  width: '25%', border: 'none', textAlign: 'right' as const,
-                  verticalAlign: 'bottom', padding: 0, height: '20px',
+                  width: '25%', border: 'none', padding: 0, height: '20px',
+                  position: 'relative' as const,
                 }}>
-                  <div style={{ display: 'inline-block', textAlign: 'center' }}>
-                    <div style={{ fontSize: FONT, marginBottom: '1px' }}>所長確認欄</div>
-                    <div style={{
-                      border: '1px solid black', height: '45px', width: '45px',
-                      display: 'inline-block',
-                    }} />
+                  <div style={{
+                    position: 'absolute', right: 0, top: 0,
+                    height: '48px', display: 'flex', alignItems: 'flex-end',
+                    textAlign: 'center', zIndex: 1,
+                  }}>
+                    <div style={{ display: 'inline-block', textAlign: 'center' }}>
+                      <div style={{ fontSize: FONT, marginBottom: '1px' }}>所長確認欄</div>
+                      <div style={{
+                        border: '1px solid black', height: '35px', width: '35px',
+                        display: 'inline-block',
+                      }} />
+                    </div>
                   </div>
                 </td>
               </tr>
