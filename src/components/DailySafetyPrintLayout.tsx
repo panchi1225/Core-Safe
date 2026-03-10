@@ -289,7 +289,7 @@ const TH: React.CSSProperties = {
 
 /** データ入力スタイル（全文字黒統一。後で赤字指定箇所を変更予定） */
 const RED: React.CSSProperties = {
-  color: 'black',
+  color: 'red',
 };
 
 /**
@@ -726,20 +726,23 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
             </thead>
             <tbody>
               {integratedRows.slice(0, WORK_ROWS).map((row, idx) => {
-                const dataCell: React.CSSProperties = { ...CELL, ...RED };
+                // 追加作業行は全セル赤字、通常行は人数（実施）のみ赤字
+                const baseCell: React.CSSProperties = { ...CELL };
+                const redCell: React.CSSProperties = { ...CELL, ...RED };
+                const isAdd = row.isAdditional;
 
                 return (
                   <tr key={idx} style={{ height: ROW_H }}>
-                    <td style={{ ...dataCell, textIndent: INDENT1 }}>{row.workContent || '\u00A0'}</td>
-                    <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.company || '\u00A0'}</td>
-                    <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.plannedWorkers || '\u00A0'}</td>
-                    <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.actualWorkersVal || '\u00A0'}</td>
-                    <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.machinery || '\u00A0'}</td>
-                    <td style={{ ...dataCell, textAlign: 'center' as const }}>{row.material || '\u00A0'}</td>
-                    <td style={{ ...dataCell, whiteSpace: 'normal' as const, textIndent: INDENT2 }}>{row.safetyInstruction || '\u00A0'}</td>
-                    <td style={{ ...dataCell, whiteSpace: 'normal' as const, textIndent: INDENT2 }}>{row.confirmationLabel || '\u00A0'}</td>
+                    <td style={{ ...(isAdd ? redCell : baseCell), textIndent: INDENT1 }}>{row.workContent || '\u00A0'}</td>
+                    <td style={{ ...(isAdd ? redCell : baseCell), textAlign: 'center' as const }}>{row.company || '\u00A0'}</td>
+                    <td style={{ ...baseCell, textAlign: 'center' as const }}>{row.plannedWorkers || '\u00A0'}</td>
+                    <td style={{ ...redCell, textAlign: 'center' as const }}>{row.actualWorkersVal || '\u00A0'}</td>
+                    <td style={{ ...(isAdd ? redCell : baseCell), textAlign: 'center' as const }}>{row.machinery || '\u00A0'}</td>
+                    <td style={{ ...baseCell, textAlign: 'center' as const }}>{row.material || '\u00A0'}</td>
+                    <td style={{ ...baseCell, whiteSpace: 'normal' as const, textIndent: INDENT2 }}>{row.safetyInstruction || '\u00A0'}</td>
+                    <td style={{ ...baseCell, whiteSpace: 'normal' as const, textIndent: INDENT2 }}>{row.confirmationLabel || '\u00A0'}</td>
                     <td style={{ ...CELL, textAlign: 'center' as const }}>
-                      {circledChoice(row.confirmationResult, '良', '否')}
+                      {circledChoice(row.confirmationResult, '濶ｯ', '蜷ｦ')}
                     </td>
                   </tr>
                 );
