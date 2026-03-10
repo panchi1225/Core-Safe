@@ -2483,10 +2483,10 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
         </h2>
 
         <div className="bg-gray-100 rounded p-2 text-sm text-center mb-4">
-          <span className="font-bold">○</span> 適正　　
-          <span className="font-bold">△</span> 一部適正　　
-          <span className="font-bold">×</span> 不適切　　
-          <span className="font-bold">◎</span> 是正済　　
+          <span className="font-bold">○</span> 適正&emsp;
+          <span className="font-bold">△</span> 一部適正&emsp;
+          <span className="font-bold">×</span> 不適切&emsp;
+          <span className="font-bold">◎</span> 是正済&emsp;
           <span className="font-bold">無印</span> 該当無
         </div>
         
