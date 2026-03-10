@@ -513,7 +513,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
     const renderChecklistColumn = (keys: string[], side: 'left' | 'right') => {
     const rows: React.ReactNode[] = [];
-    const borderR = side === 'left' ? 'none' : B;
+    const borderR = 'none';
     const borderL = side === 'left' ? B : B;
     keys.forEach((key) => {
       const title = CATEGORY_TITLES[key] || key;
@@ -559,10 +559,12 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
       for (let b = 0; b < blankCount; b++) {
         const blankData = getBlankRowData(key, b);
+        const isLastRow = (key === keys[keys.length - 1]) && (b === blankCount - 1);
         rows.push(
           <tr key={`blank-${key}-${b}`} style={{ height: ROW_H }}>
             <td style={{
-              border: B, padding: '0px 1px', fontSize: FONT, height: ROW_H,
+              border: B, borderBottom: isLastRow ? 'none' : B,
+              padding: '0px 1px', fontSize: FONT, height: ROW_H,
               maxHeight: ROW_H, lineHeight: '12px', overflow: 'hidden',
               textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
               boxSizing: 'border-box' as const, textIndent: INDENT2,
@@ -570,7 +572,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
               {blankData.label || '\u00A0'}
             </td>
             <td style={{
-              border: B, borderRight: borderR, padding: '0px 1px', fontSize: FONT,
+              border: B, borderRight: borderR, borderBottom: isLastRow ? 'none' : B,
+              padding: '0px 1px', fontSize: FONT,
               textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
               lineHeight: '12px', overflow: 'hidden', boxSizing: 'border-box' as const,
               ...RED,
@@ -894,7 +897,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                             巡視時間
                           </th>
                           <th style={{
-                            border: B, borderTop: 'none', fontSize: FONT, fontWeight: 'bold',
+                            border: B, borderTop: 'none', borderRight: 'none', fontSize: FONT, fontWeight: 'bold',
                             textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
                             padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                             boxSizing: 'border-box' as const, backgroundColor: BG_HEADER,
