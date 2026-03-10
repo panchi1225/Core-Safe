@@ -247,7 +247,7 @@ const ROW_H2 = '28px'; // rowSpan=2用
 const FONT = '8px';
 // ヘッダー用フォントサイズ（1サイズ大きい）
 const FONT_H = '9px';
-const DIAGRAM_IMG_H = '392px';  // 配置図画像エリア固定高さ = 28行 × 14px
+const DIAGRAM_IMG_H = '378px';  // 配置図画像エリア固定高さ = 27行 × 14px
 // ヘッダーセル背景色（なし）
 const BG_HEADER = 'transparent';
 
@@ -650,11 +650,13 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                   width: '25%', border: 'none', textAlign: 'right' as const,
                   verticalAlign: 'bottom', padding: 0, height: '20px',
                 }}>
-                  <div style={{ fontSize: FONT, textAlign: 'right' }}>所長確認欄</div>
-                  <div style={{
-                    border: '1px solid black', height: '14px', width: '70px',
-                    display: 'inline-block',
-                  }} />
+                  <div style={{ display: 'inline-block', textAlign: 'center' }}>
+                    <div style={{ fontSize: FONT, marginBottom: '1px' }}>所長確認欄</div>
+                    <div style={{
+                      border: '1px solid black', height: '30px', width: '30px',
+                      display: 'inline-block',
+                    }} />
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -913,10 +915,10 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         </th>
                       </tr>
 
-                      {/* 行5-6: データ行（2行結合=28px） */}
+                      {/* 行5-6: データ行（2行結合=28px）borderTopなしで二重罫線防止 */}
                       <tr style={{ height: ROW_H2 }}>
                         <td style={{
-                          border: B, fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
+                          border: B, borderTop: 'none', fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const, textAlign: 'center' as const,
                           verticalAlign: 'middle', ...RED,
@@ -924,7 +926,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           {patrolRecord.inspector || '\u00A0'}
                         </td>
                         <td style={{
-                          border: B, fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
+                          border: B, borderTop: 'none', fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const, textAlign: 'center' as const,
                           verticalAlign: 'middle', ...RED,
@@ -932,7 +934,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           {patrolRecord.inspectionTime || '\u00A0'}
                         </td>
                         <td style={{
-                          border: B, height: ROW_H2, maxHeight: ROW_H2,
+                          border: B, borderTop: 'none', height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden',
                           verticalAlign: 'middle',
                           boxSizing: 'border-box' as const, ...RED,
@@ -949,7 +951,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     ==================================== */}
                 <td style={{ width: '45%', verticalAlign: 'top', padding: 0, border: 'none', height: '100%' }}>
                   {/* Part A: 当現場確認項目（ヘッダー1行 + データ5行 = 6行） */}
-                  <table style={{ ...TABLE_BASE, marginLeft: '-1px', width: 'calc(100% + 1px)' }}>
+                  <table style={{ ...TABLE_BASE }}>
                     <colgroup>
                       <col style={{ width: '38.89%' }} />
                       <col style={{ width: '11.11%' }} />
