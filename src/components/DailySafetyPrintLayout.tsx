@@ -870,7 +870,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     </table>
 
                     {/* === 行4〜6: 巡視記録 === */}
-                    <table style={{ ...TABLE_BASE, height: '100%' }}>
+                     <table style={{ ...TABLE_BASE }}>
                       <colgroup>
                         <col style={{ width: '27.27%' }} />
                         <col style={{ width: '21.82%' }} />
@@ -907,7 +907,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         </tr>
 
                         {/* 行5-6: データ行（2行結合=28px） */}
-                        <tr style={{ height: '100%' }}>
+                        <tr style={{ height: '29px' }}>
                           {/* 【外枠修正】borderLeft削除 */}
                           <td style={{
                             border: B, borderLeft: 'none', borderTop: 'none', borderBottom: 'none', fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
@@ -936,18 +936,6 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         </tr>
                       </tbody>
                     </table>
-                     <div style={{ position: 'relative', height: 0 }}>
-                      <div style={{
-                        position: 'absolute', top: 0, left: '27.27%',
-                        width: 0, borderLeft: '1px solid black',
-                        height: '6px',
-                      }} />
-                      <div style={{
-                        position: 'absolute', top: 0, left: '49.09%',
-                        width: 0, borderLeft: '1px solid black',
-                        height: '6px',
-                      }} />
-                    </div>
                   </td>
 
                   {/* 右側セル（45%） */}
