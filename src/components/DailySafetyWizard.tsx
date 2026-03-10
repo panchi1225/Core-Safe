@@ -978,7 +978,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
       dumpTrucks: { incoming: 0, outgoing: 0 },
       workNotes: '',
       // 実施人数リセット
-      workEntries: prev.workEntries.map((e: any) => ({ ...e, actualWorkers: 0 })),
+      actualWorkers: prev.actualWorkers?.map(() => 0) || [],
       // STEP4リセット
       patrolRecord: {
         coordinationNotes: '',
@@ -989,7 +989,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
       // STEP5リセット
       inspectionChecklist: prev.inspectionChecklist?.map((cat: any) => ({
         ...cat,
-        items: cat.items?.map((item: any) => ({ ...item, rating: '' })),
+        items: cat.items?.map((item: any) => ({ ...item, result: '' })),
       })) || [],
       // 押印リセット
       sealImage: '',
