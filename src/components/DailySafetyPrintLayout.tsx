@@ -647,12 +647,12 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                 }}>
                   <div style={{
                     position: 'absolute', right: 0, top: 0,
-                    width: '14.85mm', display: 'flex', flexDirection: 'column' as const,
+                    width: '20%', display: 'flex', flexDirection: 'column' as const,
                     alignItems: 'center', zIndex: 1,
                   }}>
                     <div style={{ fontSize: FONT, marginBottom: '1px', textAlign: 'center' }}>所長確認欄</div>
                     <div style={{
-                      border: '1px solid black', width: '100%', height: '14.85mm',
+                      border: '1px solid black', width: '100%', height: '35px',
                       boxSizing: 'border-box' as const,
                     }} />
                   </div>
