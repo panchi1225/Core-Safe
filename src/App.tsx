@@ -226,6 +226,23 @@ function extractMonthFromDiary(draft: SavedDraft): number {
   return 0; // 取得不可
 }
 
+function extractYearFromDiary(draft: SavedDraft): number {
+  const data = draft.data as DailySafetyReportData;
+  if (data.workDate) {
+    const d = new Date(data.workDate + 'T00:00:00');
+    if (!isNaN(d.getTime())) return d.getFullYear();
+  }
+  if (data.meetingDate) {
+    const d = new Date(data.meetingDate + 'T00:00:00');
+    if (!isNaN(d.getTime())) return d.getFullYear();
+  }
+  if (draft.lastModified) {
+    const d = new Date(draft.lastModified);
+    if (!isNaN(d.getTime())) return d.getFullYear();
+  }
+  return 0;
+}
+
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<ViewState>('HOME');
   
@@ -639,7 +656,7 @@ const App: React.FC = () => {
                         {selectedDiaryProject}
                         <span className="ml-3 text-pink-600">
                           <i className="fa-regular fa-calendar mr-1"></i>
-                          {selectedDiaryMonth}月
+                          {(() => { const pj = selectedDiaryProject || ''; const ds = draftsByProject[pj] || []; const d = ds.find(x => extractMonthFromDiary(x) === selectedDiaryMonth); return d ? extractYearFromDiary(d) : ''; })()}年{selectedDiaryMonth}月
                         </span>
                       </div>
 
@@ -675,7 +692,7 @@ const App: React.FC = () => {
                               if (dateStr) {
                                 const d = new Date(dateStr + 'T00:00:00');
                                 if (!isNaN(d.getTime())) {
-                                  displayDate = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+                                  displayDate = `${d.getMonth() + 1}月${d.getDate()}日`;
                                 }
                               }
                               if (!displayDate) {
@@ -687,10 +704,7 @@ const App: React.FC = () => {
                                   <div className="cursor-pointer flex-1" onClick={() => handleResumeDraft(draft)}>
                                     <div className="font-bold text-pink-800 text-lg">
                                       <i className="fa-regular fa-calendar-check mr-2"></i>
-                                      {displayDate} 分
-                                    </div>
-                                    <div className="text-xs text-gray-500 mt-1 pl-7">
-                                      最終更新: {new Date(draft.lastModified).toLocaleString('ja-JP')}
+                                      {displayDate} 
                                     </div>
                                   </div>
                                   <button
@@ -959,7 +973,7 @@ const App: React.FC = () => {
         <div>&copy; 2026 Matsuura Construction App</div>
         <div className="mt-1 flex items-center justify-center gap-2">
           <span>Core Safe</span>
-          <span>Ver.1.7.12</span>
+          <span>Ver.1.9.1</span>
         </div>
       </footer>
 
