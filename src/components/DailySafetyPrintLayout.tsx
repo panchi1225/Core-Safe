@@ -381,9 +381,6 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   const materialEntriesStep3 = (data as any)?.step3MaterialEntries || [];
   const materialEntries = [...materialEntriesStep1, ...materialEntriesStep3];
   const step1MaterialCount = materialEntriesStep1.length;
-  const materialEntriesStep3 = (data as any)?.step3MaterialEntries || [];
-  const materialEntries = [...materialEntriesStep1, ...materialEntriesStep3];
-  const step1MaterialCount = materialEntriesStep1.length;
   const step1Machinery = ((data as any)?.machineryEntries || []).filter((m: string) => m);
   const step3Machinery = ((data as any)?.step3MachineryEntries || []).filter((m: string) => m);
   const machineryEntries = [...step1Machinery, ...step3Machinery];
