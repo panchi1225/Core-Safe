@@ -754,6 +754,9 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
             </tbody>
           </table>
 
+          {/* 右端罫線統一用の外枠div */}
+          <div style={{ borderRight: '1px solid black', marginTop: '-1px' }}>
+
           {/* ==================================================================
               第4段〜第5段: 左右独立レイアウト
               修正5: 左47%・右53%
@@ -1045,12 +1048,12 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       </tr>
 
                       {/* 配置図画像: 固定高さ */}
-                      <tr style={{ height: DIAGRAM_IMG_H }}>
+                      <tr style={{ height: 'auto' }}>
                         <td style={{
                           border: B, borderTop: 'none', textAlign: 'center' as const,
                           verticalAlign: 'top', padding: 0,
                           overflow: 'hidden',
-                          height: DIAGRAM_IMG_H, maxHeight: DIAGRAM_IMG_H,
+                          height: 'auto',
                           boxSizing: 'border-box' as const,
                           position: 'relative' as const,
                         }}>
@@ -1084,7 +1087,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
 
                 {/* 右側: 巡視点検チェックリスト（57%） */}
                 <td style={{ width: '57%', verticalAlign: 'top', padding: 0, border: 'none' }}>
-                  <table style={{ ...TABLE_BASE, marginLeft: '-1px', width: 'calc(100% + 1px)' }}>
+                  <table style={{ ...TABLE_BASE }}>
                     <tbody>
                       {/* タイトル行（28px） */}
                       <tr style={{ height: ROW_H2 }}>
