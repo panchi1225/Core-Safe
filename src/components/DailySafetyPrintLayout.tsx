@@ -681,13 +681,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
             <span style={{ margin: '0 8px' }}>{'\u00A0'}</span>
             <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>打合せ参加者</span>
             <span>：</span>
-            <span>元請 </span>
-            <span style={RED}>{(data as any)?.participantsPrimeCount || 0}</span>
-            <span>名 / 協力会社 </span>
-            <span style={RED}>{(data as any)?.participantsSubCompanyCount || 0}</span>
-            <span>社 </span>
-            <span style={RED}>{(data as any)?.participantsSubWorkerCount || 0}</span>
-            <span>名</span>
+            <span>元請 {(data as any)?.participantsPrimeCount || 0} 名 / 協力会社 {(data as any)?.participantsSubCompanyCount || 0} 社 {(data as any)?.participantsSubWorkerCount || 0} 名</span>
           </div>
 
           {/* 【外枠修正】帳票罫線エリアを1つのdivで囲む */}
@@ -955,7 +949,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         <tr style={{ height: ROW_H2 }}>
                           {/* 【外枠修正】borderTop+borderRight削除 */}
                           <th colSpan={4} style={{
-                            border: B, borderTop: 'none', borderRight: 'none', fontSize: FONT_H, fontWeight: 'bold',
+                            border: B, borderRight: 'none', fontSize: FONT_H, fontWeight: 'bold',
                             textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                             padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                             boxSizing: 'border-box' as const, backgroundColor: BG_HEADER,
