@@ -629,7 +629,7 @@ const App: React.FC = () => {
                                   <div>
                                     <div className="font-bold text-gray-800 text-lg">
                                       <i className="fa-regular fa-calendar mr-2 text-pink-500"></i>
-                                      {month}月
+                                      {(() => { const d = projectDrafts.find(x => extractMonthFromDiary(x) === month); return d ? extractYearFromDiary(d) : ''; })()}年{month}月
                                     </div>
                                     <div className="text-xs text-gray-500 ml-7">
                                       {count} 件のデータ
@@ -973,7 +973,7 @@ const App: React.FC = () => {
         <div>&copy; 2026 Matsuura Construction App</div>
         <div className="mt-1 flex items-center justify-center gap-2">
           <span>Core Safe</span>
-          <span>Ver.1.9.1</span>
+          <span>Ver.1.9.2</span>
         </div>
       </footer>
 
