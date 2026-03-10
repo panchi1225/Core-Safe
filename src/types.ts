@@ -991,6 +991,7 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
   workEntries: [],
   machineryEntries: [''],        // 主要機械（初期1項目）
   materialEntries: [],
+  step3MaterialEntries: [],
   // 【修正2】preparationEntries を削除（オプショナルのため省略可）
   // 【修正】安全衛生指示事項: 7個→10個に変更
   safetyInstructions: ['', '', '', '', '', '', '', '', '', ''],
@@ -1031,6 +1032,7 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
   actualWorkers: [],
   step3AdditionalWorkEntries: [],
   step3MachineryEntries: [],
+  step3MaterialEntries: string[];   // STEP3追加搬出入資機材（STEP1と合計10個まで）
   step3ConfirmationItems: {
     item1: '', item2: '', item3: '', item4: '', item5: '',
     item6: '', item7: '', item8: '', item9: '', item10: '',
@@ -1057,7 +1059,7 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
     inspectionTime: '14:00',
     findings: '',
   },
-  
+
   // --- 作業所長押印 ---
   sealImage: '',
 

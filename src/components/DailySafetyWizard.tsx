@@ -412,6 +412,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
       if (!restored.step3AdditionalWorkEntries) restored.step3AdditionalWorkEntries = [];
       if (!restored.step3MachineryEntries || !Array.isArray(restored.step3MachineryEntries)) restored.step3MachineryEntries = [];
       if (!restored.step3MachineryEntries || !Array.isArray(restored.step3MachineryEntries)) restored.step3MachineryEntries = [];
+      if (!restored.step3MaterialEntries || !Array.isArray(restored.step3MaterialEntries)) restored.step3MaterialEntries = [];
       /* 【修正】基本確認事項: 10項目対応のフォールバック（item8〜item10を補完） */
       if (!restored.step3ConfirmationItems) {
         restored.step3ConfirmationItems = { item1: '', item2: '', item3: '', item4: '', item5: '', item6: '', item7: '', item8: '', item9: '', item10: '' };
@@ -842,6 +843,37 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
       const arr = [...(prev.step3MachineryEntries || [])];
       arr.splice(index, 1);
       return { ...prev, step3MachineryEntries: arr };
+    });
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
+  const addStep3Material = () => {
+    const total = (report.materialEntries || []).filter(m => m).length + (report.step3MaterialEntries || []).length;
+    if (total >= 10) return;
+    setReport((prev) => ({
+      ...prev,
+      step3MaterialEntries: [...(prev.step3MaterialEntries || []), ''],
+    }));
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
+  const updateStep3Material = (index: number, value: string) => {
+    setReport((prev) => {
+      const arr = [...(prev.step3MaterialEntries || [])];
+      arr[index] = value;
+      return { ...prev, step3MaterialEntries: arr };
+    });
+    setHasUnsavedChanges(true);
+    setSaveStatus('idle');
+  };
+
+  const removeStep3Material = (index: number) => {
+    setReport((prev) => {
+      const arr = [...(prev.step3MaterialEntries || [])];
+      arr.splice(index, 1);
+      return { ...prev, step3MaterialEntries: arr };
     });
     setHasUnsavedChanges(true);
     setSaveStatus('idle');
@@ -2066,6 +2098,46 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
           <button
             onClick={addStep3Machinery}
             className="text-sm text-pink-600 font-bold hover:underline"
+          >
+            <i className="fa-solid fa-plus mr-1"></i>追加
+          </button>
+        )}
+      </div>
+
+      {/* 追加 搬出入資機材 */}
+      <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+        <label className="block text-sm font-bold text-gray-700 mb-2">
+          <i className="fa-solid fa-truck mr-1 text-orange-500"></i>
+          追加 搬出入資機材（STEP1と合計10個まで）
+        </label>
+        <p className="text-xs text-gray-500 mb-2">
+          STEP1で{(report.materialEntries || []).filter(m => m).length}個選択済み / 残り{Math.max(0, 10 - (report.materialEntries || []).filter(m => m).length - (report.step3MaterialEntries || []).length)}個追加可能
+        </p>
+        {(report.step3MaterialEntries || []).map((val, idx) => (
+          <div key={idx} className="flex items-center gap-2 mb-2">
+            <select
+              className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
+              value={val}
+              onChange={(e) => updateStep3Material(idx, e.target.value)}
+            >
+              <option value="">選択してください</option>
+              {masterData.materials.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => removeStep3Material(idx)}
+              className="text-gray-400 hover:text-red-500 p-1 transition-colors shrink-0"
+              title="削除"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        ))}
+        {((report.materialEntries || []).filter(m => m).length + (report.step3MaterialEntries || []).length) < 10 && (
+          <button
+            onClick={addStep3Material}
+            className="text-sm text-orange-600 font-bold hover:underline"
           >
             <i className="fa-solid fa-plus mr-1"></i>追加
           </button>

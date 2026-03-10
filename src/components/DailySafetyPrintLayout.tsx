@@ -377,7 +377,13 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   // ============================
   const workEntries = data?.workEntries || [];
   const actualWorkers = data?.actualWorkers || [];
-  const materialEntries = data?.materialEntries || [];
+  const materialEntriesStep1 = data?.materialEntries || [];
+  const materialEntriesStep3 = (data as any)?.step3MaterialEntries || [];
+  const materialEntries = [...materialEntriesStep1, ...materialEntriesStep3];
+  const step1MaterialCount = materialEntriesStep1.length;
+  const materialEntriesStep3 = (data as any)?.step3MaterialEntries || [];
+  const materialEntries = [...materialEntriesStep1, ...materialEntriesStep3];
+  const step1MaterialCount = materialEntriesStep1.length;
   const step1Machinery = ((data as any)?.machineryEntries || []).filter((m: string) => m);
   const step3Machinery = ((data as any)?.step3MachineryEntries || []).filter((m: string) => m);
   const machineryEntries = [...step1Machinery, ...step3Machinery];
@@ -423,6 +429,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
     machinery: string;
     isMachineryFromStep3: boolean;
     material: string;
+    isMaterialStep3: boolean;
     safetyInstruction: string;
     confirmationLabel: string;
     confirmationResult: string;
@@ -441,6 +448,8 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
       actualWorkersVal: actualCount > 0 ? String(actualCount) : '',
       machinery: '',
       material: materialEntries[index] || '',
+      isMaterialStep3: index >= step1MaterialCount && !!materialEntries[index],
+      isMaterialStep3: index >= step1MaterialCount && materialEntries[index] ? true : false,
       safetyInstruction: '',
       confirmationLabel: '',
       confirmationResult: '',
@@ -457,6 +466,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
       actualWorkersVal: entry.actualWorkers > 0 ? String(entry.actualWorkers) : '',
       machinery: (entry.machines || []).filter((m: string) => m).join(', '),
       material: '',
+      isMaterialStep3: false,
       safetyInstruction: '',
       confirmationLabel: '',
       confirmationResult: '',
@@ -469,7 +479,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
     integratedRows.push({
       workContent: '', company: '', plannedWorkers: '', actualWorkersVal: '',
       machinery: '', material: '', safetyInstruction: '',
-      confirmationLabel: '', confirmationResult: '', isMachineryFromStep3: false, isAdditional: false,
+      confirmationLabel: '', confirmationResult: '', isMachineryFromStep3: false, isMaterialStep3: false, isAdditional: false,
     });
   }
 
@@ -748,8 +758,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       <td style={{ ...baseCell, textAlign: 'center' as const, ...(isLastRow ? { borderBottom: 'none' } : {}) }}>{row.plannedWorkers || '\u00A0'}</td>
                       <td style={{ ...redCell, textAlign: 'center' as const, ...(isLastRow ? { borderBottom: 'none' } : {}) }}>{row.actualWorkersVal || '\u00A0'}</td>
                       <td style={{ ...((isAdd || row.isMachineryFromStep3) ? redCell : baseCell), textAlign: 'center' as const, ...(isLastRow ? { borderBottom: 'none' } : {}) }}>{row.machinery || '\u00A0'}</td>
-                      <td style={{ ...baseCell, textAlign: 'center' as const, ...(isLastRow ? { borderBottom: 'none' } : {}) }}>{row.material || '\u00A0'}</td>
-                      <td style={{ ...baseCell, whiteSpace: 'normal' as const, textIndent: INDENT2, ...(isLastRow ? { borderBottom: 'none' } : {}) }}>{row.safetyInstruction || '\u00A0'}</td>
+                      <td style={{ ...(row.isMaterialStep3 ? redCell : baseCell), textAlign: 'center' as const, ...(isLastRow ? { borderBottom: 'none' } : {}) }}>{row.material || '\u00A0'}</td>                      <td style={{ ...baseCell, whiteSpace: 'normal' as const, textIndent: INDENT2, ...(isLastRow ? { borderBottom: 'none' } : {}) }}>{row.safetyInstruction || '\u00A0'}</td>
                       <td style={{ ...baseCell, whiteSpace: 'normal' as const, textIndent: INDENT2, ...(isLastRow ? { borderBottom: 'none' } : {}) }}>{row.confirmationLabel || '\u00A0'}</td>
                       {/* 【外枠修正】最終列: borderRight削除 */}
                       <td style={{ ...CELL, textAlign: 'center' as const, borderRight: 'none', ...(isLastRow ? { borderBottom: 'none' } : {}) }}>
