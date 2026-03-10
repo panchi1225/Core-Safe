@@ -799,7 +799,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                             ダンプ台数
                           </td>
                           <td style={{
-                            border: B, borderRight: 'none', fontSize: FONT_H, fontWeight: 'bold',
+                            border: B,  fontSize: FONT_H, fontWeight: 'bold',
                             textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                             padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                             boxSizing: 'border-box' as const,
@@ -837,7 +837,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                             <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}><span style={{ width: '40%', textAlign: 'right' }}>搬入：</span><span style={{ width: '30%', textAlign: 'center', ...RED }}>{dumpIncoming}</span><span style={{ width: '30%', textAlign: 'left' }}>台</span></span>
                           </td>
                           <td style={{
-                             border: B, borderRight: 'none', fontSize: FONT, textAlign: 'center' as const,
+                             border: B, fontSize: FONT, textAlign: 'center' as const,
                             height: ROW_H, maxHeight: ROW_H, padding: '1px 2px',
                             overflow: 'hidden', lineHeight: '12px', boxSizing: 'border-box' as const,
                           }}>
@@ -857,7 +857,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                             <span style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}><span style={{ width: '40%', textAlign: 'right' }}>搬出：</span><span style={{ width: '30%', textAlign: 'center', ...RED }}>{dumpOutgoing}</span><span style={{ width: '30%', textAlign: 'left' }}>台</span></span>
                           </td>
                           <td style={{
-                            border: B, borderRight: 'none', fontSize: FONT, textAlign: 'center' as const,
+                            border: B, fontSize: FONT, textAlign: 'center' as const,
                             height: ROW_H, maxHeight: ROW_H, padding: '1px 2px',
                             overflow: 'hidden', lineHeight: '12px', boxSizing: 'border-box' as const,
                           }}>
@@ -897,7 +897,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                             巡視時間
                           </th>
                           <th style={{
-                            border: B, borderTop: 'none', borderRight: 'none', fontSize: FONT, fontWeight: 'bold',
+                            border: B, borderTop: 'none', fontSize: FONT, fontWeight: 'bold',
                             textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
                             padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                             boxSizing: 'border-box' as const, backgroundColor: BG_HEADER,
@@ -926,7 +926,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                             {patrolRecord.inspectionTime || '\u00A0'}
                           </td>
                           <td style={{
-                            border: B, borderTop: 'none', borderBottom: 'none', borderRight: 'none', height: ROW_H2, maxHeight: ROW_H2,
+                            border: B, borderTop: 'none', borderBottom: 'none', height: ROW_H2, maxHeight: ROW_H2,
                             padding: '1px 2px', overflow: 'hidden',
                             verticalAlign: 'middle',
                             boxSizing: 'border-box' as const, ...RED,
@@ -952,7 +952,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         <tr style={{ height: ROW_H2 }}>
                           {/* 【外枠修正】borderTop+borderRight削除 */}
                           <th colSpan={4} style={{
-                            border: B, borderRight: 'none', fontSize: FONT_H, fontWeight: 'bold',
+                            border: B, borderLeft: 'none', borderRight: 'none', fontSize: FONT_H, fontWeight: 'bold',
                             textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                             padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                             boxSizing: 'border-box' as const, backgroundColor: BG_HEADER,
@@ -971,7 +971,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           return (
                             <tr key={i} style={{ height: ROW_H }}>
                               <td style={{
-                                border: B, fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
+                                border: B, borderLeft: 'none', fontSize: FONT, height: ROW_H, maxHeight: ROW_H,
                                 padding: '1px 2px', whiteSpace: 'normal' as const,
                                 overflow: 'hidden', lineHeight: '12px',
                                 boxSizing: 'border-box' as const, textIndent: INDENT2,
