@@ -2105,11 +2105,11 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
       </div>
 
       {/* 追加 搬出入資機材 */}
-      <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
-        <label className="block text-sm font-bold text-gray-700 mb-2">
-          <i className="fa-solid fa-truck mr-1 text-orange-500"></i>
-          追加 搬出入資機材（STEP1と合計10個まで）
-        </label>
+      <div className="bg-white p-3 rounded-lg border border-gray-200">
+        <h3 className="text-base font-bold text-gray-800 mb-3">
+          <i className="fa-solid fa-truck mr-2 text-pink-500"></i>
+           追加 搬出入資機材（STEP1と合計10個まで）
+        </h3>
         <p className="text-xs text-gray-500 mb-2">
           STEP1で{(report.materialEntries || []).filter(m => m).length}個選択済み / 残り{Math.max(0, 10 - (report.materialEntries || []).filter(m => m).length - (report.step3MaterialEntries || []).length)}個追加可能
         </p>
@@ -2137,7 +2137,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
         {((report.materialEntries || []).filter(m => m).length + (report.step3MaterialEntries || []).length) < 10 && (
           <button
             onClick={addStep3Material}
-            className="text-sm text-orange-600 font-bold hover:underline"
+            className="text-sm text-pink-600 font-bold hover:underline"
           >
             <i className="fa-solid fa-plus mr-1"></i>追加
           </button>
@@ -2474,15 +2474,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
         <h2 className="text-xl font-bold text-gray-800 border-l-4 border-pink-500 pl-3">
           STEP 5: 点検チェックリスト
         </h2>
-
-        {/* 凡例表示 */}
-        <div className="bg-gray-100 rounded p-2 text-sm text-center mb-4">
-          <span className="font-bold">○</span> 適正　
-          <span className="font-bold">△</span> 一部適正　
-          <span className="font-bold">×</span> 不適切　
-          <span className="font-bold">◎</span> 是正済　
-          <span className="font-bold">無印</span> 該当無
-        </div>
 
         {/* 各大分類セクション */}
         {STEP5_CATEGORIES.map((category) => {
