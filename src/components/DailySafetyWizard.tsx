@@ -1044,19 +1044,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
     setSaveStatus('idle');
   }, [report.workDate]);
 
-  const handleNext = () => {
-    if (step === 1) {
-      if (!validateStep1()) return;
-      if (
-        originalWorkDate !== null &&
-        originalWorkDate !== report.workDate
-      ) {
-        setShowDateChangeConfirm(true);
-        return;
-      }
-    }
-    setStep((prev) => Math.min(prev + 1, 5));
-  };
 
   const handleBack = () => {
     setStep((prev) => Math.max(prev - 1, 1));
