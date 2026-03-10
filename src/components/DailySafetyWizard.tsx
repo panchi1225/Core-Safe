@@ -987,7 +987,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
         findings: '',
       },
       // STEP5リセット
-      step5InspectionChecklist: prev.step5InspectionChecklist?.map((cat: any) => ({
+      inspectionChecklist: prev.inspectionChecklist?.map((cat: any) => ({
         ...cat,
         items: cat.items?.map((item: any) => ({ ...item, rating: '' })),
       })) || [],
