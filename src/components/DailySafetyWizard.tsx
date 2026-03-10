@@ -965,8 +965,34 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
     setDraftId(newId);
     setReport((prev) => ({
       ...prev,
+      // STEP2リセット
       annotatedDiagramUrl: '',
       baseDiagramUrl: '',
+      // STEP3リセット
+      step3AdditionalWorkEntries: [],
+      step3MachineryEntries: [],
+      step3ConfirmationItems: { item1: '', item2: '', item3: '', item4: '', item5: '', item6: '', item7: '', item8: '', item9: '', item10: '' },
+      step3SiteConfirmationItems: { item1: '', item2: '', item3: '', item4: '', item5: '', item6: '', item7: '', item8: '', item9: '', item10: '' },
+      stageConfirmation: '',
+      witnessConfirmation: '',
+      dumpTrucks: { incoming: 0, outgoing: 0 },
+      workNotes: '',
+      // 実施人数リセット
+      workEntries: prev.workEntries.map((e: any) => ({ ...e, actualWorkers: 0 })),
+      // STEP4リセット
+      patrolRecord: {
+        coordinationNotes: '',
+        inspector: '',
+        inspectionTime: '14:00',
+        findings: '',
+      },
+      // STEP5リセット
+      step5InspectionChecklist: prev.step5InspectionChecklist?.map((cat: any) => ({
+        ...cat,
+        items: cat.items?.map((item: any) => ({ ...item, rating: '' })),
+      })) || [],
+      // 押印リセット
+      sealImage: '',
     }));
     setCurrentDiagramSrc('');
     setDiagramLoaded(false);
