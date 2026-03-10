@@ -907,7 +907,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         </tr>
 
                         {/* 行5-6: データ行（2行結合=28px） */}
-                        <tr style={{ height: ROW_H2 }}>
+                        <tr style={{ height: '100%' }}>
                           {/* 【外枠修正】borderLeft削除 */}
                           <td style={{
                             border: B, borderLeft: 'none', borderTop: 'none', borderBottom: 'none', fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
