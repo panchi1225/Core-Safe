@@ -394,6 +394,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
   const diagramUrl = (data as any)?.annotatedDiagramUrl || (data as any)?.baseDiagramUrl || '';
   const presenter = (data as any)?.presenter || data?.meetingConductor || '';
   const projectName = (data as any)?.projectName || data?.project || '';
+  const sealImage = (data as any)?.sealImage || '';
   const meetingDate = data?.meetingDate || '';
   const workDate = data?.workDate || '';
 
@@ -654,7 +655,13 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     <div style={{
                       border: '1px solid black', width: '100%', height: '35px',
                       boxSizing: 'border-box' as const,
-                    }} />
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      overflow: 'hidden',
+                    }}>
+                      {sealImage && (
+                        <img src={sealImage} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                      )}
+                    </div>
                   </div>
                 </td>
               </tr>
