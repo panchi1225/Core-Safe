@@ -279,6 +279,10 @@ const App: React.FC = () => {
   const [diarySelectionStep, setDiarySelectionStep] = useState<'project' | 'month' | 'date'>('project');
   const [selectedDiaryProject, setSelectedDiaryProject] = useState<string | null>(null);
   const [selectedDiaryMonth, setSelectedDiaryMonth] = useState<number | null>(null);
+  const [diaryActionModal, setDiaryActionModal] = useState<{ isOpen: boolean; draft: SavedDraft | null }>({ isOpen: false, draft: null });
+  const [wizardInitialStep, setWizardInitialStep] = useState<number>(1);
+  const [sealSelectModal, setSealSelectModal] = useState<{ isOpen: boolean; draft: SavedDraft | null }>({ isOpen: false, draft: null });
+
 
   // URLパラメータ判定（QRコードからのアクセス時）
   useEffect(() => {
@@ -356,10 +360,14 @@ const App: React.FC = () => {
   };
 
   const handleResumeDraft = (draft: SavedDraft) => {
-    setWizardInitialData(draft.data);
-    setWizardDraftId(draft.id);
-    setCurrentView(draft.type as ViewState);
-    closeSelectionModal();
+    if (draft.type === 'DAILY_SAFETY') {
+      setDiaryActionModal({ isOpen: true, draft });
+    } else {
+      setWizardInitialData(draft.data);
+      setWizardDraftId(draft.id);
+      setCurrentView(draft.type as ViewState);
+      closeSelectionModal();
+    }
   };
 
   const handleDeleteDraft = (id: string) => {
@@ -458,7 +466,8 @@ const App: React.FC = () => {
       <DailySafetyWizard
         initialData={wizardInitialData}
         initialDraftId={wizardDraftId}
-        onBackToMenu={() => setCurrentView('HOME')}
+        initialStep={wizardInitialStep}
+        onBackToMenu={() => { setCurrentView('HOME'); setWizardInitialStep(1); }}
       />
     );
   }
@@ -973,7 +982,7 @@ const App: React.FC = () => {
         <div>&copy; 2026 Matsuura Construction App</div>
         <div className="mt-1 flex items-center justify-center gap-2">
           <span>Core Safe</span>
-          <span>Ver.1.9.2</span>
+          <span>Ver.1.10.1</span>
         </div>
       </footer>
 
@@ -993,6 +1002,97 @@ const App: React.FC = () => {
         url={qrUrl}
         masterData={masterData}
       />
+
+            {/* 安全衛生日誌アクション選択モーダル */}
+      {diaryActionModal.isOpen && diaryActionModal.draft && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="p-4 border-b bg-pink-50">
+              <h3 className="font-bold text-lg text-pink-800 text-center">
+                <i className="fa-solid fa-clipboard-list mr-2"></i>操作を選択
+              </h3>
+            </div>
+            <div className="p-4 space-y-3">
+              <button
+                onClick={() => {
+                  const draft = diaryActionModal.draft!;
+                  setWizardInitialData(draft.data);
+                  setWizardDraftId(draft.id);
+                  setWizardInitialStep(1);
+                  setCurrentView(draft.type as ViewState);
+                  setDiaryActionModal({ isOpen: false, draft: null });
+                  closeSelectionModal();
+                }}
+                className="w-full text-left border rounded-lg p-4 hover:bg-blue-50 transition-colors flex items-center gap-3 shadow-sm"
+              >
+                <i className="fa-solid fa-pen-to-square text-blue-500 text-xl w-8 text-center"></i>
+                <div>
+                  <div className="font-bold text-gray-800">作業内容を修正（STEP1）</div>
+                  <div className="text-xs text-gray-500">作業内容・主要機械・安全指示事項を編集</div>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  const draft = diaryActionModal.draft!;
+                  setWizardInitialData(draft.data);
+                  setWizardDraftId(draft.id);
+                  setWizardInitialStep(3);
+                  setCurrentView(draft.type as ViewState);
+                  setDiaryActionModal({ isOpen: false, draft: null });
+                  closeSelectionModal();
+                }}
+                className="w-full text-left border rounded-lg p-4 hover:bg-green-50 transition-colors flex items-center gap-3 shadow-sm"
+              >
+                <i className="fa-solid fa-clipboard-check text-green-500 text-xl w-8 text-center"></i>
+                <div>
+                  <div className="font-bold text-gray-800">当日作業確認・巡視（STEP3）</div>
+                  <div className="text-xs text-gray-500">実施人数・追加作業・巡視点検を入力</div>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  setSealSelectModal({ isOpen: true, draft: diaryActionModal.draft });
+                  setDiaryActionModal({ isOpen: false, draft: null });
+                }}
+                className="w-full text-left border rounded-lg p-4 hover:bg-purple-50 transition-colors flex items-center gap-3 shadow-sm"
+              >
+                <i className="fa-solid fa-stamp text-purple-500 text-xl w-8 text-center"></i>
+                <div>
+                  <div className="font-bold text-gray-800">作業所長押印</div>
+                  <div className="text-xs text-gray-500">社員を選択して電子印鑑を押印</div>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  const draft = diaryActionModal.draft!;
+                  setWizardInitialData(draft.data);
+                  setWizardDraftId(draft.id);
+                  setWizardInitialStep(99);
+                  setCurrentView(draft.type as ViewState);
+                  setDiaryActionModal({ isOpen: false, draft: null });
+                  closeSelectionModal();
+                }}
+                className="w-full text-left border rounded-lg p-4 hover:bg-orange-50 transition-colors flex items-center gap-3 shadow-sm"
+              >
+                <i className="fa-solid fa-print text-orange-500 text-xl w-8 text-center"></i>
+                <div>
+                  <div className="font-bold text-gray-800">印刷プレビュー</div>
+                  <div className="text-xs text-gray-500">帳票を確認・PDF出力</div>
+                </div>
+              </button>
+            </div>
+            <div className="p-4 border-t bg-gray-50">
+              <button
+                onClick={() => setDiaryActionModal({ isOpen: false, draft: null })}
+                className="w-full py-2 bg-gray-200 rounded-lg font-bold text-gray-600 hover:bg-gray-300"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

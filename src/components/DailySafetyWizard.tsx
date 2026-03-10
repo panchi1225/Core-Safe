@@ -62,6 +62,7 @@ const INSPECTION_VALUES: ('○' | '△' | '×' | '◎' | '')[] = ['', '○', '�
 interface Props {
   initialData?: DailySafetyReportData;
   initialDraftId?: string | null;
+  initialStep?: number;
   onBackToMenu: () => void;
 }
 
@@ -394,8 +395,8 @@ function isImageSizeError(error: unknown): boolean {
 // ============================
 // メインコンポーネント
 // ============================
-const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
-  const [step, setStep] = useState(1);
+const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initialStep, onBackToMenu }) => {
+  const [step, setStep] = useState(initialStep || 1);
 
   const [report, setReport] = useState<DailySafetyReportData>(() => {
     if (initialData) {
@@ -514,7 +515,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
   const [diagramPickerLoading, setDiagramPickerLoading] = useState(false);
 
   // 【追加】プレビュー表示用state
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(initialStep === 99);
 
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasElRef = useRef<HTMLCanvasElement>(null);
