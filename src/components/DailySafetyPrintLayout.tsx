@@ -292,6 +292,73 @@ const RED: React.CSSProperties = {
   color: 'black',
 };
 
+/**
+ * AutoFitText: セル内にテキストが収まるようフォントサイズを自動縮小するコンポーネント
+ * - 改行（\n）に対応
+ * - 水平・垂直ともに中央表示
+ * - maxFontSizeから1pxずつ縮小してオーバーフローしないサイズを探す
+ */
+const AutoFitText: React.FC<{
+  text: string;
+  maxFontSize?: number;
+  minFontSize?: number;
+  style?: React.CSSProperties;
+}> = ({ text, maxFontSize = 8, minFontSize = 4, style }) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const textRef = React.useRef<HTMLDivElement>(null);
+  const [fontSize, setFontSize] = React.useState(maxFontSize);
+
+  React.useEffect(() => {
+    if (!containerRef.current || !textRef.current || !text) return;
+    let fs = maxFontSize;
+    textRef.current.style.fontSize = `${fs}px`;
+    while (fs > minFontSize) {
+      textRef.current.style.fontSize = `${fs}px`;
+      if (
+        textRef.current.scrollWidth <= containerRef.current.clientWidth &&
+        textRef.current.scrollHeight <= containerRef.current.clientHeight
+      ) {
+        break;
+      }
+      fs -= 0.5;
+    }
+    setFontSize(fs);
+  }, [text, maxFontSize, minFontSize]);
+
+  if (!text) return <>{'\u00A0'}</>;
+
+  const lines = text.split('\n');
+  return (
+    <div
+      ref={containerRef}
+      style={{
+        width: '100%', height: '100%',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        overflow: 'hidden',
+        ...style,
+      }}
+    >
+      <div
+        ref={textRef}
+        style={{
+          fontSize: `${fontSize}px`,
+          lineHeight: 1.3,
+          textAlign: 'center',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-all',
+        }}
+      >
+        {lines.map((line, i) => (
+          <React.Fragment key={i}>
+            {line}
+            {i < lines.length - 1 && <br />}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // 固定行数定数
 const WORK_ROWS = 10;
 
@@ -755,11 +822,12 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         <td rowSpan={2} style={{
                           border: B, whiteSpace: 'normal' as const,
                           height: ROW_H2, maxHeight: ROW_H2,
-                          verticalAlign: 'top', fontSize: FONT, padding: '1px 2px',
-                          overflow: 'hidden', lineHeight: '12px',
-                          boxSizing: 'border-box' as const, textIndent: INDENT1, ...RED,
+                          verticalAlign: 'middle', padding: '1px 2px',
+                          overflow: 'hidden',
+                          boxSizing: 'border-box' as const, ...RED,
+                          position: 'relative' as const,
                         }}>
-                          {workNotes || '\u00A0'}
+                          <AutoFitText text={workNotes} />
                         </td>
                         {/* 人数（合計）表示欄 rowSpan=2 */}
                         <td rowSpan={2} style={{
@@ -844,12 +912,13 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           巡視所見
                         </th>
                         <td rowSpan={2} colSpan={2} style={{
-                          border: B, fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
-                          padding: '1px 2px', whiteSpace: 'normal' as const,
-                          overflow: 'hidden', lineHeight: '12px', verticalAlign: 'top',
-                          boxSizing: 'border-box' as const, textIndent: INDENT1, ...RED,
+                          border: B, height: ROW_H2, maxHeight: ROW_H2,
+                          padding: '1px 2px', overflow: 'hidden',
+                          verticalAlign: 'middle',
+                          boxSizing: 'border-box' as const, ...RED,
+                          position: 'relative' as const,
                         }}>
-                          {patrolRecord.findings || '\u00A0'}
+                          <AutoFitText text={patrolRecord.findings || ''} />
                         </td>
                       </tr>
 
