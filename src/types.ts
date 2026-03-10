@@ -621,6 +621,7 @@ export interface DailySafetyReportData {
 
   // --- STEP1: 作業内容（前日入力） ---
   workEntries: WorkEntry[];     // 作業内容セット（複数追加可）
+  machineryEntries: string[];   // 主要機械（machinesマスタから選択、複数追加可、最大10個）
   materialEntries: string[];    // 搬出入資機材（資機材マスタから選択、複数追加可）
   // 【修正2】preparationEntries をオプショナルに変更（後方互換性のため残す）
   preparationEntries?: string[];
@@ -976,6 +977,7 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
 
   // --- STEP1: 作業内容（前日入力） ---
   workEntries: [],
+  machineryEntries: [''],        // 主要機械（初期1項目）
   materialEntries: [],
   // 【修正2】preparationEntries を削除（オプショナルのため省略可）
   // 【修正】安全衛生指示事項: 7個→10個に変更
