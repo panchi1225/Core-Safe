@@ -599,19 +599,19 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
               <col style={{ width: '18%' }} />
             </colgroup>
             <tbody>
-              <tr style={{ height: ROW_H }}>
-                <th style={{ ...TH, borderTop: B2, borderBottom: B2, borderLeft: B2 }}>工事名</th>
-                <td style={{ ...CELL, paddingLeft: '4px', borderTop: B2, borderBottom: B2 }}>{projectName}</td>
-                <th style={{ ...TH, borderTop: B2, borderBottom: B2 }}>打合せ日</th>
-                <td style={{ ...CELL, textAlign: 'center' as const, borderTop: B2, borderBottom: B2 }}>
+              <tr style={{ height: ROW_H2 }}>
+                <th style={{ ...TH, height: ROW_H2, borderTop: B2, borderBottom: B2, borderLeft: B2 }}>工事名</th>
+                <td style={{ ...CELL, height: ROW_H2, paddingLeft: '4px', borderTop: B2, borderBottom: B2 }}>{projectName}</td>
+                <th style={{ ...TH, height: ROW_H2, borderTop: B2, borderBottom: B2 }}>打合せ日</th>
+                <td style={{ ...CELL, height: ROW_H2, textAlign: 'center' as const, borderTop: B2, borderBottom: B2 }}>
                   {toWareki(meetingDate)}{getWeekdayLabel(meetingDate)}
                 </td>
-                <th style={{ ...TH, borderTop: B2, borderBottom: B2 }}>作業日</th>
-                <td style={{ ...CELL, textAlign: 'center' as const, borderTop: B2, borderBottom: B2 }}>
+                <th style={{ ...TH, height: ROW_H2, borderTop: B2, borderBottom: B2 }}>作業日</th>
+                <td style={{ ...CELL, height: ROW_H2, textAlign: 'center' as const, borderTop: B2, borderBottom: B2 }}>
                   {toWareki(workDate)}{getWeekdayLabel(workDate)}
                 </td>
-                <th style={{ ...TH, borderTop: B2, borderBottom: B2 }}>打合せ実施者</th>
-                <td style={{ ...CELL, textAlign: 'center' as const, borderTop: B2, borderBottom: B2, borderRight: B2, ...RED }}>
+                <th style={{ ...TH, height: ROW_H2, borderTop: B2, borderBottom: B2 }}>打合せ実施者</th>
+                <td style={{ ...CELL, height: ROW_H2, textAlign: 'center' as const, borderTop: B2, borderBottom: B2, borderRight: B2, ...RED }}>
                   {presenter}
                 </td>
               </tr>
@@ -637,16 +637,16 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
               <col style={{ width: '7%' }} />
             </colgroup>
             <thead>
-              <tr style={{ height: ROW_H }}>
-                <th style={{ ...TH }}>作業内容</th>
-                <th style={{ ...TH }}>会社名</th>
-                <th style={{ ...TH, whiteSpace: 'normal' as const, lineHeight: '6px' }}>人数<br />（予定）</th>
-                <th style={{ ...TH, whiteSpace: 'normal' as const, lineHeight: '6px' }}>人数<br />（実施）</th>
-                <th style={{ ...TH }}>主要機械</th>
-                <th style={{ ...TH }}>搬出入資機材</th>
-                <th style={{ ...TH }}>安全衛生指示事項</th>
-                <th style={{ ...TH }}>基本確認事項</th>
-                <th style={{ ...TH }}>結果</th>
+              <tr style={{ height: ROW_H2 }}>
+                <th style={{ ...TH, height: ROW_H2 }}>作業内容</th>
+                <th style={{ ...TH, height: ROW_H2 }}>会社名</th>
+                <th style={{ ...TH, height: ROW_H2, whiteSpace: 'normal' as const, lineHeight: '12px' }}>人数<br />（予定）</th>
+                <th style={{ ...TH, height: ROW_H2, whiteSpace: 'normal' as const, lineHeight: '12px' }}>人数<br />（実施）</th>
+                <th style={{ ...TH, height: ROW_H2 }}>主要機械</th>
+                <th style={{ ...TH, height: ROW_H2 }}>搬出入資機材</th>
+                <th style={{ ...TH, height: ROW_H2 }}>安全衛生指示事項</th>
+                <th style={{ ...TH, height: ROW_H2 }}>基本確認事項</th>
+                <th style={{ ...TH, height: ROW_H2 }}>結果</th>
               </tr>
             </thead>
             <tbody>
@@ -704,37 +704,41 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       <col style={{ width: '19.15%' }} />{/* 9/47*100 */}
                     </colgroup>
                     <tbody>
-                      {/* 行1: ヘッダー（14px） */}
-                      <tr style={{ height: ROW_H }}>
+                      {/* 行1: ヘッダー（28px） */}
+                      <tr style={{ height: ROW_H2 }}>
                         <td style={{
                           border: B, fontSize: FONT, fontWeight: 'bold',
-                          textAlign: 'left' as const, height: ROW_H, maxHeight: ROW_H,
+                          textAlign: 'left' as const, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const, whiteSpace: 'nowrap' as const,
+                          verticalAlign: 'middle',
                         }}>
                           ＊作業連絡調整事項・打合せ・朝礼等周知事項・その他
                         </td>
                         <td style={{
                           border: B, fontSize: FONT, fontWeight: 'bold',
-                          textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
-                          padding: '1px 2px', overflow: 'hidden', lineHeight: '10px',
+                          textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
+                          padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const, whiteSpace: 'normal' as const,
+                          verticalAlign: 'middle',
                         }}>
                           人数<br />（合計）
                         </td>
                         <td style={{
                           border: B, fontSize: FONT, fontWeight: 'bold',
-                          textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
+                          textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const,
+                          verticalAlign: 'middle',
                         }}>
                           ダンプ台数
                         </td>
                         <td style={{
                           border: B, fontSize: FONT, fontWeight: 'bold',
-                          textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
+                          textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const,
+                          verticalAlign: 'middle',
                         }}>
                           発注者確認
                         </td>
@@ -926,10 +930,10 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       <col style={{ width: '13%' }} />
                     </colgroup>
                     <thead>
-                      <tr style={{ height: ROW_H }}>
+                      <tr style={{ height: ROW_H2 }}>
                         <th colSpan={4} style={{
                           border: B, fontSize: FONT, fontWeight: 'bold',
-                          textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
+                          textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const,
                         }}>
@@ -986,11 +990,11 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                   {/* Part B: 巡視点検チェックリスト（タイトル1行 + 27行 = 28行） */}
                   <table style={{ ...TABLE_BASE, marginTop: '-1px', marginLeft: '-1px', width: 'calc(100% + 1px)' }}>
                     <tbody>
-                      {/* タイトル行（14px）修正25: borderBottomをnoneにして内側テーブルの上辺との二重罫線防止 */}
-                      <tr style={{ height: ROW_H }}>
+                      {/* タイトル行（28px）修正25: borderBottomをnoneにして内側テーブルの上辺との二重罫線防止 */}
+                      <tr style={{ height: ROW_H2 }}>
                         <td colSpan={4} style={{
                           border: B, borderBottom: 'none', fontSize: FONT, fontWeight: 'bold',
-                          textAlign: 'center' as const, height: ROW_H, maxHeight: ROW_H,
+                          textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '0px 1px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const,
                         }}>
