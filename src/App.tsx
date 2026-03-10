@@ -983,7 +983,7 @@ const App: React.FC = () => {
         <div>&copy; 2026 Matsuura Construction App</div>
         <div className="mt-1 flex items-center justify-center gap-2">
           <span>Core Safe</span>
-          <span>Ver.1.10.4</span>
+          <span>Ver.1.10.5</span>
         </div>
       </footer>
 
@@ -1004,7 +1004,7 @@ const App: React.FC = () => {
         masterData={masterData}
       />
 
-            {/* 安全衛生日誌アクション選択モーダル */}
+      {/* 安全衛生日誌アクション選択モーダル */}
       {diaryActionModal.isOpen && diaryActionModal.draft && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
@@ -1051,21 +1051,6 @@ const App: React.FC = () => {
                 </div>
               </button>
               <button
-                onClick={async () => {
-                  const emps = await fetchEmployees();
-                  setSealEmployees(emps.filter(e => e.sealImage));
-                  setSealSelectModal({ isOpen: true, draft: diaryActionModal.draft });
-                  setDiaryActionModal({ isOpen: false, draft: null });
-                }}
-                className="w-full text-left border rounded-lg p-4 hover:bg-purple-50 transition-colors flex items-center gap-3 shadow-sm"
-              >
-                <i className="fa-solid fa-stamp text-purple-500 text-xl w-8 text-center"></i>
-                <div>
-                  <div className="font-bold text-gray-800">作業所長押印</div>
-                  <div className="text-xs text-gray-500">社員を選択して電子印鑑を押印</div>
-                </div>
-              </button>
-              <button
                 onClick={() => {
                   const draft = diaryActionModal.draft!;
                   setWizardInitialData(draft.data);
@@ -1087,60 +1072,6 @@ const App: React.FC = () => {
             <div className="p-4 border-t bg-gray-50">
               <button
                 onClick={() => setDiaryActionModal({ isOpen: false, draft: null })}
-                className="w-full py-2 bg-gray-200 rounded-lg font-bold text-gray-600 hover:bg-gray-300"
-              >
-                キャンセル
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 作業所長押印 社員選択モーダル */}
-      {sealSelectModal.isOpen && sealSelectModal.draft && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-            <div className="p-4 border-b bg-purple-50">
-              <h3 className="font-bold text-lg text-purple-800 text-center">
-                <i className="fa-solid fa-stamp mr-2"></i>作業所長を選択
-              </h3>
-            </div>
-            <div className="p-4 max-h-96 overflow-y-auto">
-              {sealEmployees.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
-                  <i className="fa-solid fa-exclamation-circle text-2xl mb-2 block"></i>
-                  電子印が登録された社員がいません
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {sealEmployees.map(emp => (
-                    <button
-                      key={emp.id}
-                      onClick={async () => {
-                        const draft = sealSelectModal.draft!;
-                        const updatedData = { ...draft.data as DailySafetyReportData, sealImage: emp.sealImage };
-                        // Firebaseに保存
-                        const { saveDraft } = await import('./services/firebaseService');
-                        await saveDraft(draft.id, draft.type, updatedData);
-                        // 画面を更新
-                        const newDrafts = await fetchDrafts();
-                        setDrafts(newDrafts);
-                        setSealSelectModal({ isOpen: false, draft: null });
-                        closeSelectionModal();
-                        alert(`${emp.nameSei} ${emp.nameMei} の電子印を押印しました`);
-                      }}
-                      className="w-full text-left border rounded-lg p-3 hover:bg-purple-50 transition-colors flex items-center gap-3"
-                    >
-                      <img src={emp.sealImage} alt="電子印" style={{ width: '40px', height: '40px', objectFit: 'contain', border: '1px solid #ccc', borderRadius: '4px' }} />
-                      <div className="font-bold text-gray-800">{emp.nameSei} {emp.nameMei}</div>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="p-4 border-t bg-gray-50">
-              <button
-                onClick={() => setSealSelectModal({ isOpen: false, draft: null })}
                 className="w-full py-2 bg-gray-200 rounded-lg font-bold text-gray-600 hover:bg-gray-300"
               >
                 キャンセル

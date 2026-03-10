@@ -2601,23 +2601,25 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
             </button>
             <div className="flex items-center gap-3">
               {isDirectPreview && (
-                <button
-                  onClick={async () => {
-                    const emps = await fetchEmployees();
-                    setSealEmployees(emps.filter((e: any) => e.sealImage));
-                    setShowSealModal(true);
-                  }}
-                  className="px-6 py-2 bg-purple-600 text-white rounded-lg font-bold text-sm hover:bg-purple-700 transition-colors shadow"
-                >
-                  <i className="fa-solid fa-stamp mr-2"></i>押印
-                </button>
+                <>
+                  <button
+                    onClick={async () => {
+                      const emps = await fetchEmployees();
+                      setSealEmployees(emps.filter((e: any) => e.sealImage));
+                      setShowSealModal(true);
+                    }}
+                    className="px-6 py-2 bg-purple-600 text-white rounded-lg font-bold text-sm hover:bg-purple-700 transition-colors shadow"
+                  >
+                    <i className="fa-solid fa-stamp mr-2"></i>押印
+                  </button>
+                  <button
+                    onClick={handlePrint}
+                    className="px-6 py-2 bg-pink-600 text-white rounded-lg font-bold text-sm hover:bg-pink-700 transition-colors shadow"
+                  >
+                    <i className="fa-solid fa-print mr-2"></i>印刷
+                  </button>
+                </>
               )}
-              <button
-                onClick={handlePrint}
-                className="px-6 py-2 bg-pink-600 text-white rounded-lg font-bold text-sm hover:bg-pink-700 transition-colors shadow"
-              >
-                <i className="fa-solid fa-print mr-2"></i>印刷
-              </button>
             </div>
           </div>
 
@@ -2679,7 +2681,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
               </div>
             </div>
           )}    
-                
+
         </div>
       )}
 
