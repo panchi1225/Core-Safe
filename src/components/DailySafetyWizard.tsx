@@ -1930,39 +1930,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBac
                     ))}
                   </select>
                 </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-gray-600 mb-1">主要機械</label>
-                  {entry.machines.map((machine, machineIdx) => (
-                    <div key={machineIdx} className="flex items-center gap-2 mb-2">
-                      <select
-                        className="flex-1 p-2 border border-gray-300 rounded bg-white text-black outline-none appearance-none text-sm"
-                        value={machine}
-                        onChange={(e) => updateMachineInAdditionalWork(entry.id, machineIdx, e.target.value)}
-                      >
-                        <option value="">選択してください</option>
-                        {masterData.machines.map((m) => (
-                          <option key={m} value={m}>
-                            {m}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={() => removeMachineFromAdditionalWork(entry.id, machineIdx)}
-                        className="text-gray-400 hover:text-red-500 p-1 transition-colors shrink-0"
-                        title="削除"
-                      >
-                        <i className="fa-solid fa-xmark"></i>
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    onClick={() => addMachineToAdditionalWork(entry.id)}
-                    className="text-sm text-pink-600 font-bold hover:underline"
-                  >
-                    <i className="fa-solid fa-plus mr-1"></i>追加
-                  </button>
-                </div>
               </div>
             </div>
           ))}
