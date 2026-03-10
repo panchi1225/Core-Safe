@@ -746,7 +746,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                     <td style={{ ...baseCell, whiteSpace: 'normal' as const, textIndent: INDENT2 }}>{row.safetyInstruction || '\u00A0'}</td>
                     <td style={{ ...baseCell, whiteSpace: 'normal' as const, textIndent: INDENT2 }}>{row.confirmationLabel || '\u00A0'}</td>
                     <td style={{ ...CELL, textAlign: 'center' as const }}>
-                      {circledChoice(row.confirmationResult, '濶ｯ', '蜷ｦ')}
+                      {circledChoice(row.confirmationResult, '良', '否')}
                     </td>
                   </tr>
                 );
@@ -1034,7 +1034,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       {/* 配置図ヘッダー: 2行結合(28px) */}
                       <tr style={{ height: ROW_H2 }}>
                         <td style={{
-                          border: B, borderBottom: 'none', fontSize: FONT_H, fontWeight: 'bold',
+                          border: B, borderBottom: 'none', borderRight: 'none', fontSize: FONT_H, fontWeight: 'bold',
                           textAlign: 'center' as const, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           verticalAlign: 'middle', boxSizing: 'border-box' as const,
@@ -1047,7 +1047,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       {/* 配置図画像: 固定高さ */}
                       <tr style={{ height: DIAGRAM_IMG_H }}>
                         <td style={{
-                          border: B, borderTop: 'none', textAlign: 'center' as const,
+                          border: B, borderTop: 'none', borderRight: 'none', textAlign: 'center' as const,
                           verticalAlign: 'top', padding: 0,
                           overflow: 'hidden',
                           height: DIAGRAM_IMG_H, maxHeight: DIAGRAM_IMG_H,
@@ -1083,7 +1083,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                 </td>
 
                 {/* 右側: 巡視点検チェックリスト（57%） */}
-                <td style={{ width: '57%', verticalAlign: 'top', padding: 0, border: 'none' }}>
+                <td style={{ width: '57%', verticalAlign: 'top', padding: 0, border: 'none', borderRight: '1px solid black', borderBottom: '1px solid black' }}>
                   <table style={{ ...TABLE_BASE }}>
                     <tbody>
                       {/* タイトル行（28px） */}
@@ -1116,7 +1116,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                         </td>
                         <td colSpan={2} style={{
                           width: '50%', verticalAlign: 'top', padding: 0,
-                          border: 'none',
+                          border: 'none', borderRight: '1px solid black',
                         }}>
                           <table style={{
                             width: '100%', borderCollapse: 'collapse' as const,
