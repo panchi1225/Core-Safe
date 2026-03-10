@@ -655,40 +655,30 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
           </table>
 
           {/* ==================================================================
-              修正15: 第2段基本情報行（1行8列、外枠太線、日付・実施者中央表示）
-              列幅: 6%, 30%, 6%, 13%, 5%, 13%, 9%, 18%
-              打合せ日TD・作業日TDを1.5倍に拡大、右端空白セルを削除
+              第2段: 基本情報行（罫線なし、ラベル：データの形式で1行表示）
               ================================================================== */}
-          <table style={{ ...TABLE_BASE, border: B2 }}>
-            <colgroup>
-              <col style={{ width: '6%' }} />
-              <col style={{ width: '30%' }} />
-              <col style={{ width: '6%' }} />
-              <col style={{ width: '13%' }} />
-              <col style={{ width: '5%' }} />
-              <col style={{ width: '13%' }} />
-              <col style={{ width: '9%' }} />
-              <col style={{ width: '18%' }} />
-            </colgroup>
-            <tbody>
-              <tr style={{ height: ROW_H2 }}>
-                <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, borderTop: B2, borderBottom: B2, borderLeft: B2 }}>工事名</th>
-                <td style={{ ...CELL, height: ROW_H2, paddingLeft: '4px', textIndent: INDENT1, borderTop: B2, borderBottom: B2 }}>{projectName}</td>
-                <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, borderTop: B2, borderBottom: B2 }}>打合せ日</th>
-                <td style={{ ...CELL, height: ROW_H2, textAlign: 'center' as const, borderTop: B2, borderBottom: B2 }}>
-                  {toWareki(meetingDate)}{getWeekdayLabel(meetingDate)}
-                </td>
-                <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, borderTop: B2, borderBottom: B2 }}>作業日</th>
-                <td style={{ ...CELL, height: ROW_H2, textAlign: 'center' as const, borderTop: B2, borderBottom: B2 }}>
-                  {toWareki(workDate)}{getWeekdayLabel(workDate)}
-                </td>
-                <th style={{ ...TH, height: ROW_H2, fontSize: FONT_H, borderTop: B2, borderBottom: B2 }}>打合せ実施者</th>
-                <td style={{ ...CELL, height: ROW_H2, textAlign: 'center' as const, borderTop: B2, borderBottom: B2, borderRight: B2, ...RED }}>
-                  {presenter}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <div style={{
+            height: ROW_H2, display: 'flex', alignItems: 'center',
+            fontSize: FONT, lineHeight: ROW_H2,
+            padding: '0 2px', overflow: 'hidden',
+            whiteSpace: 'nowrap' as const,
+          }}>
+            <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>工事名</span>
+            <span>：</span>
+            <span style={RED}>{projectName}</span>
+            <span style={{ margin: '0 6px' }}>、</span>
+            <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>打合せ日</span>
+            <span>：</span>
+            <span style={RED}>{toWareki(meetingDate)}{getWeekdayLabel(meetingDate)}</span>
+            <span style={{ margin: '0 6px' }}>、</span>
+            <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>作業日</span>
+            <span>：</span>
+            <span style={RED}>{toWareki(workDate)}{getWeekdayLabel(workDate)}</span>
+            <span style={{ margin: '0 6px' }}>、</span>
+            <span style={{ fontWeight: 'bold', fontSize: FONT_H }}>打合せ実施者</span>
+            <span>：</span>
+            <span style={RED}>{presenter}</span>
+          </div>
 
           {/* ==================================================================
               第3段: 統合作業テーブル（9列×ヘッダー1行(14px)＋データ10行(14px)）
