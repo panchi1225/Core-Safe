@@ -668,6 +668,9 @@ export interface DailySafetyReportData {
   // --- STEP4: 巡視記録データ（新規追加） ---
   patrolRecord: PatrolRecord;
 
+  // --- 作業所長押印 ---
+  sealImage: string;              // 作業所長電子印画像（Base64）
+
   // --- STEP5: 点検チェックリスト（レガシー — 後方互換のため残す） ---
   inspectionChecklist: InspectionCategory[];
 
@@ -1054,6 +1057,9 @@ export const INITIAL_DAILY_SAFETY_REPORT: DailySafetyReportData = {
     inspectionTime: '14:00',
     findings: '',
   },
+  
+  // --- 作業所長押印 ---
+  sealImage: '',
 
   // --- STEP5: 点検チェックリスト（レガシー — 後方互換のため残す） ---
   inspectionChecklist: createInitialInspectionChecklist(),

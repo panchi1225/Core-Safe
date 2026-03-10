@@ -8,8 +8,8 @@ import DailySafetyWizard from './components/DailySafetyWizard';
 import MasterSettings from './components/MasterSettings';
 
 // Firebase機能
-import { fetchDrafts, removeDraft, getMasterData } from './services/firebaseService'; 
-import { SavedDraft, ReportData, DisasterCouncilReportData, ReportTypeString, NewcomerSurveyReportData, DailySafetyReportData, MasterData, INITIAL_MASTER_DATA } from './types';
+import { fetchDrafts, removeDraft, getMasterData, fetchEmployees } from './services/firebaseService';
+import { SavedDraft, ReportData, DisasterCouncilReportData, ReportTypeString, NewcomerSurveyReportData, DailySafetyReportData, MasterData, INITIAL_MASTER_DATA, EmployeeData } from './types';
 
 // --- 確認用モーダル ---
 interface ConfirmModalProps {
@@ -282,6 +282,7 @@ const App: React.FC = () => {
   const [diaryActionModal, setDiaryActionModal] = useState<{ isOpen: boolean; draft: SavedDraft | null }>({ isOpen: false, draft: null });
   const [wizardInitialStep, setWizardInitialStep] = useState<number>(1);
   const [sealSelectModal, setSealSelectModal] = useState<{ isOpen: boolean; draft: SavedDraft | null }>({ isOpen: false, draft: null });
+  const [sealEmployees, setSealEmployees] = useState<EmployeeData[]>([]);
 
 
   // URLパラメータ判定（QRコードからのアクセス時）
@@ -982,7 +983,7 @@ const App: React.FC = () => {
         <div>&copy; 2026 Matsuura Construction App</div>
         <div className="mt-1 flex items-center justify-center gap-2">
           <span>Core Safe</span>
-          <span>Ver.1.10.1</span>
+          <span>Ver.1.10.2</span>
         </div>
       </footer>
 
@@ -1050,7 +1051,9 @@ const App: React.FC = () => {
                 </div>
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
+                  const emps = await fetchEmployees();
+                  setSealEmployees(emps.filter(e => e.sealImage));
                   setSealSelectModal({ isOpen: true, draft: diaryActionModal.draft });
                   setDiaryActionModal({ isOpen: false, draft: null });
                 }}
@@ -1093,6 +1096,60 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* 作業所長押印 社員選択モーダル */}
+      {sealSelectModal.isOpen && sealSelectModal.draft && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="p-4 border-b bg-purple-50">
+              <h3 className="font-bold text-lg text-purple-800 text-center">
+                <i className="fa-solid fa-stamp mr-2"></i>作業所長を選択
+              </h3>
+            </div>
+            <div className="p-4 max-h-96 overflow-y-auto">
+              {sealEmployees.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <i className="fa-solid fa-exclamation-circle text-2xl mb-2 block"></i>
+                  電子印が登録された社員がいません
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {sealEmployees.map(emp => (
+                    <button
+                      key={emp.id}
+                      onClick={async () => {
+                        const draft = sealSelectModal.draft!;
+                        const updatedData = { ...draft.data as DailySafetyReportData, sealImage: emp.sealImage };
+                        // Firebaseに保存
+                        const { saveDraft } = await import('./services/firebaseService');
+                        await saveDraft(draft.id, draft.type, updatedData);
+                        // 画面を更新
+                        const newDrafts = await fetchDrafts();
+                        setDrafts(newDrafts);
+                        setSealSelectModal({ isOpen: false, draft: null });
+                        closeSelectionModal();
+                        alert(`${emp.nameSei} ${emp.nameMei} の電子印を押印しました`);
+                      }}
+                      className="w-full text-left border rounded-lg p-3 hover:bg-purple-50 transition-colors flex items-center gap-3"
+                    >
+                      <img src={emp.sealImage} alt="電子印" style={{ width: '40px', height: '40px', objectFit: 'contain', border: '1px solid #ccc', borderRadius: '4px' }} />
+                      <div className="font-bold text-gray-800">{emp.nameSei} {emp.nameMei}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t bg-gray-50">
+              <button
+                onClick={() => setSealSelectModal({ isOpen: false, draft: null })}
+                className="w-full py-2 bg-gray-200 rounded-lg font-bold text-gray-600 hover:bg-gray-300"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
     </div>
   );
 };
