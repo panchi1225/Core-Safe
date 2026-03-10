@@ -1045,12 +1045,12 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       </tr>
 
                       {/* 配置図画像: 固定高さ */}
-                      <tr style={{ height: 'auto' }}>
+                      <tr style={{ height: DIAGRAM_IMG_H }}>
                         <td style={{
                           border: B, borderTop: 'none', textAlign: 'center' as const,
                           verticalAlign: 'top', padding: 0,
                           overflow: 'hidden',
-                          height: 'auto',
+                          height: DIAGRAM_IMG_H, maxHeight: DIAGRAM_IMG_H,
                           boxSizing: 'border-box' as const,
                           position: 'relative' as const,
                         }}>
@@ -1121,7 +1121,6 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           <table style={{
                             width: '100%', borderCollapse: 'collapse' as const,
                             tableLayout: 'fixed' as const, margin: 0,
-                            marginLeft: '-1px',
                           }}>
                             <colgroup>
                               <col style={{ width: '77.78%' }} />
