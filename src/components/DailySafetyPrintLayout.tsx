@@ -754,9 +754,6 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
             </tbody>
           </table>
 
-          {/* 右端罫線統一用の外枠div */}
-          <div style={{ borderRight: '1px solid black', marginTop: '-1px' }}>
-
           {/* ==================================================================
               第4段〜第5段: 左右独立レイアウト
               修正5: 左47%・右53%
@@ -1141,7 +1138,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
             </tbody>
           </table>
         </div>
-      </div>
+     </div>
     </>
   );
 };
