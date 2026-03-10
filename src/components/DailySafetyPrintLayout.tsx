@@ -912,7 +912,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       {/* 行5-6: データ行（2行結合=28px）borderTopなしで二重罫線防止 */}
                       <tr style={{ height: ROW_H2 }}>
                         <td style={{
-                          border: B, borderTop: 'none', fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
+                          border: B, borderTop: 'none', borderBottom: 'none', fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const, textAlign: 'center' as const,
                           verticalAlign: 'middle', ...RED,
@@ -920,7 +920,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           {patrolRecord.inspector || '\u00A0'}
                         </td>
                         <td style={{
-                          border: B, borderTop: 'none', fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
+                          border: B, borderTop: 'none', borderBottom: 'none', fontSize: FONT, height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden', lineHeight: '12px',
                           boxSizing: 'border-box' as const, textAlign: 'center' as const,
                           verticalAlign: 'middle', ...RED,
@@ -928,7 +928,7 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                           {patrolRecord.inspectionTime || '\u00A0'}
                         </td>
                         <td style={{
-                          border: B, borderTop: 'none', height: ROW_H2, maxHeight: ROW_H2,
+                          border: B, borderTop: 'none', borderBottom: 'none', borderRight: 'none', height: ROW_H2, maxHeight: ROW_H2,
                           padding: '1px 2px', overflow: 'hidden',
                           verticalAlign: 'middle',
                           boxSizing: 'border-box' as const, ...RED,
