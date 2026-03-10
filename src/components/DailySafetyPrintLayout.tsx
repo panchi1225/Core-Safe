@@ -940,12 +940,12 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
                       <div style={{
                         position: 'absolute', top: 0, left: '27.27%',
                         width: 0, borderLeft: '1px solid black',
-                        height: '14px',
+                        height: '6px',
                       }} />
                       <div style={{
                         position: 'absolute', top: 0, left: '49.09%',
                         width: 0, borderLeft: '1px solid black',
-                        height: '14px',
+                        height: '6px',
                       }} />
                     </div>
                   </td>
