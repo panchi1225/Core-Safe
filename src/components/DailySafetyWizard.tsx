@@ -116,7 +116,7 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({
 const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen, onOk }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-60 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[90] bg-gray-900 bg-opacity-60 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-2xl max-w-sm w-full p-8 text-center animate-fade-in">
         <div className="w-16 h-16 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
           <i className="fa-solid fa-check text-3xl"></i>
