@@ -1044,7 +1044,28 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
     setSaveStatus('idle');
   }, [report.workDate]);
 
-
+  const handleNext = () => {
+    if (step === 1) {
+      if (!validateStep1()) return;
+      if (
+        originalWorkDate !== null &&
+        originalWorkDate !== report.workDate
+      ) {
+        setShowDateChangeConfirm(true);
+        return;
+      }
+    }
+    // STEP2から次へ進む際にキャンバス内容を自動保存
+    if (step === 2) {
+      const canvasEl = canvasElRef.current;
+      if (canvasEl && canvasEl.width > 0 && canvasEl.height > 0) {
+        const dataUrl = canvasEl.toDataURL('image/jpeg', 0.6);
+        setReport((prev) => ({ ...prev, annotatedDiagramUrl: dataUrl }));
+      }
+    }
+    setStep((prev) => Math.min(prev + 1, 5));
+  };
+  
   const handleBack = () => {
     setStep((prev) => Math.max(prev - 1, 1));
   };
