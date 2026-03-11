@@ -985,7 +985,7 @@ const App: React.FC = () => {
         <div>&copy; 2026 Matsuura Construction App</div>
         <div className="mt-1 flex items-center justify-center gap-2">
           <span>Core Safe</span>
-          <span>Ver.1.4.1</span>
+          <span>Ver.1.4.2</span>
         </div>
       </footer>
 

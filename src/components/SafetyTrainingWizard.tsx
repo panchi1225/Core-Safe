@@ -97,6 +97,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, in
   const initialMonthRef = useRef<number>(report.month);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
   const [showPreview, setShowPreview] = useState(initialStep === 99);
+  const isDirectPreview = initialStep === 99;
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
@@ -441,18 +442,34 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, in
   const renderPreviewModal = () => {
     if (!showPreview) return null;
     return (
-      <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-90 flex flex-col no-print">
-        <div className="sticky top-0 bg-gray-800 text-white p-4 shadow-lg flex justify-between items-center shrink-0">
-          <h2 className="text-lg font-bold"><i className="fa-solid fa-eye mr-2"></i> 印刷プレビュー</h2>
-          <div className="flex gap-4">
-            <button onClick={() => setShowPreview(false)} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500">閉じる</button>
-            <button onClick={handlePrint} className="px-6 py-2 bg-green-600 rounded font-bold shadow-md flex items-center"><i className="fa-solid fa-print mr-2"></i> 印刷する</button>
+      <div className="fixed inset-0 z-[80] bg-white flex flex-col no-print">
+        <div className="flex items-center justify-between px-4 py-3 bg-slate-800 text-white shadow-md shrink-0">
+          <button
+            onClick={() => {
+              if (isDirectPreview) {
+                onBackToMenu();
+              } else {
+                setShowPreview(false);
+              }
+            }}
+            className="flex items-center gap-2 text-white hover:text-gray-300 font-bold text-sm"
+          >
+            <i className={`fa-solid ${isDirectPreview ? 'fa-house' : 'fa-arrow-left'}`}></i>
+            {isDirectPreview ? 'ホームに戻る' : '閉じる'}
+          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handlePrint}
+              className="px-6 py-2 bg-pink-600 text-white rounded-lg font-bold text-sm hover:bg-pink-700 transition-colors shadow"
+            >
+              <i className="fa-solid fa-print mr-2"></i>印刷
+            </button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-8 flex flex-col items-center gap-10 bg-gray-800">
-          <div className="bg-white shadow-2xl" style={{ width: '794px', transform: `scale(${previewScale})`, transformOrigin: 'top center' }}>
+        <div className="flex-1 overflow-auto bg-gray-200 p-4">
+          <div className="flex justify-center"><div className="shadow-2xl">
             <PrintLayout data={report} />
-          </div>
+          </div></div>
         </div>
       </div>
     );
