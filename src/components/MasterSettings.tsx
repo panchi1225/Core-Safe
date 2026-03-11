@@ -88,7 +88,7 @@ const MasterSection: React.FC<{
   onBack: () => void;
 }> = ({ title, items, onUpdate, onDeleteRequest, onBack }) => {
   const [newItem, setNewItem] = useState("");
-  const safeItems = items || [];
+  const safeItems = [...(items || [])].sort((a, b) => a.localeCompare(b, 'ja'));
   const handleAdd = () => {
     if (newItem.trim()) {
       onUpdate([...safeItems, newItem.trim()]);
