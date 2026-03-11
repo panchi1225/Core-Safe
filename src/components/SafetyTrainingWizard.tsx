@@ -127,7 +127,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, in
     const loadMaster = async () => { 
       try { 
         const data = await getMasterData(); 
-        setMasterData(data); 
+        setMasterData({ ...INITIAL_MASTER_DATA, ...data });
       } catch (e) { 
         console.error("マスタ取得エラー", e); 
       } 

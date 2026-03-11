@@ -556,12 +556,9 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
     const loadMaster = async () => {
       try {
         const data = await getMasterData();
-        setMasterData({
+         setMasterData({
+          ...INITIAL_MASTER_DATA,
           ...data,
-          machines: data.machines || INITIAL_MASTER_DATA.machines,
-          equipment: data.equipment || INITIAL_MASTER_DATA.equipment,
-          cautions: data.cautions || INITIAL_MASTER_DATA.cautions,
-          safetyInstructionItems: data.safetyInstructionItems || INITIAL_MASTER_DATA.safetyInstructionItems,
         });
       } catch (e) {
         console.error('マスタ取得エラー', e);

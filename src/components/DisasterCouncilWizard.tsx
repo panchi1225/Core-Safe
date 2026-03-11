@@ -110,7 +110,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
     const loadMaster = async () => { 
       try { 
         const data = await getMasterData(); 
-        setMasterData(data); 
+        setMasterData({ ...INITIAL_MASTER_DATA, ...data }); 
       } catch (e) { 
         console.error("マスタ取得エラー", e); 
       } 

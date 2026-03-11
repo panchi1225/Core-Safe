@@ -153,7 +153,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
     const loadData = async () => { 
       try { 
         const mData = await getMasterData(); 
-        setMasterData(mData); 
+        setMasterData({ ...INITIAL_MASTER_DATA, ...mData }); 
         const eData = await fetchEmployees();
         setEmployees(eData);
       } catch (e) { console.error("データ取得エラー", e); } 
