@@ -51,9 +51,9 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
           
           {/* Row 1: Name / Birth / Gender */}
           <div className="flex border-b border-black shrink-0 h-[64px]">
-            <div className={`w-24 ${borderClass} bg-gray-50 flex flex-col justify-center items-center p-1`}>
+            <div className={`w-24 ${borderClass} bg-gray-50 flex flex-col justify-center items-center px-2 py-1`}>
               <span className="text-[10px] mb-1">カ　　　ナ</span>
-              <span className="font-bold text-base">氏　　　名</span>
+              <span className="font-bold text-sm">氏　　　名</span>
             </div>
             <div className={`w-64 ${borderClass} p-1 flex flex-col justify-center`}>
                <div className="text-xs text-center w-full mb-0.5">{data.furiganaSei}　{data.furiganaMei}</div>
@@ -227,7 +227,7 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
           {/* Row 7: Kentaikyo */}
           <div className="flex border-b border-black shrink-0 h-[40px]">
              <div className={`w-1/2 ${borderClass} bg-gray-50 flex items-center justify-center font-bold p-1 text-sm`}>
-               建退共の加入状況
+               建設退職金制度の加入状況
              </div>
              <div className={`w-1/2 border-b border-black flex items-center justify-center gap-10 p-1`}>
                <div className="flex items-center gap-2">
