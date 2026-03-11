@@ -52,6 +52,13 @@
         }
       }
 
+      /* iPad キーボード表示時のフッター位置修正 */
+      @supports (-webkit-touch-callout: none) {
+        footer.fixed {
+          position: sticky !important;
+        }
+      }
+      
     </style>
   </head>
   <body>
