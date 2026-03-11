@@ -203,18 +203,21 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
     
     let currentExpYears = emp.experienceYears;
     let currentExpMonths = emp.experienceMonths;
-    if (emp.lastUpdatedExperience) {
-      const lastUpdate = new Date(emp.lastUpdatedExperience);
-      const now = new Date();
-      let monthsDiff = (now.getFullYear() - lastUpdate.getFullYear()) * 12 + (now.getMonth() - lastUpdate.getMonth());
-      if (now.getDate() < lastUpdate.getDate()) {
-        monthsDiff--;
-      }
-      if (monthsDiff > 0) {
-        const totalMonths = currentExpYears * 12 + currentExpMonths + monthsDiff;
-        currentExpYears = Math.floor(totalMonths / 12);
-        currentExpMonths = totalMonths % 12;
-      }
+    // 2026年4月1日を基準日として経験年数を逆算
+    const baseDate = new Date(2026, 3, 1); // 2026年4月1日
+    const now = new Date();
+    let monthsDiff = (now.getFullYear() - baseDate.getFullYear()) * 12 + (now.getMonth() - baseDate.getMonth());
+    if (now.getDate() < baseDate.getDate()) {
+      monthsDiff--;
+    }
+    if (monthsDiff > 0) {
+      const totalMonths = currentExpYears * 12 + currentExpMonths + monthsDiff;
+      currentExpYears = Math.floor(totalMonths / 12);
+      currentExpMonths = totalMonths % 12;
+    } else if (monthsDiff < 0) {
+      const totalMonths = currentExpYears * 12 + currentExpMonths + monthsDiff;
+      currentExpYears = Math.max(0, Math.floor(totalMonths / 12));
+      currentExpMonths = Math.max(0, totalMonths % 12);
     }
 
     const isPreset = PRESET_JOB_TYPES.includes(emp.jobType);
