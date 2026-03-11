@@ -566,7 +566,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
             {isExpired && <p className="text-xs text-red-600 font-bold mt-1">※最終受診から1年以上経過しています</p>}
           </div>
         </div>
-        <div className="form-control"><label className="label font-bold text-gray-700">建退共加入状況</label><div className="flex gap-4 mt-1"><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'Joined'} onChange={() => updateReport({kentaikyo: 'Joined'})} />加入している</label><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'NotJoined'} onChange={() => updateReport({kentaikyo: 'NotJoined'})} />加入していない</label></div></div>
+        <div className="form-control"><label className="label font-bold text-gray-700">建設退職金制度加入状況</label><div className="flex gap-4 mt-1"><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'Joined'} onChange={() => updateReport({kentaikyo: 'Joined'})} />加入している</label><label className="flex items-center gap-2 cursor-pointer bg-white px-4 py-2 border rounded shadow-sm"><input type="radio" checked={report.kentaikyo === 'NotJoined'} onChange={() => updateReport({kentaikyo: 'NotJoined'})} />加入していない</label></div></div>
       </div>
     );
   };
@@ -592,7 +592,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, on
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
             {[
               {k:'arc_welding',l:'アーク溶接'}, {k:'grinding_wheel',l:'研削といし'}, {k:'low_voltage',l:'低圧電気取扱'},
-              {k:'roller',l:'ローラー運転'}, {k:'asbestos',l:'石綿取り扱い'}, {k:'foreman',l:'職長教育'},
+              {k:'roller',l:'ローラー運転'}, {k:'asbestos',l:'石綿取り扱い'}, {k:'chainsaw',l:'伐木等の業務（チェーンソー）'}, {k:'foreman',l:'職長教育'},
               {k:'electrician',l:'電気工事士'}
             ].map(q => <label key={q.k} className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={(qual as any)[q.k]} onChange={e=>updateQual(q.k as any, e.target.checked)} />{q.l}</label>)}
           </div>

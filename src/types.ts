@@ -383,6 +383,7 @@ export interface Qualifications {
   low_voltage: boolean;
   roller: boolean;
   asbestos: boolean;
+  chainsaw: boolean;              // 伐木等の業務（チェーンソー）
   foreman: boolean;
   license_regular?: boolean;
   license_large?: boolean;
@@ -465,7 +466,7 @@ export const INITIAL_NEWCOMER_SURVEY_REPORT: NewcomerSurveyReportData = {
   healthCheckDay: null,
   kentaikyo: 'Joined',
   qualifications: {
-    vehicle_leveling: false, vehicle_demolition: false, mobile_crane: false, slinging: false, gas_welding: false, earth_retaining: false, excavation: false, scaffolding: false, formwork: false, oxygen_deficiency: false, rough_terrain: false, arc_welding: false, grinding_wheel: false, low_voltage: false, roller: false, asbestos: false, foreman: false, 
+    vehicle_leveling: false, vehicle_demolition: false, mobile_crane: false, slinging: false, gas_welding: false, earth_retaining: false, excavation: false, scaffolding: false, formwork: false, oxygen_deficiency: false, rough_terrain: false, arc_welding: false, grinding_wheel: false, low_voltage: false, roller: false, asbestos: false, chainsaw: false, foreman: false, 
     license_regular: false, license_large: false, license_large_special: false, license_towing: false,
     otherText1: "", otherText2: "", otherText3: ""
   },

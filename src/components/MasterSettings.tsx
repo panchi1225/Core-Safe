@@ -390,6 +390,7 @@ const EmployeeEditForm: React.FC<{
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.low_voltage} onChange={(e)=>handleQualChange('low_voltage', e.target.checked)} />低圧電気取扱</label>
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.roller} onChange={(e)=>handleQualChange('roller', e.target.checked)} />ローラー運転</label>
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.asbestos} onChange={(e)=>handleQualChange('asbestos', e.target.checked)} />石綿取り扱い</label>
+              <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.chainsaw} onChange={(e)=>handleQualChange('chainsaw', e.target.checked)} />伐木等の業務（チェーンソー）</label>
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.foreman} onChange={(e)=>handleQualChange('foreman', e.target.checked)} />職長教育</label>
 
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.license_regular} onChange={(e)=>handleQualChange('license_regular', e.target.checked)} />普通自動車免許</label>

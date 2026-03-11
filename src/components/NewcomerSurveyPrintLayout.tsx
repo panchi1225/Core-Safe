@@ -277,6 +277,7 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                       <CheckBox checked={qual.low_voltage} label="低圧電気取扱" />
                       <CheckBox checked={qual.roller} label="ローラー運転業務" />
                       <CheckBox checked={qual.asbestos} label="石綿取り扱い業務" />
+                      <CheckBox checked={qual.chainsaw} label="伐木等の業務（チェーンソー）" />
                    </div>
                 </div>
 
