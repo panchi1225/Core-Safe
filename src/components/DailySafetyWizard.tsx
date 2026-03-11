@@ -1065,7 +1065,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
     }
     setStep((prev) => Math.min(prev + 1, 5));
   };
-  
+
   const handleBack = () => {
     setStep((prev) => Math.max(prev - 1, 1));
   };
@@ -1174,7 +1174,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
     img.onerror = () => {
       console.error('[キャンバス初期化] 画像読み込みエラー:', currentDiagramSrc.substring(0, 50));
     };
-    img.src = currentDiagramSrc;
+    img.src = report.annotatedDiagramUrl || currentDiagramSrc;
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, diagramLoaded, currentDiagramSrc]);
