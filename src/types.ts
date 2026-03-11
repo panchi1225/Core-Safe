@@ -389,6 +389,7 @@ export interface Qualifications {
   license_large?: boolean;
   license_large_special?: boolean;
   license_towing?: boolean;
+  license_mobile_crane?: boolean;   // 移動式クレーン
   otherText1: string;
   otherText2: string;
   otherText3: string;
@@ -467,7 +468,7 @@ export const INITIAL_NEWCOMER_SURVEY_REPORT: NewcomerSurveyReportData = {
   kentaikyo: 'Joined',
   qualifications: {
     vehicle_leveling: false, vehicle_demolition: false, mobile_crane: false, slinging: false, gas_welding: false, earth_retaining: false, excavation: false, scaffolding: false, formwork: false, oxygen_deficiency: false, rough_terrain: false, arc_welding: false, grinding_wheel: false, low_voltage: false, roller: false, asbestos: false, chainsaw: false, foreman: false, 
-    license_regular: false, license_large: false, license_large_special: false, license_towing: false,
+    license_regular: false, license_large: false, license_large_special: false, license_towing: false, license_mobile_crane: false,
     otherText1: "", otherText2: "", otherText3: ""
   },
   pledgeDateYear: null,

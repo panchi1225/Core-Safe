@@ -601,7 +601,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
           <div className="border-t pt-2 mb-2"><h4 className="font-bold text-sm mb-2">運転免許</h4>
             {[
               {k:'license_regular',l:'普通自動車免許'}, {k:'license_large',l:'大型自動車免許'},
-              {k:'license_large_special',l:'大型特殊自動車免許'}, {k:'license_towing',l:'牽引自動車免許'}
+              {k:'license_large_special',l:'大型特殊自動車免許'}, {k:'license_towing',l:'牽引自動車免許'}, {k:'license_mobile_crane',l:'移動式クレーン'}
             ].map(q => <label key={q.k} className="flex items-center gap-2 cursor-pointer mb-1"><input type="checkbox" checked={(qual as any)[q.k]} onChange={e=>updateQual(q.k as any, e.target.checked)} />{q.l}</label>)}
           </div>
           

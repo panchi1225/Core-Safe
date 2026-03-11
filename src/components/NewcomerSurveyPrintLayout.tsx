@@ -291,6 +291,7 @@ const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
                    <CheckBox checked={(qual as any).license_large} label="大型自動車免許" />
                    <CheckBox checked={(qual as any).license_large_special} label="大型特殊自動車免許" />
                    <CheckBox checked={(qual as any).license_towing} label="牽引自動車免許" />
+                   <CheckBox checked={(qual as any).license_mobile_crane} label="移動式クレーン" />
                    
                    <div className="mt-auto pt-2">
                       <div className="text-[9px] font-bold mb-1 text-gray-600">
