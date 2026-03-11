@@ -281,7 +281,6 @@ const App: React.FC = () => {
   const [selectedDiaryMonth, setSelectedDiaryMonth] = useState<number | null>(null);
   const [diaryActionModal, setDiaryActionModal] = useState<{ isOpen: boolean; draft: SavedDraft | null }>({ isOpen: false, draft: null });
   const [generalActionModal, setGeneralActionModal] = useState<{ isOpen: boolean; draft: SavedDraft | null }>({ isOpen: false, draft: null });
-  const [generalActionModal, setGeneralActionModal] = useState<{ isOpen: boolean; draft: SavedDraft | null }>({ isOpen: false, draft: null });
   const [wizardInitialStep, setWizardInitialStep] = useState<number>(1);
   const [sealSelectModal, setSealSelectModal] = useState<{ isOpen: boolean; draft: SavedDraft | null }>({ isOpen: false, draft: null });
   const [sealEmployees, setSealEmployees] = useState<EmployeeData[]>([]);
