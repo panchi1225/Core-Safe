@@ -7,6 +7,7 @@ import DisasterCouncilPrintLayout from './DisasterCouncilPrintLayout';
 interface Props {
   initialData?: any;
   initialDraftId?: string | null;
+  initialStep?: number;
   onBackToMenu: () => void;
 }
 
@@ -72,14 +73,14 @@ const TOP_FIXED_ROLES = [
   "安全委員"
 ];
 
-const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
+const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, initialStep, onBackToMenu }) => {
   const [step, setStep] = useState(1);
   const [report, setReport] = useState<DisasterCouncilReportData>(initialData || INITIAL_DISASTER_COUNCIL_REPORT);
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
   const initialYearRef = useRef<number>(report.year);
   const initialMonthRef = useRef<number>(report.month);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(initialStep === 99);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previewScale, setPreviewScale] = useState(1);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);

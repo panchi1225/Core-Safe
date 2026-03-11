@@ -8,6 +8,7 @@ import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
 interface Props {
   initialData?: any;
   initialDraftId?: string | null;
+  initialStep?: number;
   onBackToMenu: () => void;
 }
 
@@ -105,12 +106,12 @@ const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen
   );
 };
 
-const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
+const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, initialStep, onBackToMenu }) => {
   const [step, setStep] = useState(1);
   const [report, setReport] = useState<NewcomerSurveyReportData>(sanitizeReportData(initialData));
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(initialStep === 99);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [previewScale, setPreviewScale] = useState(1);
   

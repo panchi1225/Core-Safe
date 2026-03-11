@@ -8,6 +8,7 @@ import { getDaysInMonth, getDay } from 'date-fns';
 interface Props {
   initialData?: any;
   initialDraftId?: string | null;
+  initialStep?: number;
   onBackToMenu: () => void;
 }
 
@@ -106,7 +107,7 @@ const isJapaneseHoliday = (date: Date): boolean => {
 };
 
 // --- Main Wizard Component ---
-const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBackToMenu }) => {
+const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, initialStep, onBackToMenu }) => {
   // 初期データに safetyGoals がない場合のフォールバックを追加
   const [report, setReport] = useState<SafetyPlanReportData>(() => {
     const raw = initialData || INITIAL_SAFETY_PLAN_REPORT;
@@ -123,7 +124,7 @@ const SafetyPlanWizard: React.FC<Props> = ({ initialData, initialDraftId, onBack
   const initialYearRef = useRef<number>(report.year);
   const initialMonthRef = useRef<number>(report.month);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(initialStep === 99);
   const [ganttMode, setGanttMode] = useState<'idle' | 'selectStart' | 'selectEnd'>('idle');
   const [ganttRowId, setGanttRowId] = useState<string | null>(null);
   const [ganttStartDay, setGanttStartDay] = useState<number | null>(null);

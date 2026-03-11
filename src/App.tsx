@@ -280,6 +280,8 @@ const App: React.FC = () => {
   const [selectedDiaryProject, setSelectedDiaryProject] = useState<string | null>(null);
   const [selectedDiaryMonth, setSelectedDiaryMonth] = useState<number | null>(null);
   const [diaryActionModal, setDiaryActionModal] = useState<{ isOpen: boolean; draft: SavedDraft | null }>({ isOpen: false, draft: null });
+  const [generalActionModal, setGeneralActionModal] = useState<{ isOpen: boolean; draft: SavedDraft | null }>({ isOpen: false, draft: null });
+  const [generalActionModal, setGeneralActionModal] = useState<{ isOpen: boolean; draft: SavedDraft | null }>({ isOpen: false, draft: null });
   const [wizardInitialStep, setWizardInitialStep] = useState<number>(1);
   const [sealSelectModal, setSealSelectModal] = useState<{ isOpen: boolean; draft: SavedDraft | null }>({ isOpen: false, draft: null });
   const [sealEmployees, setSealEmployees] = useState<EmployeeData[]>([]);
@@ -364,10 +366,7 @@ const App: React.FC = () => {
     if (draft.type === 'DAILY_SAFETY') {
       setDiaryActionModal({ isOpen: true, draft });
     } else {
-      setWizardInitialData(draft.data);
-      setWizardDraftId(draft.id);
-      setCurrentView(draft.type as ViewState);
-      closeSelectionModal();
+      setGeneralActionModal({ isOpen: true, draft });
     }
   };
 
@@ -424,10 +423,11 @@ const App: React.FC = () => {
   // Routing Logic
   if (currentView === 'SAFETY_TRAINING') {
     return (
-      <SafetyTrainingWizard 
+      <SafetyTrainingWizard
         initialData={wizardInitialData}
         initialDraftId={wizardDraftId}
-        onBackToMenu={() => setCurrentView('HOME')} 
+        initialStep={wizardInitialStep}
+        onBackToMenu={() => setCurrentView('HOME')}
       />
     );
   }
@@ -437,6 +437,7 @@ const App: React.FC = () => {
       <DisasterCouncilWizard
         initialData={wizardInitialData}
         initialDraftId={wizardDraftId}
+        initialStep={wizardInitialStep}
         onBackToMenu={() => setCurrentView('HOME')}
       />
     );
@@ -447,6 +448,7 @@ const App: React.FC = () => {
       <SafetyPlanWizard 
          initialData={wizardInitialData}
          initialDraftId={wizardDraftId}
+         initialStep={wizardInitialStep}
          onBackToMenu={() => setCurrentView('HOME')}
       />
     );
@@ -457,6 +459,7 @@ const App: React.FC = () => {
       <NewcomerSurveyWizard
         initialData={wizardInitialData}
         initialDraftId={wizardDraftId}
+        initialStep={wizardInitialStep}
         onBackToMenu={() => setCurrentView('HOME')}
       />
     );
@@ -903,7 +906,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">安全衛生日誌</h3>
             <p className="text-xs text-gray-500 text-center">
-              日々の安全衛生日誌を作成します。
+              日々の安全衛生日誌を作成します。<br />※電子印対応
             </p>
           </button>
 
@@ -917,7 +920,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">安全訓練</h3>
             <p className="text-xs text-gray-500 text-center">
-              安全訓練の実施報告書を作成します。電子署名対応。
+              安全訓練の実施報告書を作成します。<br />※電子署名対応
             </p>
           </button>
 
@@ -931,7 +934,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">災害防止協議会</h3>
             <p className="text-xs text-gray-500 text-center">
-              災害防止協議会の報告書を作成します。電子署名対応。
+              災害防止協議会の報告書を作成します。<br />※電子署名対応
             </p>
           </button>
 
@@ -945,7 +948,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">安全管理計画表</h3>
             <p className="text-xs text-gray-500 text-center">
-              安全管理計画表を作成します。報告書に自動添付。<br />※PCでの作成推奨
+              安全訓練・災防協に添付する工程表を作成します。<br />※PCでの作成推奨
             </p>
           </button>
 
@@ -959,7 +962,7 @@ const App: React.FC = () => {
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">新規入場者アンケート</h3>
             <p className="text-xs text-gray-500 text-center">
-              新規入場者書類を作成します。QRコードから作成可能。
+              新規入場者書類を作成します。<br />※QRコードから作成可能
             </p>
           </button>
 
@@ -983,7 +986,7 @@ const App: React.FC = () => {
         <div>&copy; 2026 Matsuura Construction App</div>
         <div className="mt-1 flex items-center justify-center gap-2">
           <span>Core Safe</span>
-          <span>Ver.1.10.5</span>
+          <span>Ver.1.4.1</span>
         </div>
       </footer>
 
@@ -1072,6 +1075,62 @@ const App: React.FC = () => {
             <div className="p-4 border-t bg-gray-50">
               <button
                 onClick={() => setDiaryActionModal({ isOpen: false, draft: null })}
+                className="w-full py-2 bg-gray-200 rounded-lg font-bold text-gray-600 hover:bg-gray-300"
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {generalActionModal.isOpen && generalActionModal.draft && (
+        <div className="fixed inset-0 z-50 bg-gray-900 bg-opacity-60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6 border-b">
+              <h3 className="text-lg font-bold text-gray-800">操作を選択</h3>
+            </div>
+            <div className="p-4 space-y-3">
+              <button
+                onClick={() => {
+                  const draft = generalActionModal.draft!;
+                  setWizardInitialData(draft.data);
+                  setWizardDraftId(draft.id);
+                  setWizardInitialStep(1);
+                  setCurrentView(draft.type as ViewState);
+                  setGeneralActionModal({ isOpen: false, draft: null });
+                  closeSelectionModal();
+                }}
+                className="w-full text-left border rounded-lg p-4 hover:bg-blue-50 transition-colors flex items-center gap-3 shadow-sm"
+              >
+                <i className="fa-solid fa-pen-to-square text-blue-500 text-xl w-8 text-center"></i>
+                <div>
+                  <div className="font-bold text-gray-800">内容を修正</div>
+                  <div className="text-xs text-gray-500">入力内容を編集します</div>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  const draft = generalActionModal.draft!;
+                  setWizardInitialData(draft.data);
+                  setWizardDraftId(draft.id);
+                  setWizardInitialStep(99);
+                  setCurrentView(draft.type as ViewState);
+                  setGeneralActionModal({ isOpen: false, draft: null });
+                  closeSelectionModal();
+                }}
+                className="w-full text-left border rounded-lg p-4 hover:bg-orange-50 transition-colors flex items-center gap-3 shadow-sm"
+              >
+                <i className="fa-solid fa-print text-orange-500 text-xl w-8 text-center"></i>
+                <div>
+                  <div className="font-bold text-gray-800">印刷プレビュー</div>
+                  <div className="text-xs text-gray-500">帳票を確認・印刷します</div>
+                </div>
+              </button>
+            </div>
+            <div className="p-4 border-t bg-gray-50">
+              <button
+                onClick={() => setGeneralActionModal({ isOpen: false, draft: null })}
                 className="w-full py-2 bg-gray-200 rounded-lg font-bold text-gray-600 hover:bg-gray-300"
               >
                 キャンセル
