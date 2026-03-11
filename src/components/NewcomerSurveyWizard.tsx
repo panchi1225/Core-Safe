@@ -599,14 +599,16 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
             ].map(q => <label key={q.k} className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={(qual as any)[q.k]} onChange={e=>updateQual(q.k as any, e.target.checked)} />{q.l}</label>)}
           </div>
           <div className="border-t pt-2 mb-2"><h4 className="font-bold text-sm mb-2">運転免許</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {[
               {k:'license_regular',l:'普通自動車免許'}, {k:'license_large',l:'大型自動車免許'},
               {k:'license_large_special',l:'大型特殊自動車免許'}, {k:'license_towing',l:'牽引自動車免許'}, {k:'license_mobile_crane',l:'移動式クレーン'}
-            ].map(q => <label key={q.k} className="flex items-center gap-2 cursor-pointer mb-1"><input type="checkbox" checked={(qual as any)[q.k]} onChange={e=>updateQual(q.k as any, e.target.checked)} />{q.l}</label>)}
+            ].map(q => <label key={q.k} className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={(qual as any)[q.k]} onChange={e=>updateQual(q.k as any, e.target.checked)} />{q.l}</label>)}
+            </div>
           </div>
           
           {/* ★修正: その他資格入力欄を3つに戻す */}
-          <div className="mt-2 text-sm font-bold mb-2">上記以外の資格</div>
+          <div className="border-t pt-2 mt-2 text-sm font-bold mb-2">上記以外の資格</div>
           <div className="space-y-2">
              <input type="text" className="w-full p-2 border rounded" placeholder="資格名" value={qual.otherText1||''} onChange={e=>updateQual('otherText1', e.target.value)} />
              <input type="text" className="w-full p-2 border rounded" placeholder="資格名" value={qual.otherText2||''} onChange={e=>updateQual('otherText2', e.target.value)} />
