@@ -1696,7 +1696,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
               onChange={(e) => updateListEntry('machineryEntries', idx, e.target.value)}
             >
               <option value="">選択してください</option>
-              {masterData.machines.map((m) => (
+              {[...masterData.machines].sort((a, b) => a.localeCompare(b, 'ja')).map((m) => (
                 <option key={m} value={m}>
                   {m}
                 </option>
@@ -2096,7 +2096,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
               onChange={(e) => updateStep3Machinery(idx, e.target.value)}
             >
               <option value="">選択してください</option>
-              {masterData.machines.map((m) => (
+              {[...masterData.machines].sort((a, b) => a.localeCompare(b, 'ja')).map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>
