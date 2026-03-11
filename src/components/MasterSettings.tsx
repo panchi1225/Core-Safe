@@ -397,6 +397,7 @@ const EmployeeEditForm: React.FC<{
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.license_large} onChange={(e)=>handleQualChange('license_large', e.target.checked)} />大型自動車免許</label>
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.license_large_special} onChange={(e)=>handleQualChange('license_large_special', e.target.checked)} />大型特殊自動車免許</label>
               <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.license_towing} onChange={(e)=>handleQualChange('license_towing', e.target.checked)} />牽引自動車免許</label>
+              <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={data.qualifications.license_mobile_crane} onChange={(e)=>handleQualChange('license_mobile_crane', e.target.checked)} />移動式クレーン</label>
             </div>
           </section>
 
