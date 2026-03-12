@@ -296,6 +296,7 @@ export interface SubcontractorAttendee {
 
 export interface DisasterCouncilReportData extends ReportData {
   count: number;
+  meetingMethod: string;
   startTime: string;
   endTime: string;
   hostRole: string;
@@ -306,14 +307,19 @@ export interface DisasterCouncilReportData extends ReportData {
   reviewerRole: string;
   reviewerName: string;
   reviewerSealId: string;
+  reviewerSealImage: string;
 }
+
+// 備考欄の初期文（定数化）
+export const DISASTER_COUNCIL_DEFAULT_REMARKS = "関係請負人に配布するとともに、重要な協議結果を現場労働者に周知することとした。";
 
 export const INITIAL_DISASTER_COUNCIL_REPORT: DisasterCouncilReportData = {
   ...INITIAL_REPORT,
   count: 1,
+  meetingMethod: "現地開催",
   startTime: "13:00",
   endTime: "14:00",
-  hostRole: "",
+  hostRole: "統括安全衛生責任者",
   hostName: "",
   attendees: [],
   agendaItems: [
@@ -329,6 +335,8 @@ export const INITIAL_DISASTER_COUNCIL_REPORT: DisasterCouncilReportData = {
   reviewerRole: "",
   reviewerName: "",
   reviewerSealId: "",
+  reviewerSealImage: "",
+  remarks: DISASTER_COUNCIL_DEFAULT_REMARKS,
 };
 
 // --- Safety Plan Report ---

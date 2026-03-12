@@ -67,99 +67,106 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
         </div>
       </div>
 
-      {/* PAGE 2: 議題 */}
-      <div className="print-page p-[15mm] page-break-after-always">
-        {/* ヘッダー */}
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold tracking-widest">災 害 防 止 協 議 会</h2>
+      {/* PAGE 2: 本文（基本情報・出席者・協議内容・備考・確認者） */}
+      <div className="print-page p-[12mm] text-[11px] leading-relaxed">
+        {/* タイトル */}
+        <div className="text-center mb-3">
+          <h2 className="text-base font-bold tracking-[0.15em]">災 害 防 止 協 議 会 議 事 録</h2>
         </div>
 
-        {/* 基本情報テーブル */}
-        <table className={`w-full border-collapse mb-4 ${borderClass}`}>
+        {/* 基本情報（縦並び） */}
+        <table className="w-full border-collapse mb-2" style={{ borderTop: '1px solid #888', borderBottom: '1px solid #888' }}>
           <tbody>
-            <tr>
-              <td className={`${borderClass} ${headerClass} w-28 text-sm`}>工事名</td>
-              <td className={`${borderClass} p-2 text-sm`} colSpan={3}>{data.project}</td>
+            <tr style={{ height: '22px' }}>
+              <td className="px-2 font-bold w-24 bg-gray-50" style={{ borderBottom: '1px solid #ccc' }}>工事名</td>
+              <td className="px-2" style={{ borderBottom: '1px solid #ccc' }} colSpan={3}>{data.project}</td>
             </tr>
-            <tr>
-              <td className={`${borderClass} ${headerClass} text-sm`}>開催日時</td>
-              <td className={`${borderClass} p-2 text-sm`}>{data.date ? formatDate(data.date) : ''}　{data.startTime}～{data.endTime}</td>
-              <td className={`${borderClass} ${headerClass} w-20 text-sm`}>場所</td>
-              <td className={`${borderClass} p-2 text-sm`}>{data.location}</td>
-            </tr>
-            <tr>
-              <td className={`${borderClass} ${headerClass} text-sm`}>主催者</td>
-              <td className={`${borderClass} p-2 text-sm`} colSpan={3}>{data.hostRole}　{data.hostName}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        {/* 議題テーブル */}
-        <table className={`w-full border-collapse mb-4 ${borderClass}`}>
-          <thead>
-            <tr>
-              <th className={`${borderClass} ${headerClass} w-48 text-sm`}>議題</th>
-              <th className={`${borderClass} ${headerClass} text-sm`}>内容</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(data.agendaItems || []).map((item, idx) => (
-              <tr key={idx}>
-                <td className={`${borderClass} p-2 text-sm font-bold align-top`}>{item.title}</td>
-                <td className={`${borderClass} p-2 text-sm whitespace-pre-wrap align-top`} style={{ minHeight: '2.5rem' }}>{item.content}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {/* フッター情報 */}
-        <table className={`w-full border-collapse ${borderClass}`}>
-          <tbody>
-            <tr>
-              <td className={`${borderClass} ${headerClass} w-28 text-sm`}>次回開催日</td>
-              <td className={`${borderClass} p-2 text-sm`}>{data.nextMeetingDate ? formatDate(data.nextMeetingDate) : ''}</td>
-              <td className={`${borderClass} ${headerClass} w-20 text-sm`}>備考</td>
-              <td className={`${borderClass} p-2 text-sm`}>{data.remarks}</td>
-            </tr>
-            <tr>
-              <td className={`${borderClass} ${headerClass} text-sm`}>確認者</td>
-              <td className={`${borderClass} p-2 text-sm`}>{data.reviewerRole}　{data.reviewerName}</td>
-              <td className={`${borderClass} ${headerClass} text-sm`}>印</td>
-              <td className={`${borderClass} p-2 text-center`}>
-                {data.reviewerSealId ? <span className="text-sm">（電子印）</span> : ''}
+            <tr style={{ height: '22px' }}>
+              <td className="px-2 font-bold bg-gray-50" style={{ borderBottom: '1px solid #ccc' }}>開催日時</td>
+              <td className="px-2" style={{ borderBottom: '1px solid #ccc' }} colSpan={3}>
+                {data.date ? formatDate(data.date) : ''}　{data.startTime}～{data.endTime}
               </td>
             </tr>
+            <tr style={{ height: '22px' }}>
+              <td className="px-2 font-bold bg-gray-50" style={{ borderBottom: '1px solid #ccc' }}>開催方法</td>
+              <td className="px-2" style={{ borderBottom: '1px solid #ccc' }} colSpan={3}>{data.meetingMethod || '現地開催'}</td>
+            </tr>
+            <tr style={{ height: '22px' }}>
+              <td className="px-2 font-bold bg-gray-50" style={{ borderBottom: '1px solid #ccc' }}>場所</td>
+              <td className="px-2" style={{ borderBottom: '1px solid #ccc' }} colSpan={3}>{data.location}</td>
+            </tr>
+            <tr style={{ height: '22px' }}>
+              <td className="px-2 font-bold bg-gray-50">主催者</td>
+              <td className="px-2" colSpan={3}>{data.hostRole}　{data.hostName}</td>
+            </tr>
           </tbody>
         </table>
-      </div>
 
-      {/* PAGE 3: 出席者名簿 */}
-      <div className="print-page p-[15mm]">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold tracking-widest">出 席 者 名 簿</h2>
-          <div className="text-sm mt-2">第 {data.count} 回　{data.date ? formatDate(data.date) : ''}</div>
+        {/* 出席者名簿 */}
+        <div className="mb-2">
+          <div className="font-bold text-xs mb-1">出席者</div>
+          <table className="w-full border-collapse" style={{ border: '1px solid #888' }}>
+            <thead>
+              <tr style={{ height: '20px' }} className="bg-gray-50">
+                <th className="font-bold text-center w-8" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #888' }}>No.</th>
+                <th className="font-bold text-center" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #888' }}>会社名</th>
+                <th className="font-bold text-center w-28" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #888' }}>役職・職務名</th>
+                <th className="font-bold text-center w-28" style={{ borderBottom: '1px solid #888' }}>氏名</th>
+              </tr>
+            </thead>
+            <tbody>
+              {attendeeRows.map((att, idx) => (
+                <tr key={idx} style={{ height: '18px' }}>
+                  <td className="text-center" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ddd' }}>{idx + 1}</td>
+                  <td className="px-1" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ddd' }}>{att.company}</td>
+                  <td className="px-1" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ddd' }}>{att.role}</td>
+                  <td className="px-1 text-center" style={{ borderBottom: '1px solid #ddd' }}>{att.name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
-        <table className={`w-full border-collapse ${borderClass}`}>
-          <thead>
-            <tr>
-              <th className={`${borderClass} ${headerClass} w-10 text-sm`}>No.</th>
-              <th className={`${borderClass} ${headerClass} text-sm`}>会社名</th>
-              <th className={`${borderClass} ${headerClass} text-sm`}>役職</th>
-              <th className={`${borderClass} ${headerClass} text-sm`}>氏名</th>
-            </tr>
-          </thead>
-          <tbody>
-            {attendeeRows.map((att, idx) => (
-              <tr key={idx} className="h-12">
-                <td className={`${borderClass} text-center text-sm`}>{idx + 1}</td>
-                <td className={`${borderClass} px-2 text-sm align-middle`}>{att.company}</td>
-                <td className={`${borderClass} px-2 text-sm align-middle`}>{att.role}</td>
-                <td className={`${borderClass} px-2 text-sm align-middle text-center`}>{att.name}</td>
+        {/* 協議内容 */}
+        <div className="mb-2">
+          <div className="font-bold text-xs mb-1">協議内容</div>
+          <table className="w-full border-collapse" style={{ border: '1px solid #888' }}>
+            <thead>
+              <tr style={{ height: '20px' }} className="bg-gray-50">
+                <th className="font-bold text-center w-36" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #888' }}>議題</th>
+                <th className="font-bold text-center" style={{ borderBottom: '1px solid #888' }}>内容</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {(data.agendaItems || []).map((item, idx) => (
+                <tr key={idx} style={{ height: '36px' }}>
+                  <td className="px-2 font-bold align-middle text-center" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ddd' }}>{item.title}</td>
+                  <td className="px-2 whitespace-pre-wrap align-middle" style={{ borderBottom: '1px solid #ddd' }}>{item.content}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 備考 */}
+        <div className="mb-1" style={{ borderBottom: '1px solid #ccc', paddingBottom: '2px' }}>
+          <span className="font-bold">備考：</span>{data.remarks}
+        </div>
+
+        {/* 次回開催日 */}
+        <div className="mb-3" style={{ borderBottom: '1px solid #ccc', paddingBottom: '2px' }}>
+          <span className="font-bold">次回開催日：</span>{data.nextMeetingDate ? formatDate(data.nextMeetingDate) : ''}
+        </div>
+
+        {/* 確認者（右寄せ、枠なし） */}
+        <div className="flex justify-end items-center gap-2 mt-2">
+          <span>確認者：{data.reviewerRole}　{data.reviewerName}</span>
+          {data.reviewerSealImage ? (
+            <img src={data.reviewerSealImage} alt="電子印" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+          ) : (
+            <span>㊞</span>
+          )}
+        </div>
       </div>
     </div>
   );

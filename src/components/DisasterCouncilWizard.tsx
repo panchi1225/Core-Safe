@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MasterData, DisasterCouncilReportData, INITIAL_DISASTER_COUNCIL_REPORT, INITIAL_MASTER_DATA } from '../types';
-import { getMasterData, saveDraft } from '../services/firebaseService';
+import { getMasterData, saveDraft, fetchEmployees } from '../services/firebaseService';
 import { AGENDA_TEMPLATES } from './disasterCouncilTemplates';
 import DisasterCouncilPrintLayout from './DisasterCouncilPrintLayout';
 
@@ -79,6 +79,9 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
   const [previewScale, setPreviewScale] = useState(1);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [showSealModal, setShowSealModal] = useState(false);
+  const [sealEmployees, setSealEmployees] = useState<any[]>([]);
+
 
   // ★追加: エラー状態管理
   const [errors, setErrors] = useState<Record<string, boolean>>({});
@@ -308,10 +311,31 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="form-control"><label className="label font-bold text-gray-700">開催日 <span className="text-red-500">*</span></label><input type="date" className={getErrorClass('date')} value={report.date} onChange={(e) => updateReport({date: e.target.value})} /></div>
         <div className="form-control">
+          <label className="label font-bold text-gray-700">開催方法 <span className="text-red-500">*</span></label>
+          <select className={getErrorClass('meetingMethod')} value={report.meetingMethod} onChange={(e) => {
+            const method = e.target.value;
+            updateReport({ meetingMethod: method, location: "" });
+          }}>
+            <option value="現地開催">現地開催</option>
+            <option value="Web開催">Web開催</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="form-control">
           <label className="label font-bold text-gray-700">場所 <span className="text-red-500">*</span></label>
           <select className={getErrorClass('location')} value={report.location} onChange={(e) => updateReport({location: e.target.value})}>
             <option value="">(データを選択してください)</option>
-            {masterData.locations.map(l => <option key={l} value={l}>{l}</option>)}
+            {report.meetingMethod === "Web開催" ? (
+              <>
+                <option value="WEB開催（Microsoft Teams使用）">WEB開催（Microsoft Teams使用）</option>
+                <option value="WEB開催（Zoom使用）">WEB開催（Zoom使用）</option>
+                <option value="WEB開催（Google Meet使用）">WEB開催（Google Meet使用）</option>
+              </>
+            ) : (
+              masterData.locations.map(l => <option key={l} value={l}>{l}</option>)
+            )}
           </select>
         </div>
       </div>
@@ -389,10 +413,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
                   <option value="">(役職)</option>
                   {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
-                <select className="h-10 p-2 border border-gray-300 rounded text-sm outline-none appearance-none" value={att.name} onChange={(e) => updateAttendee(i, 'name', e.target.value)}>
-                  <option value="">(氏名)</option>
-                  {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <input type="text" className="h-10 p-2 border border-gray-300 rounded text-sm outline-none" value={att.name} onChange={(e) => updateAttendee(i, 'name', e.target.value)} placeholder="氏名を入力" />
               </div>
               <button onClick={() => removeAttendee(i)} className="text-red-400 hover:text-red-600 shrink-0"><i className="fa-solid fa-trash"></i></button>
             </div>
@@ -556,7 +577,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
 
   const renderPreviewModal = () => {
     if (!showPreview) return null;
-    return (
+    return (<>
       <div className="fixed inset-0 z-[80] bg-white flex flex-col no-print">
         <div className="flex items-center justify-between px-4 py-3 bg-slate-800 text-white shadow-md shrink-0">
           <button
@@ -573,12 +594,34 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
             {isDirectPreview ? 'ホームに戻る' : '閉じる'}
           </button>
           <div className="flex items-center gap-3">
-            <button
-              onClick={handlePrint}
-              className="px-6 py-2 bg-pink-600 text-white rounded-lg font-bold text-sm hover:bg-pink-700 transition-colors shadow"
-            >
-              <i className="fa-solid fa-print mr-2"></i>印刷
-            </button>
+            {isDirectPreview && (
+              <>
+                <button
+                  onClick={async () => {
+                    const emps = await fetchEmployees();
+                    setSealEmployees(emps.filter((e: any) => e.sealImage));
+                    setShowSealModal(true);
+                  }}
+                  className="px-6 py-2 bg-purple-600 text-white rounded-lg font-bold text-sm hover:bg-purple-700 transition-colors shadow"
+                >
+                  <i className="fa-solid fa-stamp mr-2"></i>押印
+                </button>
+                <button
+                  onClick={handlePrint}
+                  className="px-6 py-2 bg-pink-600 text-white rounded-lg font-bold text-sm hover:bg-pink-700 transition-colors shadow"
+                >
+                  <i className="fa-solid fa-print mr-2"></i>印刷
+                </button>
+              </>
+            )}
+            {!isDirectPreview && (
+              <button
+                onClick={handlePrint}
+                className="px-6 py-2 bg-pink-600 text-white rounded-lg font-bold text-sm hover:bg-pink-700 transition-colors shadow"
+              >
+                <i className="fa-solid fa-print mr-2"></i>印刷
+              </button>
+            )}
           </div>
         </div>
         <div className="flex-1 overflow-auto bg-gray-200 p-4">
@@ -587,7 +630,52 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
           </div></div>
         </div>
       </div>
-    );
+
+      {/* 押印社員選択モーダル */}
+      {showSealModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[90]">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="p-4 border-b bg-purple-50">
+              <h3 className="font-bold text-lg text-purple-800 text-center">
+                <i className="fa-solid fa-stamp mr-2"></i>確認者を選択
+              </h3>
+            </div>
+            <div className="p-4 max-h-96 overflow-y-auto">
+              {sealEmployees.length === 0 ? (
+                <div className="text-center py-8 text-gray-400">
+                  <i className="fa-solid fa-exclamation-circle text-2xl mb-2 block"></i>
+                  電子印が登録された社員がいません
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {sealEmployees.map((emp: any) => (
+                    <button
+                      key={emp.id}
+                      onClick={async () => {
+                        const updated = { ...report, reviewerSealId: emp.id, reviewerSealImage: emp.sealImage };
+                        setReport(updated);
+                        if (draftId) {
+                          await saveDraft(draftId, 'DISASTER_COUNCIL', updated);
+                        }
+                        setShowSealModal(false);
+                        alert(`${emp.nameSei} ${emp.nameMei} の電子印を押印しました`);
+                      }}
+                      className="w-full text-left border rounded-lg p-3 hover:bg-purple-50 transition-colors flex items-center gap-3"
+                    >
+                      <img src={emp.sealImage} alt="電子印" style={{ width: '40px', height: '40px', objectFit: 'contain', border: '1px solid #ccc', borderRadius: '4px' }} />
+                      <div className="font-bold text-gray-800">{emp.nameSei} {emp.nameMei}</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="p-4 border-t">
+              <button onClick={() => setShowSealModal(false)} className="w-full py-2 bg-gray-200 rounded-lg font-bold text-gray-600 hover:bg-gray-300">キャンセル</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>);
   };
 
   return (
