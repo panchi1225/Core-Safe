@@ -301,8 +301,6 @@ export interface DisasterCouncilReportData extends ReportData {
   endTime: string;
   hostRole: string;
   hostName: string;
-  attendees: GCAttendee[];
-  agendaItems: { title: string; content: string }[];
   nextMeetingDate: string;
   reviewerRole: string;
   reviewerName: string;
@@ -322,14 +320,14 @@ export const INITIAL_DISASTER_COUNCIL_REPORT: DisasterCouncilReportData = {
   hostRole: "統括安全衛生責任者",
   hostName: "",
   attendees: [],
+  isFirstMeeting: false,
   agendaItems: [
-    { title: "1. 前回の振り返り", content: "" },
-    { title: "2. 当月の工事概要", content: "" },
-    { title: "3. 安全管理について", content: "" },
-    { title: "4. 労働衛生について", content: "" },
-    { title: "5. 環境対策について", content: "" },
-    { title: "6. その他", content: "" },
-    { title: "7. 連絡事項", content: "" },
+    { title: "1. 前回協議事項及び是正改善状況の確認", content: "" },
+    { title: "2. 月間工程並びに作業内容の説明", content: "" },
+    { title: "3. 職種間の作業調整及び安全対策の検討", content: "" },
+    { title: "4. 各職種からの提案事項及び注意事項", content: "" },
+    { title: "5. その他協議事項", content: "" },
+    { title: "6. 次回開催予定日", content: "" },
   ],
   nextMeetingDate: "",
   reviewerRole: "",

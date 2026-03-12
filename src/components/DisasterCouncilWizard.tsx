@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MasterData, DisasterCouncilReportData, INITIAL_DISASTER_COUNCIL_REPORT, INITIAL_MASTER_DATA } from '../types';
 import { getMasterData, saveDraft, fetchEmployees } from '../services/firebaseService';
-import { AGENDA_TEMPLATES } from './disasterCouncilTemplates';
+import { AGENDA_TEMPLATES, AGENDA_COMMON_ITEM1, AGENDA_FIRST_TIME_ITEM1 } from './disasterCouncilTemplates';
 import DisasterCouncilPrintLayout from './DisasterCouncilPrintLayout';
 
 interface Props {
@@ -146,7 +146,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
       if (key === 'location') delete newErrors.location;
       if (key === 'hostRole') delete newErrors.hostRole;
       if (key === 'hostName') delete newErrors.hostName;
-      if (key === 'nextMeetingDate') delete newErrors.nextMeetingDate;
       if (key === 'reviewerRole') delete newErrors.reviewerRole;
       if (key === 'reviewerName') delete newErrors.reviewerName;
     });
@@ -222,7 +221,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
     if (!hasValidAttendee) { newErrors.attendees = true; hasError = true; }
 
     // STEP2 必須項目チェック
-    if (!report.nextMeetingDate) { newErrors.nextMeetingDate = true; hasError = true; }
     if (!report.reviewerRole) { newErrors.reviewerRole = true; hasError = true; }
     if (!report.reviewerName) { newErrors.reviewerName = true; hasError = true; }
 
@@ -465,15 +463,64 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 2: 議題・確認者</h2>
 
+      {/* 第1回開催チェック */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={report.isFirstMeeting}
+            onChange={(e) => {
+              const checked = e.target.checked;
+              const currentContent = report.agendaItems[0]?.content || "";
+              const isAutoText = currentContent === AGENDA_COMMON_ITEM1 || currentContent === AGENDA_FIRST_TIME_ITEM1 || currentContent === "";
+              if (isAutoText) {
+                const newItems = [...report.agendaItems];
+                newItems[0] = { ...newItems[0], content: checked ? AGENDA_FIRST_TIME_ITEM1 : AGENDA_COMMON_ITEM1 };
+                updateReport({ isFirstMeeting: checked, agendaItems: newItems });
+              } else {
+                setConfirmModal({
+                  isOpen: true,
+                  message: "議題1の内容が上書きされます。\nよろしいですか？",
+                  leftButtonLabel: "キャンセル",
+                  leftButtonClass: "px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300",
+                  onLeftButtonClick: () => setConfirmModal(prev => ({ ...prev, isOpen: false })),
+                  rightButtonLabel: "上書きする",
+                  rightButtonClass: "px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700",
+                  onRightButtonClick: () => {
+                    const newItems = [...report.agendaItems];
+                    newItems[0] = { ...newItems[0], content: checked ? AGENDA_FIRST_TIME_ITEM1 : AGENDA_COMMON_ITEM1 };
+                    updateReport({ isFirstMeeting: checked, agendaItems: newItems });
+                    setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                  }
+                });
+              }
+            }}
+            className="w-5 h-5"
+          />
+          <span className="font-bold text-gray-700">第1回開催</span>
+          <span className="text-xs text-gray-400">（チェックすると議題1が初回用の文言に切り替わります）</span>
+        </label>
+      </div>
+
       {/* テンプレート選択 */}
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-        <h3 className="font-bold text-gray-700 mb-3">テンプレート選択</h3>
+        <h3 className="font-bold text-gray-700 mb-3">現場種別テンプレート選択</h3>
         <select
           className="w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none"
           onChange={(e) => {
             const template = AGENDA_TEMPLATES.find(t => t.id === e.target.value);
             if (!template || template.id === 'none') return;
-            const hasContent = report.agendaItems.some(item => item.content.trim() !== '');
+            const hasContent = report.agendaItems.some((item, idx) => idx < 5 && item.content.trim() !== '');
+            const applyTemplate = () => {
+              const newItems = report.agendaItems.map((item, idx) => {
+                if (idx === 5) return item; // 議題6（次回開催予定日）はそのまま
+                if (idx === 0 && report.isFirstMeeting) {
+                  return { ...item, content: AGENDA_FIRST_TIME_ITEM1 };
+                }
+                return { ...item, content: template.contents[idx] || "" };
+              });
+              updateReport({ agendaItems: newItems });
+            };
             if (hasContent) {
               setConfirmModal({
                 isOpen: true,
@@ -484,20 +531,12 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
                 rightButtonLabel: "上書きする",
                 rightButtonClass: "px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700",
                 onRightButtonClick: () => {
-                  const newItems = report.agendaItems.map((item, idx) => ({
-                    ...item,
-                    content: template.contents[idx] || ""
-                  }));
-                  updateReport({ agendaItems: newItems });
+                  applyTemplate();
                   setConfirmModal(prev => ({ ...prev, isOpen: false }));
                 }
               });
             } else {
-              const newItems = report.agendaItems.map((item, idx) => ({
-                ...item,
-                content: template.contents[idx] || ""
-              }));
-              updateReport({ agendaItems: newItems });
+              applyTemplate();
             }
           }}
         >
@@ -508,41 +547,43 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
         </select>
       </div>
 
-      {/* 議題7項目 */}
+      {/* 議題6項目 */}
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-        <h3 className="font-bold text-gray-700 mb-3">議題</h3>
+        <h3 className="font-bold text-gray-700 mb-3">協議事項</h3>
         <div className="space-y-4">
           {report.agendaItems.map((item, idx) => (
             <div key={idx}>
               <label className="font-bold text-sm text-gray-600 mb-1 block">{item.title}</label>
-              <textarea
-                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none resize-none"
-                rows={3}
-                value={item.content}
-                onChange={(e) => {
-                  const newItems = [...report.agendaItems];
-                  newItems[idx] = { ...newItems[idx], content: e.target.value };
-                  updateReport({ agendaItems: newItems });
-                }}
-                placeholder="内容を入力..."
-              />
+              {idx === 5 ? (
+                <input
+                  type="date"
+                  className="w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none"
+                  value={report.nextMeetingDate}
+                  onChange={(e) => updateReport({ nextMeetingDate: e.target.value })}
+                />
+              ) : (
+                <textarea
+                  className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none resize-none"
+                  rows={3}
+                  value={item.content}
+                  onChange={(e) => {
+                    const newItems = [...report.agendaItems];
+                    newItems[idx] = { ...newItems[idx], content: e.target.value };
+                    updateReport({ agendaItems: newItems });
+                  }}
+                  placeholder="内容を入力..."
+                />
+              )}
             </div>
           ))}
         </div>
       </div>
 
-      {/* 次回開催日・備考 */}
+      {/* 備考 */}
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-        <h3 className="font-bold text-gray-700 mb-3">次回・備考</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="form-control">
-            <label className="label text-sm font-bold text-gray-600">次回開催日 <span className="text-red-500">*</span></label>
-            <input type="date" className={getErrorClass('nextMeetingDate')} value={report.nextMeetingDate} onChange={(e) => updateReport({nextMeetingDate: e.target.value})} />
-          </div>
-          <div className="form-control">
-            <label className="label text-sm font-bold text-gray-600">備考</label>
-            <input type="text" className="w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none" value={report.remarks} onChange={(e) => updateReport({remarks: e.target.value})} placeholder="任意入力" />
-          </div>
+        <h3 className="font-bold text-gray-700 mb-3">備考</h3>
+        <div className="form-control">
+          <input type="text" className="w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none" value={report.remarks} onChange={(e) => updateReport({remarks: e.target.value})} placeholder="任意入力" />
         </div>
       </div>
 

@@ -139,9 +139,11 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
             </thead>
             <tbody>
               {(data.agendaItems || []).map((item, idx) => (
-                <tr key={idx} style={{ height: '36px' }}>
-                  <td className="px-2 font-bold align-middle text-center" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ddd' }}>{item.title}</td>
-                  <td className="px-2 whitespace-pre-wrap align-middle" style={{ borderBottom: '1px solid #ddd' }}>{item.content}</td>
+                <tr key={idx} style={{ height: '48px' }}>
+                  <td className="px-2 font-bold align-middle text-center text-[10px]" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ddd' }}>{item.title}</td>
+                  <td className="px-2 whitespace-pre-wrap align-middle" style={{ borderBottom: '1px solid #ddd' }}>
+                    {idx === 5 ? (data.nextMeetingDate ? formatDate(data.nextMeetingDate) : '次回開催予定日未定') : item.content}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -149,13 +151,8 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
         </div>
 
         {/* 備考 */}
-        <div className="mb-1" style={{ borderBottom: '1px solid #ccc', paddingBottom: '2px' }}>
+        <div className="mb-2" style={{ borderBottom: '1px solid #ccc', paddingBottom: '2px' }}>
           <span className="font-bold">備考：</span>{data.remarks}
-        </div>
-
-        {/* 次回開催日 */}
-        <div className="mb-3" style={{ borderBottom: '1px solid #ccc', paddingBottom: '2px' }}>
-          <span className="font-bold">次回開催日：</span>{data.nextMeetingDate ? formatDate(data.nextMeetingDate) : ''}
         </div>
 
         {/* 確認者（右寄せ、枠なし） */}
