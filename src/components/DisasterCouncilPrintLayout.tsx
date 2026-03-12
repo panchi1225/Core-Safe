@@ -68,37 +68,37 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
       </div>
 
       {/* PAGE 2: 本文 */}
-      <div className="print-page p-[10mm] text-[12px]" style={{ lineHeight: '1.65' }}>
+      <div className="print-page pt-[18mm] px-[10mm] pb-[10mm] text-[11.5px]" style={{ lineHeight: '1.6' }}>
         {/* タイトル */}
-        <div className="text-center mb-2">
-          <h2 className="text-[17px] font-bold tracking-[0.15em]">災 害 防 止 協 議 会 議 事 録</h2>
+        <div className="text-center mb-3">
+          <h2 className="text-[19px] font-bold">災害防止協議会議事録</h2>
         </div>
 
         {/* 基本情報 */}
         <div style={{ marginBottom: '2px' }}>
           <table className="border-collapse" style={{ borderSpacing: 0 }}>
             <tbody>
-              <tr style={{ height: '24px' }}>
+              <tr style={{ height: '22px' }}>
                 <td className="font-bold pr-1" style={{ whiteSpace: 'nowrap', width: '6em', textAlign: 'justify', textAlignLast: 'justify' }}>工事名</td>
                 <td className="px-2">：</td>
                 <td>{data.project}</td>
               </tr>
-              <tr style={{ height: '24px' }}>
+              <tr style={{ height: '22px' }}>
                 <td className="font-bold pr-1" style={{ whiteSpace: 'nowrap', width: '6em', textAlign: 'justify', textAlignLast: 'justify' }}>開催日時</td>
                 <td className="px-2">：</td>
                 <td>{data.date ? formatDate(data.date) : ''}　{data.startTime}～{data.endTime}</td>
               </tr>
-              <tr style={{ height: '24px' }}>
+              <tr style={{ height: '22px' }}>
                 <td className="font-bold pr-1" style={{ whiteSpace: 'nowrap', width: '6em', textAlign: 'justify', textAlignLast: 'justify' }}>開催方法</td>
                 <td className="px-2">：</td>
                 <td>{data.meetingMethod || '現地開催'}</td>
               </tr>
-              <tr style={{ height: '24px' }}>
+              <tr style={{ height: '22px' }}>
                 <td className="font-bold pr-1" style={{ whiteSpace: 'nowrap', width: '6em', textAlign: 'justify', textAlignLast: 'justify' }}>開催場所</td>
                 <td className="px-2">：</td>
                 <td>{data.location}</td>
               </tr>
-              <tr style={{ height: '24px' }}>
+              <tr style={{ height: '22px' }}>
                 <td className="font-bold pr-1" style={{ whiteSpace: 'nowrap', width: '6em', textAlign: 'justify', textAlignLast: 'justify' }}>主催者</td>
                 <td className="px-2">：</td>
                 <td>{data.hostRole}　{data.hostName}</td>
@@ -107,15 +107,15 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
           </table>
         </div>
 
-        {/* 基本情報→出席者の間：1行分スペース */}
-        <div style={{ height: '16px' }}></div>
+        {/* 基本情報→出席者の間 */}
+        <div style={{ height: '14px' }}></div>
 
         {/* 出席者 */}
         <div>
-          <div className="font-bold text-[12.5px] mb-1">【出席者】</div>
+          <div className="font-bold text-[12px] mb-1">【出席者】</div>
           <table className="w-full border-collapse" style={{ border: '2px solid #555' }}>
             <thead>
-              <tr style={{ height: '20px' }} className="bg-gray-50">
+              <tr style={{ height: '18px' }} className="bg-gray-50">
                 <th className="font-bold text-center" style={{ width: '44px', borderRight: '1px solid #ccc', borderBottom: '1px solid #888' }}>No.</th>
                 <th className="font-bold text-center" style={{ width: '44%', borderRight: '1px solid #ccc', borderBottom: '1px solid #888' }}>会社名</th>
                 <th className="font-bold text-center" style={{ width: '25%', borderRight: '1px solid #ccc', borderBottom: '1px solid #888' }}>役職・職務名</th>
@@ -124,7 +124,7 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
             </thead>
             <tbody>
               {attendeeRows.map((att, idx) => (
-                <tr key={idx} style={{ height: '18px' }}>
+                <tr key={idx} style={{ height: '17px' }}>
                   <td className="text-center" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ddd' }}>{idx + 1}</td>
                   <td className="px-1" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ddd' }}>{att.company}</td>
                   <td className="px-1 text-center" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ddd' }}>{att.role}</td>
@@ -135,17 +135,17 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
           </table>
         </div>
 
-        {/* 出席者→協議内容の間：1行分スペース */}
-        <div style={{ height: '16px' }}></div>
+        {/* 出席者→協議内容の間 */}
+        <div style={{ height: '14px' }}></div>
 
         {/* 協議内容 */}
         <div>
-          <div className="font-bold text-[12.5px] mb-1">【協議内容】</div>
+          <div className="font-bold text-[12px] mb-1">【協議内容】</div>
           <div style={{ paddingLeft: '1em' }}>
             {(data.agendaItems || []).map((item, idx) => (
-              <div key={idx} style={{ minHeight: '58px', marginBottom: '2px' }}>
-                <div className="font-bold text-[12px]">{item.title}</div>
-                <div className="whitespace-pre-wrap text-[12px]" style={{ paddingLeft: '1em' }}>
+              <div key={idx} style={{ minHeight: '68px', marginBottom: '12px' }}>
+                <div className="font-bold text-[11.5px]">{item.title}</div>
+                <div className="whitespace-pre-wrap text-[11.5px]" style={{ paddingLeft: '1em' }}>
                   {idx === 5 ? (data.nextMeetingDate ? formatDate(data.nextMeetingDate) : '次回開催予定日未定') : (item.content ? `　${item.content}` : '')}
                 </div>
               </div>
@@ -154,12 +154,12 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
         </div>
 
         {/* 備考 */}
-        <div style={{ marginTop: '4px' }}>
+        <div style={{ marginTop: '2px' }}>
           <span className="font-bold">備考：</span>{data.remarks}
         </div>
 
         {/* 備考→確認者の間：2行分スペース */}
-        <div style={{ height: '32px' }}></div>
+        <div style={{ height: '28px' }}></div>
 
         {/* 確認者（右寄せ、枠なし） */}
         <div className="flex justify-end items-center gap-2">
