@@ -102,9 +102,9 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
           </tbody>
         </table>
 
-        {/* 出席者名簿 */}
+        {/* 出席者 */}
         <div className="mb-2">
-          <div className="font-bold text-xs mb-1">出席者</div>
+          <div className="font-bold text-xs mb-1">【出席者】</div>
           <table className="w-full border-collapse" style={{ border: '1px solid #888' }}>
             <thead>
               <tr style={{ height: '20px' }} className="bg-gray-50">
@@ -129,25 +129,17 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
 
         {/* 協議内容 */}
         <div className="mb-2">
-          <div className="font-bold text-xs mb-1">協議内容</div>
-          <table className="w-full border-collapse" style={{ border: '1px solid #888' }}>
-            <thead>
-              <tr style={{ height: '20px' }} className="bg-gray-50">
-                <th className="font-bold text-center w-36" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #888' }}>議題</th>
-                <th className="font-bold text-center" style={{ borderBottom: '1px solid #888' }}>内容</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(data.agendaItems || []).map((item, idx) => (
-                <tr key={idx} style={{ height: '48px' }}>
-                  <td className="px-2 font-bold align-middle text-center text-[10px]" style={{ borderRight: '1px solid #ccc', borderBottom: '1px solid #ddd' }}>{item.title}</td>
-                  <td className="px-2 whitespace-pre-wrap align-middle" style={{ borderBottom: '1px solid #ddd' }}>
-                    {idx === 5 ? (data.nextMeetingDate ? formatDate(data.nextMeetingDate) : '次回開催予定日未定') : item.content}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="font-bold text-xs mb-1">【協議内容】</div>
+          <div className="space-y-2">
+            {(data.agendaItems || []).map((item, idx) => (
+              <div key={idx} style={{ minHeight: '48px' }}>
+                <div className="font-bold text-[11px]">{item.title}</div>
+                <div className="whitespace-pre-wrap text-[11px]" style={{ paddingLeft: '1em', textIndent: '0' }}>
+                  {idx === 5 ? (data.nextMeetingDate ? formatDate(data.nextMeetingDate) : '次回開催予定日未定') : (item.content ? `　${item.content}` : '')}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* 備考 */}
