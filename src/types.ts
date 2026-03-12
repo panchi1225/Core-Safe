@@ -281,6 +281,7 @@ export const INITIAL_REPORT: ReportData = {
 
 // --- Disaster Council Report ---
 export interface GCAttendee {
+  company: string;
   role: string;
   name: string;
 }
@@ -297,8 +298,14 @@ export interface DisasterCouncilReportData extends ReportData {
   count: number;
   startTime: string;
   endTime: string;
-  gcAttendees: GCAttendee[];
-  subcontractorAttendees: SubcontractorAttendee[];
+  hostRole: string;
+  hostName: string;
+  attendees: GCAttendee[];
+  agendaItems: { title: string; content: string }[];
+  nextMeetingDate: string;
+  reviewerRole: string;
+  reviewerName: string;
+  reviewerSealId: string;
 }
 
 export const INITIAL_DISASTER_COUNCIL_REPORT: DisasterCouncilReportData = {
@@ -306,8 +313,22 @@ export const INITIAL_DISASTER_COUNCIL_REPORT: DisasterCouncilReportData = {
   count: 1,
   startTime: "13:00",
   endTime: "14:00",
-  gcAttendees: Array(8).fill({ role: "", name: "" }),
-  subcontractorAttendees: []
+  hostRole: "",
+  hostName: "",
+  attendees: [],
+  agendaItems: [
+    { title: "1. 前回の振り返り", content: "" },
+    { title: "2. 当月の工事概要", content: "" },
+    { title: "3. 安全管理について", content: "" },
+    { title: "4. 労働衛生について", content: "" },
+    { title: "5. 環境対策について", content: "" },
+    { title: "6. その他", content: "" },
+    { title: "7. 連絡事項", content: "" },
+  ],
+  nextMeetingDate: "",
+  reviewerRole: "",
+  reviewerName: "",
+  reviewerSealId: "",
 };
 
 // --- Safety Plan Report ---

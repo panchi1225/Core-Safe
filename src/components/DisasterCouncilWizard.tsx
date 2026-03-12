@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MasterData, DisasterCouncilReportData, INITIAL_DISASTER_COUNCIL_REPORT, INITIAL_MASTER_DATA } from '../types';
 import { getMasterData, saveDraft } from '../services/firebaseService';
-import SignatureCanvas from './SignatureCanvas';
+import { AGENDA_TEMPLATES } from './disasterCouncilTemplates';
 import DisasterCouncilPrintLayout from './DisasterCouncilPrintLayout';
 
 interface Props {
@@ -65,13 +65,6 @@ const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen
     </div>
   );
 };
-
-const TOP_FIXED_ROLES = [
-  "統括安全衛生責任者",
-  "副統括安全衛生責任者",
-  "書記",
-  "安全委員"
-];
 
 const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, initialStep, onBackToMenu }) => {
   const [step, setStep] = useState(1);
@@ -137,24 +130,6 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
     }
   }, [report.contractor]);
 
-  useEffect(() => {
-    let hasChanged = false;
-    const nextAttendees = [...report.gcAttendees];
-    while(nextAttendees.length < 8) {
-      nextAttendees.push({ role: "", name: "" });
-      hasChanged = true;
-    }
-    TOP_FIXED_ROLES.forEach((role, idx) => {
-      if (nextAttendees[idx].role !== role) {
-        nextAttendees[idx] = { ...nextAttendees[idx], role: role };
-        hasChanged = true;
-      }
-    });
-    if (hasChanged) {
-      updateReport({ gcAttendees: nextAttendees });
-    }
-  }, [report.gcAttendees]);
-
   const updateReport = (updates: Partial<DisasterCouncilReportData>) => { 
     setReport(prev => ({ ...prev, ...updates })); 
     setSaveStatus('idle'); 
@@ -166,6 +141,11 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
       if (key === 'project') delete newErrors.project;
       if (key === 'date') delete newErrors.date;
       if (key === 'location') delete newErrors.location;
+      if (key === 'hostRole') delete newErrors.hostRole;
+      if (key === 'hostName') delete newErrors.hostName;
+      if (key === 'nextMeetingDate') delete newErrors.nextMeetingDate;
+      if (key === 'reviewerRole') delete newErrors.reviewerRole;
+      if (key === 'reviewerName') delete newErrors.reviewerName;
     });
     setErrors(newErrors);
   };
@@ -179,7 +159,12 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
       if (!report.project) { newErrors.project = true; hasError = true; }
       if (!report.date) { newErrors.date = true; hasError = true; }
       if (!report.location) { newErrors.location = true; hasError = true; }
-      
+      if (!report.hostRole) { newErrors.hostRole = true; hasError = true; }
+      if (!report.hostName) { newErrors.hostName = true; hasError = true; }
+      // 出席者：少なくとも1行は有効（会社・役職・名前すべて入力済み）が必要
+      const hasValidAttendee = report.attendees.some(a => a.company && a.role && a.name);
+      if (!hasValidAttendee) { newErrors.attendees = true; hasError = true; }
+
       if (hasError) {
         setErrors(newErrors);
         alert("未入力の項目があります。\n全ての項目を選択・入力してください。");
@@ -228,39 +213,23 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
     if (!report.project) { newErrors.project = true; hasError = true; }
     if (!report.date) { newErrors.date = true; hasError = true; }
     if (!report.location) { newErrors.location = true; hasError = true; }
+    if (!report.hostRole) { newErrors.hostRole = true; hasError = true; }
+    if (!report.hostName) { newErrors.hostName = true; hasError = true; }
+    const hasValidAttendee = report.attendees.some(a => a.company && a.role && a.name);
+    if (!hasValidAttendee) { newErrors.attendees = true; hasError = true; }
 
-    // 元請出席者の名前チェック
-    // index 1 (副統括) は除外、それ以外で role があるのに name がないものをチェック
-    const missingGCName = report.gcAttendees.some((att, idx) => {
-      if (idx === 1) return false; 
-      if (idx > 3 && !att.role) return false; 
-      return !att.name;
-    });
-
-    // 元請のエラー箇所を特定して赤枠にする
-    report.gcAttendees.forEach((att, idx) => {
-      if (idx === 1) return;
-      if (idx > 3 && !att.role) return;
-      if (!att.name) {
-        newErrors[`gcAttendee_${idx}`] = true;
-        hasError = true;
-      }
-    });
+    // STEP2 必須項目チェック
+    if (!report.nextMeetingDate) { newErrors.nextMeetingDate = true; hasError = true; }
+    if (!report.reviewerRole) { newErrors.reviewerRole = true; hasError = true; }
+    if (!report.reviewerName) { newErrors.reviewerName = true; hasError = true; }
 
     if (hasError) {
       setErrors(newErrors);
-      // メッセージの出し分け
-      if (!report.project || !report.date || !report.location) {
-        alert("STEP 1 の必須項目（工事名、開催日、場所）が未入力です。");
-      } else if (missingGCName) {
-        alert("元請出席者の名前が選択されていません。\n（副統括安全衛生責任者以外は必須です）");
+      if (!report.project || !report.date || !report.location || !report.hostRole || !report.hostName || !hasValidAttendee) {
+        alert("STEP 1 の必須項目が未入力です。");
+      } else {
+        alert("STEP 2 の必須項目（次回開催日・確認者）が未入力です。");
       }
-      return;
-    }
-
-    // 署名有無チェック (ここは赤枠にできないのでアラートのみ)
-    if (report.subcontractorAttendees.length === 0) {
-      alert("協力会社の署名がありません。\n少なくとも1名の署名が必要です。");
       return;
     }
 
@@ -270,14 +239,13 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
     }
     setSaveStatus('saving');
     try {
-      const newId = await saveDraft(currentDraftId, 'DISASTER_COUNCIL', report); 
-      setDraftId(newId); 
+      const newId = await saveDraft(currentDraftId, 'DISASTER_COUNCIL', report);
+      setDraftId(newId);
       initialYearRef.current = report.year;
       initialMonthRef.current = report.month;
-      setSaveStatus('saved'); 
-      setHasUnsavedChanges(false); 
+      setSaveStatus('saved');
+      setHasUnsavedChanges(false);
       setTimeout(() => setSaveStatus('idle'), 2000);
-      
       setShowPreview(true);
     } catch (e) { alert("エラーが発生しました"); setSaveStatus('idle'); }
   };
@@ -333,10 +301,10 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
           </select>
         </div>
         <div className="form-control"><label className="label font-bold text-gray-700">開催回</label><div className="flex items-center"><span className="mr-2">第</span>
-          <input type="number" className="w-20 h-12 p-3 border border-gray-300 rounded-lg text-center bg-white text-black outline-none appearance-none" value={report.count} onChange={(e) => updateReport({count: parseInt(e.target.value)})} />
+          <input type="number" className="w-20 h-12 p-3 border border-gray-300 rounded-lg text-center bg-white text-black outline-none appearance-none" value={report.count} onChange={(e) => updateReport({count: parseInt(e.target.value) || 1})} />
         <span className="ml-2">回</span></div></div>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="form-control"><label className="label font-bold text-gray-700">開催日 <span className="text-red-500">*</span></label><input type="date" className={getErrorClass('date')} value={report.date} onChange={(e) => updateReport({date: e.target.value})} /></div>
         <div className="form-control">
@@ -347,132 +315,241 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
           </select>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div className="form-control">
           <label className="label font-bold text-gray-700 text-xs sm:text-sm">開始時間</label>
-          {/* 時間は必須とは言われていないが、必要ならここも getErrorClass を適用可能。一旦標準スタイル */}
-          <input type="time" className="w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.startTime} onChange={(e) => updateReport({startTime: e.target.value})} />
+          <select className="w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.startTime} onChange={(e) => {
+            const newStart = e.target.value;
+            updateReport({ startTime: newStart });
+            // 開始時間変更時、終了時間を+1時間に自動調整（ユーザー未編集時）
+            const [h, m] = newStart.split(':').map(Number);
+            const endH = Math.min(h + 1, 16);
+            updateReport({ startTime: newStart, endTime: `${String(endH).padStart(2,'0')}:${String(m).padStart(2,'0')}` });
+          }}>
+            {Array.from({ length: 15 }, (_, i) => {
+              const h = 9 + Math.floor(i / 2);
+              const m = (i % 2) * 30;
+              const val = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+              return <option key={val} value={val}>{val}</option>;
+            })}
+          </select>
         </div>
         <div className="form-control">
           <label className="label font-bold text-gray-700 text-xs sm:text-sm">終了時間</label>
-          <input type="time" className="w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.endTime} onChange={(e) => updateReport({endTime: e.target.value})} />
+          <select className="w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none" value={report.endTime} onChange={(e) => updateReport({endTime: e.target.value})}>
+            {Array.from({ length: 15 }, (_, i) => {
+              const h = 9 + Math.floor(i / 2);
+              const m = (i % 2) * 30;
+              const val = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+              return <option key={val} value={val}>{val}</option>;
+            })}
+          </select>
         </div>
       </div>
-      
+
+      {/* 主催者 */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <h3 className="font-bold text-gray-700 mb-3">主催者 <span className="text-red-500">*</span></h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="form-control">
+            <label className="label text-sm font-bold text-gray-600">役職</label>
+            <select className={getErrorClass('hostRole')} value={report.hostRole} onChange={(e) => updateReport({hostRole: e.target.value})}>
+              <option value="">(選択してください)</option>
+              {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+          <div className="form-control">
+            <label className="label text-sm font-bold text-gray-600">氏名</label>
+            <select className={getErrorClass('hostName')} value={report.hostName} onChange={(e) => updateReport({hostName: e.target.value})}>
+              <option value="">(選択してください)</option>
+              {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* 出席者 */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <h3 className="font-bold text-gray-700 mb-3">出席者 <span className="text-red-500">*</span> <span className="text-xs text-gray-400 font-normal">（最大10名）</span></h3>
+        {errors.attendees && <p className="text-red-500 text-sm mb-2 font-bold">少なくとも1名の出席者が必要です。</p>}
+        <div className="space-y-3">
+          {report.attendees.map((att, i) => (
+            <div key={i} className="flex items-center gap-2 bg-white p-3 rounded border">
+              <div className="flex flex-col gap-1 shrink-0">
+                <button onClick={() => moveAttendee(i, 'up')} disabled={i === 0} className={`text-xs px-1 ${i === 0 ? 'text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}><i className="fa-solid fa-chevron-up"></i></button>
+                <button onClick={() => moveAttendee(i, 'down')} disabled={i === report.attendees.length - 1} className={`text-xs px-1 ${i === report.attendees.length - 1 ? 'text-gray-300' : 'text-gray-500 hover:text-gray-700'}`}><i className="fa-solid fa-chevron-down"></i></button>
+              </div>
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <select className="h-10 p-2 border border-gray-300 rounded text-sm outline-none appearance-none" value={att.company} onChange={(e) => updateAttendee(i, 'company', e.target.value)}>
+                  <option value="">(会社名)</option>
+                  {masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <select className="h-10 p-2 border border-gray-300 rounded text-sm outline-none appearance-none" value={att.role} onChange={(e) => updateAttendee(i, 'role', e.target.value)}>
+                  <option value="">(役職)</option>
+                  {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <select className="h-10 p-2 border border-gray-300 rounded text-sm outline-none appearance-none" value={att.name} onChange={(e) => updateAttendee(i, 'name', e.target.value)}>
+                  <option value="">(氏名)</option>
+                  {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <button onClick={() => removeAttendee(i)} className="text-red-400 hover:text-red-600 shrink-0"><i className="fa-solid fa-trash"></i></button>
+            </div>
+          ))}
+        </div>
+        {report.attendees.length < 10 && (
+          <button onClick={addAttendee} className="mt-3 px-4 py-2 bg-green-50 text-green-600 border border-green-200 rounded-lg font-bold text-sm hover:bg-green-100">
+            <i className="fa-solid fa-plus mr-2"></i>出席者を追加
+          </button>
+        )}
+      </div>
+
       <div className="form-control"><label className="label font-bold text-gray-700">元請会社名</label><input type="text" className="w-full h-12 p-3 border border-gray-300 rounded-lg bg-gray-100 text-black outline-none appearance-none cursor-not-allowed" value="松浦建設株式会社" readOnly /></div>
     </div>
   );
 
-  const updateGCAttendee = (index: number, field: 'role' | 'name', value: string) => {
-    const newAttendees = [...report.gcAttendees];
-    if (!newAttendees[index]) newAttendees[index] = { role: '', name: '' };
+  // --- 出席者操作 ---
+  const addAttendee = () => {
+    if (report.attendees.length >= 10) return;
+    updateReport({ attendees: [...report.attendees, { company: "", role: "", name: "" }] });
+  };
+
+  const removeAttendee = (index: number) => {
+    const newAttendees = report.attendees.filter((_, i) => i !== index);
+    updateReport({ attendees: newAttendees });
+  };
+
+  const updateAttendee = (index: number, field: 'company' | 'role' | 'name', value: string) => {
+    const newAttendees = [...report.attendees];
     newAttendees[index] = { ...newAttendees[index], [field]: value };
-    updateReport({ gcAttendees: newAttendees });
-    
+    updateReport({ attendees: newAttendees });
     // エラー解除
-    if (field === 'name' && value) {
+    if (value) {
       const newErrors = { ...errors };
-      delete newErrors[`gcAttendee_${index}`];
+      delete newErrors.attendees;
       setErrors(newErrors);
     }
   };
 
-  const [tempSubRole, setTempSubRole] = useState("");
-  const [tempSubCompany, setTempSubCompany] = useState("");
-  const [sigKey, setSigKey] = useState(0); 
-  
-  const addSubAttendee = (signatureDataUrl: string) => {
-    if (!tempSubCompany || !tempSubRole) return;
-    const newAttendee = {
-      id: Date.now().toString(),
-      company: tempSubCompany,
-      role: tempSubRole,
-      name: "", 
-      signatureDataUrl
-    };
-    updateReport({ subcontractorAttendees: [...report.subcontractorAttendees, newAttendee] });
-    
-    setTempSubCompany("");
-    setTempSubRole("");
-    setSigKey(prev => prev + 1);
+  const moveAttendee = (index: number, direction: 'up' | 'down') => {
+    const newAttendees = [...report.attendees];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newAttendees.length) return;
+    [newAttendees[index], newAttendees[targetIndex]] = [newAttendees[targetIndex], newAttendees[index]];
+    updateReport({ attendees: newAttendees });
   };
 
   const renderStep2 = () => (
-    <div className="space-y-8">
-      <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 2: 出席者</h2>
-      
-      {/* GC Attendees */}
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-gray-800 border-l-4 border-green-600 pl-3">STEP 2: 議題・確認者</h2>
+
+      {/* テンプレート選択 */}
       <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-        <h3 className="font-bold text-gray-700 mb-3">元請 出席者</h3>
-        <div className="grid grid-cols-1 gap-3">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-2">
-              {i < 4 ? (
-                <span className="w-40 h-10 flex items-center justify-center text-xs font-bold bg-gray-50 px-2 border rounded text-gray-700 shrink-0">{TOP_FIXED_ROLES[i]}</span>
-              ) : (
-                <select className="w-40 h-10 text-xs font-bold bg-white px-2 border rounded text-center outline-none appearance-none shrink-0" value={report.gcAttendees[i]?.role || ""} onChange={(e) => updateGCAttendee(i, 'role', e.target.value)}>
-                  <option value="">(役職選択)</option>
-                  {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-              )}
-              {/* ★修正: エラー時に赤枠を適用 */}
-              <select 
-                className={`flex-1 h-10 p-2 rounded text-sm text-black outline-none appearance-none min-w-0 ${getStep2ErrorClass(`gcAttendee_${i}`)}`}
-                value={report.gcAttendees[i]?.name || ""} 
-                onChange={(e) => updateGCAttendee(i, 'name', e.target.value)}
-              >
-                <option value="">選択してください</option>
-                {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+        <h3 className="font-bold text-gray-700 mb-3">テンプレート選択</h3>
+        <select
+          className="w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none appearance-none"
+          onChange={(e) => {
+            const template = AGENDA_TEMPLATES.find(t => t.id === e.target.value);
+            if (!template || template.id === 'none') return;
+            const hasContent = report.agendaItems.some(item => item.content.trim() !== '');
+            if (hasContent) {
+              setConfirmModal({
+                isOpen: true,
+                message: "入力済みの議題内容がテンプレートで上書きされます。\nよろしいですか？",
+                leftButtonLabel: "キャンセル",
+                leftButtonClass: "px-4 py-2 bg-gray-200 text-gray-700 rounded font-bold hover:bg-gray-300",
+                onLeftButtonClick: () => setConfirmModal(prev => ({ ...prev, isOpen: false })),
+                rightButtonLabel: "上書きする",
+                rightButtonClass: "px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700",
+                onRightButtonClick: () => {
+                  const newItems = report.agendaItems.map((item, idx) => ({
+                    ...item,
+                    content: template.contents[idx] || ""
+                  }));
+                  updateReport({ agendaItems: newItems });
+                  setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                }
+              });
+            } else {
+              const newItems = report.agendaItems.map((item, idx) => ({
+                ...item,
+                content: template.contents[idx] || ""
+              }));
+              updateReport({ agendaItems: newItems });
+            }
+          }}
+        >
+          <option value="none">テンプレートを選択...</option>
+          {AGENDA_TEMPLATES.filter(t => t.id !== 'none').map(t => (
+            <option key={t.id} value={t.id}>{t.label}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* 議題7項目 */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <h3 className="font-bold text-gray-700 mb-3">議題</h3>
+        <div className="space-y-4">
+          {report.agendaItems.map((item, idx) => (
+            <div key={idx}>
+              <label className="font-bold text-sm text-gray-600 mb-1 block">{item.title}</label>
+              <textarea
+                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-black outline-none resize-none"
+                rows={3}
+                value={item.content}
+                onChange={(e) => {
+                  const newItems = [...report.agendaItems];
+                  newItems[idx] = { ...newItems[idx], content: e.target.value };
+                  updateReport({ agendaItems: newItems });
+                }}
+                placeholder="内容を入力..."
+              />
             </div>
           ))}
         </div>
       </div>
 
-      {/* Subcontractor Attendees */}
-      <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
-        <h3 className="font-bold text-gray-700 mb-3 text-center">協力会社 出席者登録</h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-3">
-          <div>
-            <label className="text-xs font-bold text-gray-500">会社名 <span className="text-red-500">*</span></label>
-            <select className={`w-full p-2 border rounded bg-white text-black outline-none appearance-none ${!tempSubCompany ? 'border-red-300' : 'border-gray-300'}`} value={tempSubCompany} onChange={(e) => setTempSubCompany(e.target.value)}>
-              <option value="">(データを選択してください)</option>
-              {masterData.contractors.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+      {/* 次回開催日・備考 */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <h3 className="font-bold text-gray-700 mb-3">次回・備考</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="form-control">
+            <label className="label text-sm font-bold text-gray-600">次回開催日 <span className="text-red-500">*</span></label>
+            <input type="date" className={getErrorClass('nextMeetingDate')} value={report.nextMeetingDate} onChange={(e) => updateReport({nextMeetingDate: e.target.value})} />
           </div>
-          <div>
-            <label className="text-xs font-bold text-gray-500">役職 <span className="text-red-500">*</span></label>
-            <select className={`w-full p-2 border rounded bg-white text-black outline-none appearance-none ${!tempSubRole ? 'border-red-300' : 'border-gray-300'}`} value={tempSubRole} onChange={(e) => setTempSubRole(e.target.value)}>
-              <option value="">(データを選択してください)</option>
+          <div className="form-control">
+            <label className="label text-sm font-bold text-gray-600">備考</label>
+            <input type="text" className="w-full h-12 p-3 border border-gray-300 rounded-lg bg-white text-black outline-none" value={report.remarks} onChange={(e) => updateReport({remarks: e.target.value})} placeholder="任意入力" />
+          </div>
+        </div>
+      </div>
+
+      {/* 確認者 */}
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+        <h3 className="font-bold text-gray-700 mb-3">確認者 <span className="text-red-500">*</span></h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="form-control">
+            <label className="label text-sm font-bold text-gray-600">役職</label>
+            <select className={getErrorClass('reviewerRole')} value={report.reviewerRole} onChange={(e) => updateReport({reviewerRole: e.target.value})}>
+              <option value="">(選択してください)</option>
               {masterData.roles.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
-        </div>
-        <div className="mb-3">
-          <label className="text-xs font-bold text-gray-500 mb-1 block">署名</label>
-          <div className={`border rounded border-gray-300 relative ${(!tempSubCompany || !tempSubRole) ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
-            <SignatureCanvas key={sigKey} onSave={(data) => addSubAttendee(data)} onClear={() => {}} lineWidth={4} keepOpenOnSave={true} />
-            {(!tempSubCompany || !tempSubRole) && (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="bg-red-100 text-red-600 px-3 py-1 rounded text-xs font-bold border border-red-300">会社名と役職を選択してください</span>
-              </div>
-            )}
+          <div className="form-control">
+            <label className="label text-sm font-bold text-gray-600">氏名</label>
+            <select className={getErrorClass('reviewerName')} value={report.reviewerName} onChange={(e) => updateReport({reviewerName: e.target.value})}>
+              <option value="">(選択してください)</option>
+              {masterData.supervisors.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
           </div>
         </div>
-      </div>
-
-      {/* List */}
-      <div>
-        <h3 className="font-bold text-gray-700 mb-2">登録済み協力会社一覧 ({report.subcontractorAttendees.length}名)</h3>
-        <div className="space-y-2">
-          {report.subcontractorAttendees.map((att) => (
-            <div key={att.id} className="flex justify-between items-center p-3 bg-white border rounded shadow-sm">
-              <div><div className="font-bold text-sm">{att.company}</div><div className="flex items-center gap-2 mt-1"><span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{att.role}</span>{att.signatureDataUrl && (<img src={att.signatureDataUrl} alt="sig" className="h-6 object-contain border border-gray-200 bg-white" />)}</div></div><button onClick={() => updateReport({ subcontractorAttendees: report.subcontractorAttendees.filter(a => a.id !== att.id) })} className="text-red-400 hover:text-red-600"><i className="fa-solid fa-trash"></i></button>
-            </div>
-          ))}
-          {report.subcontractorAttendees.length === 0 && <div className="text-center text-gray-400 text-sm py-4">登録なし</div>}
-        </div>
+        <button
+          onClick={() => updateReport({ reviewerRole: report.hostRole, reviewerName: report.hostName })}
+          className="mt-3 px-4 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-lg font-bold text-sm hover:bg-blue-100"
+        >
+          <i className="fa-solid fa-copy mr-2"></i>主催者と同じにする
+        </button>
       </div>
     </div>
   );
