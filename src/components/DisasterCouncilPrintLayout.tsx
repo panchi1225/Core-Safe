@@ -75,32 +75,37 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
         </div>
 
         {/* 基本情報 */}
-        <table className="w-full border-collapse" style={{ borderTop: '1px solid #888', borderBottom: '1px solid #888' }}>
-          <tbody>
-            <tr style={{ height: '22px' }}>
-              <td className="px-2 font-bold w-24 bg-gray-50" style={{ borderBottom: '1px solid #ccc' }}>工事名</td>
-              <td className="px-2" style={{ borderBottom: '1px solid #ccc' }} colSpan={3}>{data.project}</td>
-            </tr>
-            <tr style={{ height: '22px' }}>
-              <td className="px-2 font-bold bg-gray-50" style={{ borderBottom: '1px solid #ccc' }}>開催日時</td>
-              <td className="px-2" style={{ borderBottom: '1px solid #ccc' }} colSpan={3}>
-                {data.date ? formatDate(data.date) : ''}　{data.startTime}～{data.endTime}
-              </td>
-            </tr>
-            <tr style={{ height: '22px' }}>
-              <td className="px-2 font-bold bg-gray-50" style={{ borderBottom: '1px solid #ccc' }}>開催方法</td>
-              <td className="px-2" style={{ borderBottom: '1px solid #ccc' }} colSpan={3}>{data.meetingMethod || '現地開催'}</td>
-            </tr>
-            <tr style={{ height: '22px' }}>
-              <td className="px-2 font-bold bg-gray-50" style={{ borderBottom: '1px solid #ccc' }}>場所</td>
-              <td className="px-2" style={{ borderBottom: '1px solid #ccc' }} colSpan={3}>{data.location}</td>
-            </tr>
-            <tr style={{ height: '22px' }}>
-              <td className="px-2 font-bold bg-gray-50">主催者</td>
-              <td className="px-2" colSpan={3}>{data.hostRole}　{data.hostName}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div style={{ marginBottom: '2px' }}>
+          <table className="border-collapse" style={{ borderSpacing: 0 }}>
+            <tbody>
+              <tr style={{ height: '24px' }}>
+                <td className="font-bold pr-1" style={{ whiteSpace: 'nowrap', width: '6em', textAlign: 'justify', textAlignLast: 'justify' }}>工事名</td>
+                <td className="px-2">：</td>
+                <td>{data.project}</td>
+              </tr>
+              <tr style={{ height: '24px' }}>
+                <td className="font-bold pr-1" style={{ whiteSpace: 'nowrap', width: '6em', textAlign: 'justify', textAlignLast: 'justify' }}>開催日時</td>
+                <td className="px-2">：</td>
+                <td>{data.date ? formatDate(data.date) : ''}　{data.startTime}～{data.endTime}</td>
+              </tr>
+              <tr style={{ height: '24px' }}>
+                <td className="font-bold pr-1" style={{ whiteSpace: 'nowrap', width: '6em', textAlign: 'justify', textAlignLast: 'justify' }}>開催方法</td>
+                <td className="px-2">：</td>
+                <td>{data.meetingMethod || '現地開催'}</td>
+              </tr>
+              <tr style={{ height: '24px' }}>
+                <td className="font-bold pr-1" style={{ whiteSpace: 'nowrap', width: '6em', textAlign: 'justify', textAlignLast: 'justify' }}>開催場所</td>
+                <td className="px-2">：</td>
+                <td>{data.location}</td>
+              </tr>
+              <tr style={{ height: '24px' }}>
+                <td className="font-bold pr-1" style={{ whiteSpace: 'nowrap', width: '6em', textAlign: 'justify', textAlignLast: 'justify' }}>主催者</td>
+                <td className="px-2">：</td>
+                <td>{data.hostRole}　{data.hostName}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         {/* 基本情報→出席者の間：1行分スペース */}
         <div style={{ height: '16px' }}></div>
