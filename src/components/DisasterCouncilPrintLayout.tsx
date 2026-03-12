@@ -68,10 +68,10 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
       </div>
 
       {/* PAGE 2: 本文 */}
-      <div className="print-page p-[10mm] text-[11px]" style={{ lineHeight: '1.7' }}>
+      <div className="print-page p-[10mm] text-[12px]" style={{ lineHeight: '1.65' }}>
         {/* タイトル */}
         <div className="text-center mb-2">
-          <h2 className="text-[13px] font-bold tracking-[0.15em]">災 害 防 止 協 議 会 議 事 録</h2>
+          <h2 className="text-[17px] font-bold tracking-[0.15em]">災 害 防 止 協 議 会 議 事 録</h2>
         </div>
 
         {/* 基本情報 */}
@@ -103,18 +103,18 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
         </table>
 
         {/* 基本情報→出席者の間：1行分スペース */}
-        <div style={{ height: '18px' }}></div>
+        <div style={{ height: '16px' }}></div>
 
         {/* 出席者 */}
         <div>
-          <div className="font-bold text-[11.5px] mb-1">【出席者】</div>
+          <div className="font-bold text-[12.5px] mb-1">【出席者】</div>
           <table className="w-full border-collapse" style={{ border: '2px solid #555' }}>
             <thead>
               <tr style={{ height: '20px' }} className="bg-gray-50">
-                <th className="font-bold text-center" style={{ width: '28px', borderRight: '1px solid #ccc', borderBottom: '1px solid #888' }}>No.</th>
-                <th className="font-bold text-center" style={{ width: '50%', borderRight: '1px solid #ccc', borderBottom: '1px solid #888' }}>会社名</th>
+                <th className="font-bold text-center" style={{ width: '44px', borderRight: '1px solid #ccc', borderBottom: '1px solid #888' }}>No.</th>
+                <th className="font-bold text-center" style={{ width: '44%', borderRight: '1px solid #ccc', borderBottom: '1px solid #888' }}>会社名</th>
                 <th className="font-bold text-center" style={{ width: '25%', borderRight: '1px solid #ccc', borderBottom: '1px solid #888' }}>役職・職務名</th>
-                <th className="font-bold text-center" style={{ width: '25%', borderBottom: '1px solid #888' }}>氏名</th>
+                <th className="font-bold text-center" style={{ borderBottom: '1px solid #888' }}>氏名</th>
               </tr>
             </thead>
             <tbody>
@@ -131,19 +131,21 @@ const DisasterCouncilPrintLayout: React.FC<Props> = ({ data }) => {
         </div>
 
         {/* 出席者→協議内容の間：1行分スペース */}
-        <div style={{ height: '18px' }}></div>
+        <div style={{ height: '16px' }}></div>
 
         {/* 協議内容 */}
         <div>
-          <div className="font-bold text-[11.5px] mb-1">【協議内容】</div>
-          {(data.agendaItems || []).map((item, idx) => (
-            <div key={idx} style={{ minHeight: '62px', marginBottom: '2px' }}>
-              <div className="font-bold text-[11px]">{item.title}</div>
-              <div className="whitespace-pre-wrap text-[11px]" style={{ paddingLeft: '1em' }}>
-                {idx === 5 ? (data.nextMeetingDate ? formatDate(data.nextMeetingDate) : '次回開催予定日未定') : (item.content ? `　${item.content}` : '')}
+          <div className="font-bold text-[12.5px] mb-1">【協議内容】</div>
+          <div style={{ paddingLeft: '1em' }}>
+            {(data.agendaItems || []).map((item, idx) => (
+              <div key={idx} style={{ minHeight: '58px', marginBottom: '2px' }}>
+                <div className="font-bold text-[12px]">{item.title}</div>
+                <div className="whitespace-pre-wrap text-[12px]" style={{ paddingLeft: '1em' }}>
+                  {idx === 5 ? (data.nextMeetingDate ? formatDate(data.nextMeetingDate) : '次回開催予定日未定') : (item.content ? `　${item.content}` : '')}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
 
         {/* 備考 */}
