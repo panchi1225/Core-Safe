@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/Core-Safe/assets/favicon-nNjg0pGo.ico" />
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="apple-touch-icon" href="/Core-Safe/assets/apple-touch-icon-BxV-fsov.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Core Safe</title>
+    <style>
+      html, body { height: 100%; margin: 0; }
+      #root { height: 100%; }
+      body.signature-open header, body.signature-open footer, body.signature-open [data-wizard] > header, body.signature-open [data-wizard] > footer { visibility: hidden !important; height: 0 !important; overflow: hidden !important; padding: 0 !important; border: none !important; }
+    </style>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const root = document.getElementById('root');
+        if (!root) return;
+        const update = () => {
+          const hasWizard = root.querySelector('[data-wizard]');
+          if (hasWizard) {
+            document.body.style.overflow = 'hidden';
+            document.body.style.position = 'fixed';
+            document.body.style.width = '100%';
+          } else {
+            document.body.style.overflow = '';
+            document.body.style.position = '';
+            document.body.style.width = '';
+          }
+        };
+        new MutationObserver(update).observe(root, { childList: true, subtree: true });
+        update();
+      });
+    </script>
+
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- ★追加: 印刷設定の復活 -->
+    <style>
+      .handwritten { font-family: 'Kaisei Decol', serif; }
+
+      /* 画面プレビュー用の設定 */
+      @media screen {
+        .print-page {
+          margin: 40px auto;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+          border: 1px solid #e5e7eb;
+          width: 210mm;
+          height: 297mm;
+          background-color: white;
+          overflow: hidden;
+        }
+        .print-page-landscape {
+          margin: 40px auto;
+          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+          border: 1px solid #e5e7eb;
+          width: 297mm;
+          height: 210mm;
+          background-color: white;
+          overflow: hidden;
+        }
+      }
+
+      /* 本番印刷時の設定 */
+      @media print {
+        @page { size: A4 portrait; margin: 0; }
+        body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; position: static !important; overflow: visible !important; width: auto !important; height: auto !important; }
+        html { overflow: visible !important; height: auto !important; }
+        #root { overflow: visible !important; height: auto !important; }
+        .no-print { display: none !important; }
+        [data-wizard] { overflow: visible !important; height: auto !important; }
+        
+        /* ★最重要: これが改ページを機能させます */
+        .print-page {
+          width: 210mm;
+          height: 297mm;
+          page-break-after: always; /* ここで必ずページを切る */
+          margin: 0;
+          overflow: hidden;
+        }
+        /* 最後のページだけは改ページしない */
+        .print-page:last-child {
+          page-break-after: auto;
+        }
+        .print-page-landscape {
+          width: 297mm;
+          height: 210mm;
+          page-break-after: always;
+          margin: 0;
+          overflow: hidden;
+        }
+        .print-page-landscape:last-child {
+          page-break-after: auto;
+        }
+      }
+
+      /* iPad キーボード表示時のフッター位置修正 */
+      @supports (-webkit-touch-callout: none) {
+        footer.fixed {
+          position: sticky !important;
+        }
+      }
+      
+    </style>
+    <script type="module" crossorigin src="/Core-Safe/assets/index-j3qR2NZb.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- 先頭にドットをつける -->
+  </body>
