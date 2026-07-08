@@ -19,13 +19,10 @@ const range = (start: number, end: number) => Array.from({ length: end - start +
 const PRESET_JOB_TYPES = ["土工", "鳶", "大工", "オペ", "鉄筋工", "交通整理人"];
 
 // --- 安全装置 ---
-const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
+const sanitizeReportData = (data: any, useNewDefaults = !data): NewcomerSurveyReportData => {
   let base = INITIAL_NEWCOMER_SURVEY_REPORT;
-  if (data) {
-    const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
-    base = { ...INITIAL_NEWCOMER_SURVEY_REPORT, ...data, qualifications: safeQualifications };
-  } else {
-    // 新規作成時初期化
+
+  if (useNewDefaults) {
     base = {
       ...base,
       experienceYears: null as any,
@@ -40,14 +37,20 @@ const sanitizeReportData = (data: any): NewcomerSurveyReportData => {
       director: "",
       company: ""
     };
-    
+
     // 当日日付の自動設定
     const today = new Date();
-    const reiwaYear = today.getFullYear() - 2018; 
+    const reiwaYear = today.getFullYear() - 2018;
     base.pledgeDateYear = reiwaYear;
     base.pledgeDateMonth = today.getMonth() + 1;
     base.pledgeDateDay = today.getDate();
   }
+
+  if (data) {
+    const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
+    base = { ...base, ...data, qualifications: safeQualifications };
+  }
+
   return base;
 };
 
@@ -108,7 +111,7 @@ const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen
 
 const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, initialStep, onBackToMenu }) => {
   const [step, setStep] = useState(1);
-  const [report, setReport] = useState<NewcomerSurveyReportData>(sanitizeReportData(initialData));
+  const [report, setReport] = useState<NewcomerSurveyReportData>(sanitizeReportData(initialData, !initialDraftId));
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
   const [showPreview, setShowPreview] = useState(initialStep === 99);
@@ -391,7 +394,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
            <div className="col-span-1 md:col-span-2 text-sm text-purple-700 font-bold mb-1"><i className="fa-solid fa-circle-info mr-1"></i>はじめに現場を選択してください</div>
            
            <div className="w-full overflow-hidden">
-             <label className="block text-xs font-bold text-gray-700 mb-1">作業所名 (マスタ選択)</label>
+             <label className="block text-xs font-bold text-gray-700 mb-1">現場名 (マスタ選択)</label>
              <select 
                className={`w-full p-2 border rounded font-bold max-w-full text-ellipsis ${getErrorClass('project')}`} 
                value={report.project} 

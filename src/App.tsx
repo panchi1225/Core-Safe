@@ -58,6 +58,21 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, url, masterD
   const [showPrintSettings, setShowPrintSettings] = useState(false);
   const [selectedProject, setSelectedProject] = useState("");
   const [selectedManager, setSelectedManager] = useState("");
+  const linkedQrUrl = (() => {
+    const nextUrl = new URL(url);
+    nextUrl.searchParams.set('form', 'newcomer');
+    if (selectedProject) {
+      nextUrl.searchParams.set('project', selectedProject);
+    } else {
+      nextUrl.searchParams.delete('project');
+    }
+    if (selectedManager) {
+      nextUrl.searchParams.set('director', selectedManager);
+    } else {
+      nextUrl.searchParams.delete('director');
+    }
+    return nextUrl.toString();
+  })();
 
   // モーダルが開くたびに状態をリセット
   useEffect(() => {
@@ -91,7 +106,7 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, url, masterD
               <p className="text-sm text-gray-500 mb-6 text-center">入場者自身の端末で読み取ってください。<br/>自動的に入力画面が開きます。</p>
               
               <div className="p-4 border-4 border-gray-200 rounded-lg bg-white mb-6">
-                <QRCodeCanvas value={url} size={250} level={"H"} includeMargin={true} />
+                <QRCodeCanvas value={linkedQrUrl} size={250} level={"H"} includeMargin={true} />
               </div>
               
               <div className="w-full flex flex-col gap-3">
@@ -179,7 +194,7 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, url, masterD
           {/* QRコードエリア */}
           <div className="flex-1 flex flex-col items-center justify-center w-full">
             <div className="border-8 border-black p-4 bg-white rounded-xl mb-6">
-              <QRCodeCanvas value={url} size={400} level={"H"} includeMargin={false} />
+              <QRCodeCanvas value={linkedQrUrl} size={400} level={"H"} includeMargin={false} />
             </div>
             <p className="text-2xl font-bold text-black mb-2">スマートフォンで読み取ってください</p>
             <p className="text-lg text-gray-600">
@@ -292,8 +307,18 @@ const App: React.FC = () => {
     const formType = params.get('form');
     
     if (formType === 'newcomer') {
-      // パラメータがある場合、直接新規入場者アンケートを開く
-      setWizardInitialData(undefined);
+      const initialData: Partial<NewcomerSurveyReportData> = {};
+      const project = params.get('project')?.trim();
+      const director = params.get('director')?.trim();
+
+      if (project) {
+        initialData.project = project;
+      }
+      if (director) {
+        initialData.director = director;
+      }
+
+      setWizardInitialData(Object.keys(initialData).length > 0 ? initialData : undefined);
       setWizardDraftId(null);
       setCurrentView('NEWCOMER_SURVEY');
     }
@@ -878,7 +903,13 @@ const App: React.FC = () => {
     );
   };
 
-  const qrUrl = `${window.location.protocol}//${window.location.host}${window.location.pathname}?form=newcomer`;
+  const qrUrl = (() => {
+    const nextUrl = new URL(window.location.href);
+    nextUrl.search = '';
+    nextUrl.hash = '';
+    nextUrl.searchParams.set('form', 'newcomer');
+    return nextUrl.toString();
+  })();
 
   return (
     <div className="min-h-screen bg-gray-100 font-sans text-gray-800">
