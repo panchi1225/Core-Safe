@@ -9,6 +9,7 @@ interface Props {
   initialData?: any;
   initialDraftId?: string | null;
   initialStep?: number;
+  isPublicEntry?: boolean;
   onBackToMenu: () => void;
 }
 
@@ -88,7 +89,7 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({
 };
 
 // --- Complete Modal ---
-const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen, onOk }) => {
+const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void; isPublicEntry?: boolean }> = ({ isOpen, onOk, isPublicEntry = false }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[70] bg-gray-900 bg-opacity-60 flex items-center justify-center p-4">
@@ -97,19 +98,28 @@ const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void }> = ({ isOpen
           <i className="fa-solid fa-check text-3xl"></i>
         </div>
         <h3 className="text-xl font-bold text-gray-800 mb-2">保存完了</h3>
-        <p className="text-gray-600 mb-6">データを保存しました。</p>
-        <button 
-          onClick={onOk} 
-          className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 transition-colors"
-        >
-          OK（ホームへ戻る）
-        </button>
+        {isPublicEntry ? (
+          <div className="text-gray-600 space-y-3">
+            <p>保存が完了しました。<br />この画面を閉じてください。</p>
+            <p className="text-sm text-gray-500">再送信防止のため、この画面で操作を終了してください。</p>
+          </div>
+        ) : (
+          <>
+            <p className="text-gray-600 mb-6">データを保存しました。</p>
+            <button
+              onClick={onOk}
+              className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold shadow hover:bg-blue-700 transition-colors"
+            >
+              OK（ホームへ戻る）
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
 };
 
-const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, initialStep, onBackToMenu }) => {
+const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, initialStep, isPublicEntry = false, onBackToMenu }) => {
   const [step, setStep] = useState(1);
   const [report, setReport] = useState<NewcomerSurveyReportData>(sanitizeReportData(initialData, !initialDraftId));
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
@@ -717,7 +727,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
     <>
       <div className="no-print min-h-screen pb-24 bg-gray-50">
         <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
-          <div className="flex items-center gap-3"><button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button><h1 className="text-lg font-bold"><i className="fa-solid fa-person-circle-question mr-2"></i>新規入場者アンケート</h1></div>
+          <div className="flex items-center gap-3">{!isPublicEntry && <button onClick={handleHomeClick} className="text-white hover:text-gray-300"><i className="fa-solid fa-house"></i></button>}<h1 className="text-lg font-bold"><i className="fa-solid fa-person-circle-question mr-2"></i>新規入場者アンケート</h1></div>
           {/* 設定ボタン削除済み */}
         </header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-purple-600" : ""}>基本情報</span><span className={step >= 2 ? "text-purple-600" : ""}>資格</span><span className={step >= 3 ? "text-purple-600" : ""}>誓約・署名</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-purple-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
@@ -737,7 +747,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
       </div>
       
       {/* 完了モーダル */}
-      <CompleteModal isOpen={showCompleteModal} onOk={() => { setShowCompleteModal(false); onBackToMenu(); }} />
+      <CompleteModal isOpen={showCompleteModal} isPublicEntry={isPublicEntry} onOk={() => { setShowCompleteModal(false); if (!isPublicEntry) onBackToMenu(); }} />
 
       {previewSigUrl && (<div className="fixed inset-0 z-[100] bg-black bg-opacity-90 flex flex-col items-center justify-center p-4" onClick={() => setPreviewSigUrl(null)}><div className="bg-white p-1 rounded-lg shadow-2xl overflow-hidden max-w-full max-h-[80vh]"><img src={previewSigUrl} alt="Signature Preview" className="max-w-full max-h-[70vh] object-contain" /></div><button className="mt-6 text-white text-lg font-bold flex items-center gap-2 bg-gray-700 px-6 py-2 rounded-full hover:bg-gray-600 transition-colors"><i className="fa-solid fa-xmark"></i> 閉じる</button></div>)}
       {showPreview && renderPreviewModal()}

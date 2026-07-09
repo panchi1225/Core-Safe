@@ -171,40 +171,40 @@ const QRCodeModal: React.FC<QRCodeModalProps> = ({ isOpen, onClose, url, masterD
       {/* 印刷用レイアウト (画面上は非表示) */}
       <div className="hidden print:flex fixed inset-0 z-[100] bg-white flex-col items-center justify-start p-0 m-0 w-full h-full">
         <style>{`@media print { @page { size: A4 portrait; margin: 0; } body { background: white; } }`}</style>
-        <div className="w-[210mm] h-[297mm] p-[20mm] flex flex-col items-center text-center border-0">
+        <div className="w-[210mm] h-[297mm] p-[12mm] flex flex-col items-center text-center border-0">
           
           {/* ヘッダー */}
-          <div className="w-full border-b-4 border-black mb-10 pb-4">
-            <h1 className="text-4xl font-extrabold tracking-widest text-black">新規入場者アンケート</h1>
+          <div className="w-full border-b-4 border-black mb-6 pb-3">
+            <h1 className="text-3xl font-extrabold tracking-widest text-black">新規入場者アンケート</h1>
             <p className="text-xl mt-2 font-bold text-gray-700">Web入力フォーム</p>
           </div>
 
           {/* 現場情報 */}
-          <div className="w-full mb-12 text-left space-y-6">
-            <div className="border-2 border-black rounded-lg p-6">
+          <div className="w-full mb-6 text-left space-y-4">
+            <div className="border-2 border-black rounded-lg p-4">
               <p className="text-sm text-gray-500 font-bold mb-1">工事名</p>
-              <p className="text-2xl font-bold leading-tight min-h-[2rem]">{selectedProject}</p>
+              <p className="text-xl font-bold leading-tight min-h-[1.75rem]">{selectedProject}</p>
             </div>
-            <div className="border-2 border-black rounded-lg p-6">
+            <div className="border-2 border-black rounded-lg p-4">
               <p className="text-sm text-gray-500 font-bold mb-1">作業所長</p>
-              <p className="text-3xl font-bold min-h-[2.5rem]">{selectedManager}</p>
+              <p className="text-2xl font-bold min-h-[2rem]">{selectedManager}</p>
             </div>
           </div>
 
           {/* QRコードエリア */}
           <div className="flex-1 flex flex-col items-center justify-center w-full">
-            <div className="border-8 border-black p-4 bg-white rounded-xl mb-6">
-              <QRCodeCanvas value={linkedQrUrl} size={400} level={"H"} includeMargin={false} />
+            <div className="border-4 border-black p-3 bg-white rounded-xl mb-4">
+              <QRCodeCanvas value={linkedQrUrl} size={340} level={"H"} includeMargin={false} />
             </div>
-            <p className="text-2xl font-bold text-black mb-2">スマートフォンで読み取ってください</p>
-            <p className="text-lg text-gray-600">
+            <p className="text-xl font-bold text-black mb-1">スマートフォンで読み取ってください</p>
+            <p className="text-base text-gray-600">
               ※iPhone/Android対応<br/>
               ※アプリのインストールは不要です
             </p>
           </div>
 
           {/* フッター */}
-          <div className="w-full mt-auto pt-8 border-t-2 border-gray-300">
+          <div className="w-full mt-auto pt-4 border-t-2 border-gray-300">
             <p className="text-sm text-gray-500 font-bold">Core Safe -安全書類作成支援システム-</p>
             <p className="text-lg font-bold mt-1">松浦建設株式会社</p>
           </div>
@@ -289,6 +289,7 @@ const App: React.FC = () => {
   // Data to pass to Wizard
   const [wizardInitialData, setWizardInitialData] = useState<any>(undefined);
   const [wizardDraftId, setWizardDraftId] = useState<string | null>(null);
+  const [isPublicEntry, setIsPublicEntry] = useState(false);
 
   // 【修正3】安全衛生日誌モーダルの3階層ナビゲーション用state
   const [diarySelectionStep, setDiarySelectionStep] = useState<'project' | 'month' | 'date'>('project');
@@ -320,7 +321,13 @@ const App: React.FC = () => {
 
       setWizardInitialData(Object.keys(initialData).length > 0 ? initialData : undefined);
       setWizardDraftId(null);
+      setIsPublicEntry(true);
       setCurrentView('NEWCOMER_SURVEY');
+
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.search = '';
+      cleanUrl.hash = '';
+      window.history.replaceState(null, '', cleanUrl.toString());
     }
   }, []);
 
@@ -366,6 +373,7 @@ const App: React.FC = () => {
 
   // Handlers
   const openSelectionModal = (type: ReportTypeString) => {
+    setIsPublicEntry(false);
     setSelectedReportType(type);
     setIsModalOpen(true);
   };
@@ -382,11 +390,13 @@ const App: React.FC = () => {
     if (!selectedReportType) return;
     setWizardInitialData(undefined);
     setWizardDraftId(null);
+    setIsPublicEntry(false);
     setCurrentView(selectedReportType as ViewState);
     closeSelectionModal();
   };
 
   const handleResumeDraft = (draft: SavedDraft) => {
+    setIsPublicEntry(false);
     if (draft.type === 'DAILY_SAFETY') {
       setDiaryActionModal({ isOpen: true, draft });
     } else {
@@ -484,7 +494,8 @@ const App: React.FC = () => {
         initialData={wizardInitialData}
         initialDraftId={wizardDraftId}
         initialStep={wizardInitialStep}
-        onBackToMenu={() => setCurrentView('HOME')}
+        isPublicEntry={isPublicEntry}
+        onBackToMenu={() => { setIsPublicEntry(false); setCurrentView('HOME'); }}
       />
     );
   }
