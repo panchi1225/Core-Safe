@@ -266,6 +266,7 @@ const App: React.FC = () => {
   const [selectedReportType, setSelectedReportType] = useState<ReportTypeString | null>(null);
   const [drafts, setDrafts] = useState<SavedDraft[]>([]);
   const [selectedDraftProject, setSelectedDraftProject] = useState<string | null>(null);
+  const [selectedDraftCompany, setSelectedDraftCompany] = useState<string | null>(null);
   
   const [isLoading, setIsLoading] = useState(false);
 
@@ -364,6 +365,7 @@ const App: React.FC = () => {
       
       loadDrafts();
       setSelectedDraftProject(null);
+      setSelectedDraftCompany(null);
       // 【修正3】モーダルが開くたびに安全衛生日誌用stateもリセット
       setDiarySelectionStep('project');
       setSelectedDiaryProject(null);
@@ -371,16 +373,25 @@ const App: React.FC = () => {
     }
   }, [isModalOpen]);
 
+  const getNewcomerDraftCompanyKey = (draft: SavedDraft) => {
+    const company = (draft.data as Partial<NewcomerSurveyReportData>).company;
+    return typeof company === 'string' && company.trim() ? company.trim() : '会社名未設定';
+  };
+
   // Handlers
   const openSelectionModal = (type: ReportTypeString) => {
     setIsPublicEntry(false);
     setSelectedReportType(type);
+    setSelectedDraftProject(null);
+    setSelectedDraftCompany(null);
     setIsModalOpen(true);
   };
 
   // 【修正3】モーダルを閉じる際に安全衛生日誌用stateもリセット
   const closeSelectionModal = () => {
     setIsModalOpen(false);
+    setSelectedDraftProject(null);
+    setSelectedDraftCompany(null);
     setDiarySelectionStep('project');
     setSelectedDiaryProject(null);
     setSelectedDiaryMonth(null);
@@ -439,6 +450,12 @@ const App: React.FC = () => {
             );
             if (remaining.length === 0) {
               setSelectedDraftProject(null);
+              setSelectedDraftCompany(null);
+            } else if (selectedReportType === 'NEWCOMER_SURVEY' && selectedDraftCompany) {
+              const remainingForCompany = remaining.filter(d => getNewcomerDraftCompanyKey(d) === selectedDraftCompany);
+              if (remainingForCompany.length === 0) {
+                setSelectedDraftCompany(null);
+              }
             }
           }
           setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -532,6 +549,18 @@ const App: React.FC = () => {
       acc[projectKey].push(draft);
       return acc;
     }, {} as Record<string, SavedDraft[]>);
+
+    const selectedProjectDrafts = selectedDraftProject ? (draftsByProject[selectedDraftProject] || []) : [];
+    const draftsByCompany = selectedReportType === 'NEWCOMER_SURVEY'
+      ? selectedProjectDrafts.reduce((acc, draft) => {
+          const companyKey = getNewcomerDraftCompanyKey(draft);
+          if (!acc[companyKey]) {
+            acc[companyKey] = [];
+          }
+          acc[companyKey].push(draft);
+          return acc;
+        }, {} as Record<string, SavedDraft[]>)
+      : {};
 
     // ============================
     // 【修正3】安全衛生日誌専用の3階層モーダルレンダリング
@@ -792,14 +821,23 @@ const App: React.FC = () => {
             <div className="flex items-center gap-3">
               {selectedDraftProject && (
                 <button 
-                  onClick={() => setSelectedDraftProject(null)}
+                  onClick={() => {
+                    if (selectedReportType === 'NEWCOMER_SURVEY' && selectedDraftCompany) {
+                      setSelectedDraftCompany(null);
+                    } else {
+                      setSelectedDraftProject(null);
+                      setSelectedDraftCompany(null);
+                    }
+                  }}
                   className="mr-1 text-gray-300 hover:text-white"
                 >
                   <i className="fa-solid fa-arrow-left"></i>
                 </button>
               )}
               <h3 className="font-bold text-lg">
-                {selectedDraftProject ? '対象データの選択' : '作成方法の選択'}
+                {selectedDraftProject
+                  ? (selectedReportType === 'NEWCOMER_SURVEY' && !selectedDraftCompany ? '会社名の選択' : '対象データの選択')
+                  : '作成方法の選択'}
               </h3>
             </div>
             <button onClick={closeSelectionModal} className="text-gray-400 hover:text-white">
@@ -850,7 +888,10 @@ const App: React.FC = () => {
                         {Object.entries(draftsByProject).map(([projectName, projectDrafts]) => (
                           <button
                             key={projectName}
-                            onClick={() => setSelectedDraftProject(projectName)}
+                            onClick={() => {
+                              setSelectedDraftProject(projectName);
+                              setSelectedDraftCompany(null);
+                            }}
                             className="w-full text-left border rounded-lg p-4 hover:bg-blue-50 transition-colors flex justify-between items-center group shadow-sm"
                           >
                             <div>
@@ -868,44 +909,100 @@ const App: React.FC = () => {
                   </div>
                 </>
               ) : (
-                /* --- VIEW 2: Draft Details --- */
-                <div className="space-y-4">
-                  <div className="bg-gray-50 p-3 rounded border text-sm text-gray-600 mb-4">
-                    <i className="fa-solid fa-building mr-2"></i>
-                    {selectedDraftProject}
-                  </div>
+                /* --- VIEW 2: Company List / Draft Details --- */
+                selectedReportType === 'NEWCOMER_SURVEY' && !selectedDraftCompany ? (
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 p-3 rounded border text-sm text-gray-600 mb-4">
+                      <i className="fa-solid fa-building mr-2"></i>
+                      {selectedDraftProject}
+                    </div>
 
-                  <h4 className="text-gray-500 text-sm font-bold mb-2 uppercase tracking-wide">対象データを選択</h4>
+                    <h4 className="text-gray-500 text-sm font-bold mb-2 uppercase tracking-wide">会社名を選択</h4>
 
-                  <div className="space-y-3">
-                    {draftsByProject[selectedDraftProject].map(draft => (
-                      <div key={draft.id} className="border rounded-lg p-3 hover:bg-blue-50 transition-colors flex justify-between items-center group bg-white shadow-sm">
-                        <div className="cursor-pointer flex-1" onClick={() => handleResumeDraft(draft)}>
-                          <div className="font-bold text-blue-800 text-lg">
-                            <i className="fa-regular fa-calendar-check mr-2"></i>
-                            {draft.type === 'SAFETY_TRAINING' ? `${(draft.data as ReportData).month}月度` : 
-                             draft.type === 'DISASTER_COUNCIL' ? `第${(draft.data as DisasterCouncilReportData).count}回` :
-                             draft.type === 'NEWCOMER_SURVEY' ? ((draft.data as NewcomerSurveyReportData).name || '氏名未入力') :
-                             `${(draft.data as any).month}月度 計画表`}
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1 pl-7">
-                            最終更新: {new Date(draft.lastModified).toLocaleString('ja-JP')}
-                          </div>
-                        </div>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteDraft(draft.id);
-                          }}
-                          className="ml-3 p-3 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors"
-                          title="削除"
-                        >
-                          <i className="fa-solid fa-trash"></i>
-                        </button>
+                    {Object.keys(draftsByCompany).length === 0 ? (
+                      <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
+                        対象データがありません
                       </div>
-                    ))}
+                    ) : (
+                      <div className="space-y-3">
+                        {Object.entries(draftsByCompany).map(([companyName, companyDrafts]) => (
+                          <button
+                            key={companyName}
+                            onClick={() => setSelectedDraftCompany(companyName)}
+                            className="w-full text-left border rounded-lg p-4 hover:bg-blue-50 transition-colors flex justify-between items-center group shadow-sm"
+                          >
+                            <div>
+                              <div className="font-bold text-gray-800 text-sm mb-1">{companyName}</div>
+                              <div className="text-xs text-gray-500">
+                                <i className="fa-regular fa-folder-open mr-1"></i>
+                                {companyDrafts.length} 件のデータ
+                              </div>
+                            </div>
+                            <i className="fa-solid fa-chevron-right text-gray-300 group-hover:text-blue-400"></i>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 p-3 rounded border text-sm text-gray-600 mb-4">
+                      <i className="fa-solid fa-building mr-2"></i>
+                      {selectedDraftProject}
+                      {selectedReportType === 'NEWCOMER_SURVEY' && selectedDraftCompany && (
+                        <span className="ml-3 text-gray-500">
+                          <i className="fa-regular fa-folder-open mr-1"></i>
+                          {selectedDraftCompany}
+                        </span>
+                      )}
+                    </div>
+
+                    <h4 className="text-gray-500 text-sm font-bold mb-2 uppercase tracking-wide">対象データを選択</h4>
+
+                    {(() => {
+                      const displayDrafts = selectedReportType === 'NEWCOMER_SURVEY' && selectedDraftCompany
+                        ? (draftsByCompany[selectedDraftCompany] || [])
+                        : selectedProjectDrafts;
+
+                      if (displayDrafts.length === 0) {
+                        return (
+                          <div className="text-center py-8 text-gray-400 bg-gray-50 rounded-lg">
+                            対象データがありません
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-3">
+                          {displayDrafts.map(draft => (
+                            <div key={draft.id} className="border rounded-lg p-3 hover:bg-blue-50 transition-colors flex justify-between items-center group bg-white shadow-sm">
+                              <div className="cursor-pointer flex-1" onClick={() => handleResumeDraft(draft)}>
+                                <div className="font-bold text-blue-800 text-lg">
+                                  <i className="fa-regular fa-calendar-check mr-2"></i>
+                                  {draft.type === 'SAFETY_TRAINING' ? `${(draft.data as ReportData).month}月度` : 
+                                  draft.type === 'DISASTER_COUNCIL' ? `第${(draft.data as DisasterCouncilReportData).count}回` :
+                                  draft.type === 'NEWCOMER_SURVEY' ? ((draft.data as NewcomerSurveyReportData).name || '氏名未入力') :
+                                  `${(draft.data as any).month}月度 計画表`}
+                                </div>
+
+                              </div>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteDraft(draft.id);
+                                }}
+                                className="ml-3 p-3 text-gray-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors"
+                                title="削除"
+                              >
+                                <i className="fa-solid fa-trash"></i>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )
               )
             )}
           </div>
