@@ -72,7 +72,7 @@ function circledChoice(
   value: string,
   option1: string,
   option2: string
-): JSX.Element {
+): React.ReactElement {
   const circleStyle: React.CSSProperties = {
     border: '1.5px solid red',
     borderRadius: '50%',
@@ -445,7 +445,6 @@ const DailySafetyPrintLayout: React.FC<Props> = ({ data }) => {
       actualWorkersVal: actualCount > 0 ? String(actualCount) : '',
       machinery: '',
       material: materialEntries[index] || '',
-      isMaterialStep3: index >= step1MaterialCount && !!materialEntries[index],
       isMaterialStep3: index >= step1MaterialCount && materialEntries[index] ? true : false,
       safetyInstruction: '',
       confirmationLabel: '',
