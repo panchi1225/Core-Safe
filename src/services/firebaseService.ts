@@ -363,4 +363,3 @@ export const deleteEmployee = async (id: string): Promise<void> => {
     throw error;
   }
 };
-
