@@ -89,12 +89,6 @@ export const getMasterData = async (): Promise<MasterData> => {
     if (docSnap.exists()) {
       const data = docSnap.data() as Partial<MasterData>;
       
-      // ★訓練内容(topics)を新しい初期値で強制上書き
-      // （※Firestoreには保存しないが、アプリ上では新しい値を使う）
-      // もしFirestoreも更新したい場合は、ここで saveMasterData を呼ぶことも可能ですが、
-      // 読み込みのたびに書き込むのは負荷が高いため、今回は「取得したデータに上書きして返す」だけに留めます。
-      // これにより、画面上では新しいリストが表示され、ユーザーが何か変更して保存したタイミングでFirestoreも更新されます。
-      
       const mergedData: MasterData = {
         projects: data.projects || INITIAL_MASTER_DATA.projects,
         workplaces: data.workplaces || INITIAL_MASTER_DATA.workplaces,
@@ -102,7 +96,8 @@ export const getMasterData = async (): Promise<MasterData> => {
         supervisors: data.supervisors || INITIAL_MASTER_DATA.supervisors,
         locations: data.locations || INITIAL_MASTER_DATA.locations,
         roles: data.roles || INITIAL_MASTER_DATA.roles,
-        topics: INITIAL_MASTER_DATA.topics,
+        // 保存済みの安全訓練内容を優先する。値がない既存データだけ初期値を使う。
+        topics: data.topics || INITIAL_MASTER_DATA.topics,
         jobTypes: data.jobTypes || INITIAL_MASTER_DATA.jobTypes,
         goals: data.goals || INITIAL_MASTER_DATA.goals,
         predictions: data.predictions || INITIAL_MASTER_DATA.predictions,
