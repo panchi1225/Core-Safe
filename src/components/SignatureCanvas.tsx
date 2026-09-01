@@ -5,13 +5,14 @@ interface Props {
   onClear: () => void;
   lineWidth?: number;
   keepOpenOnSave?: boolean;
+  className?: string;
 }
 
 // 全端末で統一する固定キャンバスサイズ
 const FIXED_CANVAS_WIDTH = 1500;
 const FIXED_CANVAS_HEIGHT = 720;
 
-const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, keepOpenOnSave = false }) => {
+const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, keepOpenOnSave = false, className = '' }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -159,7 +160,7 @@ const SignatureCanvas: React.FC<Props> = ({ onSave, onClear, lineWidth = 3.5, ke
     return (
       <div 
         onClick={() => setIsModalOpen(true)}
-        className="w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-blue-300 bg-white text-gray-500 transition-all group"
+        className={`w-full h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-blue-300 bg-white text-gray-500 transition-all group ${className}`}
       >
         <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-2 group-hover:bg-blue-100 transition-colors">
             <i className="fa-solid fa-pen-nib text-xl text-gray-400 group-hover:text-blue-500"></i>
