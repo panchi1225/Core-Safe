@@ -527,4 +527,3 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, in
 };
 
 export default SafetyTrainingWizard;
-
