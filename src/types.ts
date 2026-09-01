@@ -12,8 +12,8 @@ export interface SavedDraft {
   id: string;
   type: ReportTypeString;
   data: any;
-  createdAt: number;
-  updatedAt: number;
+  createdAt?: number;
+  updatedAt?: number;
   lastModified: number;
 }
 
@@ -294,6 +294,11 @@ export interface SubcontractorAttendee {
   signatureDataUrl: string;
 }
 
+export interface AgendaItem {
+  title: string;
+  content: string;
+}
+
 export interface DisasterCouncilReportData extends ReportData {
   count: number;
   meetingMethod: string;
@@ -306,6 +311,9 @@ export interface DisasterCouncilReportData extends ReportData {
   reviewerName: string;
   reviewerSealId: string;
   reviewerSealImage: string;
+  attendees: GCAttendee[];
+  isFirstMeeting: boolean;
+  agendaItems: AgendaItem[];
 }
 
 // 備考欄の初期文（定数化）
@@ -681,6 +689,7 @@ export interface DailySafetyReportData {
   actualWorkers: { entryIndex: number; count: number }[];
   step3AdditionalWorkEntries: AdditionalWorkEntry[];
   step3MachineryEntries: string[];  // STEP3追加主要機械（STEP1と合計10個まで）
+  step3MaterialEntries: string[];   // STEP3追加搬出入資機材（STEP1と合計10個まで）
   step3ConfirmationItems: Step3ConfirmationItems;
   step3SiteConfirmationItems: Step3SiteConfirmationItems;
   stageConfirmation: '有' | '無' | '';     // 段階確認

@@ -35,7 +35,7 @@ interface Props {
 
 const SafetyPlanPrintLayout: React.FC<Props> = ({ data }) => {
   // Styles
-  const borderOuter = "border-2 border-black"; const borderThin = "border-2 border-black"; const headerBg = "bg-cyan-100";
+  const borderOuter = "border-2 border-black";
   const borderThin = "border-2 border-black";
   const headerBg = "bg-cyan-100";
 

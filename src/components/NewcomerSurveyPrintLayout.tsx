@@ -1,5 +1,5 @@
 import React from 'react';
-import { NewcomerSurveyReportData } from '../types';
+import { INITIAL_NEWCOMER_SURVEY_REPORT, NewcomerSurveyReportData, Qualifications } from '../types';
 
 interface Props {
   data: NewcomerSurveyReportData;
@@ -17,7 +17,7 @@ const getProjectNameClass = (text: string) => {
 
 const NewcomerSurveyPrintLayout: React.FC<Props> = ({ data }) => {
   if (!data) return null;
-  const qual = data.qualifications || {};
+  const qual: Qualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...data.qualifications };
 
   const borderClass = "border-b border-r border-black";
   

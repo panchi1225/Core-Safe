@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA, EmployeeData } from '../types';
 import { getMasterData, saveDraft, deleteDraftsByProject, fetchEmployees } from '../services/firebaseService';
-import SignatureCanvas, { SignatureCanvasHandle } from './SignatureCanvas';
+import SignatureCanvas from './SignatureCanvas';
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
 
 interface Props {
@@ -155,7 +155,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
   
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   
-  const sigPadRef = useRef<SignatureCanvasHandle>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -587,7 +586,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
   };
 
   const renderStep2 = () => {
-    const qual = report.qualifications || {};
+    const qual: Qualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...report.qualifications };
     return (
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 2: 資格</h2>
@@ -677,10 +676,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
             ) : (
               <div className="w-full">
                 <SignatureCanvas 
-                  ref={sigPadRef}
                   onSave={handleSignatureSave} 
                   onClear={() => updateReport({signatureDataUrl: null})} 
-                  canvasProps={{ className: 'w-full h-40' }}
+                  className="h-40"
                 />
               </div>
             )}

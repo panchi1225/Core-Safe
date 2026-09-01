@@ -411,7 +411,6 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
       if (!restored.actualWorkers) restored.actualWorkers = [];
       if (!restored.step3AdditionalWorkEntries) restored.step3AdditionalWorkEntries = [];
       if (!restored.step3MachineryEntries || !Array.isArray(restored.step3MachineryEntries)) restored.step3MachineryEntries = [];
-      if (!restored.step3MachineryEntries || !Array.isArray(restored.step3MachineryEntries)) restored.step3MachineryEntries = [];
       if (!restored.step3MaterialEntries || !Array.isArray(restored.step3MaterialEntries)) restored.step3MaterialEntries = [];
       /* 【修正】基本確認事項: 10項目対応のフォールバック（item8〜item10を補完） */
       if (!restored.step3ConfirmationItems) {
@@ -1007,7 +1006,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
       dumpTrucks: { incoming: 0, outgoing: 0 },
       workNotes: '',
       // 実施人数リセット
-      actualWorkers: prev.actualWorkers?.map(() => 0) || [],
+      actualWorkers: [],
       // STEP4リセット
       patrolRecord: {
         coordinationNotes: '',
@@ -2133,7 +2132,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
               onChange={(e) => updateStep3Material(idx, e.target.value)}
             >
               <option value="">選択してください</option>
-              {masterData.materials.map((m) => (
+              {masterData.equipment.map((m) => (
                 <option key={m} value={m}>{m}</option>
               ))}
             </select>
