@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA, EmployeeData } from '../types';
 import { getMasterData, saveDraft, deleteDraftsByProject, fetchEmployees } from '../services/firebaseService';
+import { calculateCurrentExperience } from '../utils/experience';
 import SignatureCanvas from './SignatureCanvas';
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
 
@@ -215,24 +216,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
     const emp = employees.find(e => e.id === empId);
     if (!emp) return;
     
-    let currentExpYears = emp.experienceYears;
-    let currentExpMonths = emp.experienceMonths;
-    // 2026年4月1日を基準日として経験年数を逆算
-    const baseDate = new Date(2026, 3, 1); // 2026年4月1日
-    const now = new Date();
-    let monthsDiff = (now.getFullYear() - baseDate.getFullYear()) * 12 + (now.getMonth() - baseDate.getMonth());
-    if (now.getDate() < baseDate.getDate()) {
-      monthsDiff--;
-    }
-    if (monthsDiff > 0) {
-      const totalMonths = currentExpYears * 12 + currentExpMonths + monthsDiff;
-      currentExpYears = Math.floor(totalMonths / 12);
-      currentExpMonths = totalMonths % 12;
-    } else if (monthsDiff < 0) {
-      const totalMonths = currentExpYears * 12 + currentExpMonths + monthsDiff;
-      currentExpYears = Math.max(0, Math.floor(totalMonths / 12));
-      currentExpMonths = Math.max(0, totalMonths % 12);
-    }
+    const currentExperience = calculateCurrentExperience(emp.experienceYears, emp.experienceMonths);
 
     const isPreset = PRESET_JOB_TYPES.includes(emp.jobType);
     const finalJobType = isPreset ? emp.jobType : (emp.jobType ? 'その他' : '');
@@ -260,8 +244,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
       healthCheckYear: emp.healthCheckYear,
       healthCheckMonth: emp.healthCheckMonth,
       healthCheckDay: emp.healthCheckDay,
-      experienceYears: currentExpYears,
-      experienceMonths: currentExpMonths,
+      experienceYears: currentExperience.years,
+      experienceMonths: currentExperience.months,
       jobType: finalJobType,
       jobTypeOther: finalJobTypeOther,
       qualifications: { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...emp.qualifications }

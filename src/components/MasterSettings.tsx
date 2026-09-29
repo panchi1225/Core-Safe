@@ -4,6 +4,7 @@ import {
   getMasterData, saveMasterData, deleteDraftsByProject,
   fetchEmployees, saveEmployee, deleteEmployee 
 } from '../services/firebaseService';
+import { EXPERIENCE_REFERENCE_LABEL } from '../utils/experience';
 
 interface Props {
   onBackToMenu: () => void;
@@ -293,7 +294,7 @@ const EmployeeEditForm: React.FC<{
                 )}
               </div>
               <div>
-                <label className="block text-xs font-bold text-gray-500 mb-1">経験年数 (2026年4月1日時点)</label>
+                <label className="block text-xs font-bold text-gray-500 mb-1">経験年数 ({EXPERIENCE_REFERENCE_LABEL}時点)</label>
                 <div className="flex gap-2 items-center">
                   <select className="w-20 p-2 border rounded text-center appearance-none bg-white" value={data.experienceYears} onChange={e => handleChange('experienceYears', parseInt(e.target.value))}>
                     <option value="0">0</option>
@@ -306,7 +307,7 @@ const EmployeeEditForm: React.FC<{
                   </select>
                   <span>ヶ月</span>
                 </div>
-                <p className="text-[10px] text-gray-400 mt-1">※2026年4月1日を基準に自動計算されます</p>
+                <p className="text-[10px] text-gray-400 mt-1">※アンケート作成時、{EXPERIENCE_REFERENCE_LABEL}を基準に自動計算します</p>
               </div>
               <div className="md:col-span-2">
                 <label className="block text-xs font-bold text-gray-500 mb-1">現住所</label>
