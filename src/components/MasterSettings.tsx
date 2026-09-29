@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { MasterData, INITIAL_MASTER_DATA, EmployeeData, Qualifications, INITIAL_NEWCOMER_SURVEY_REPORT } from '../types';
 import { 
-  getMasterData, saveMasterData, deleteDraftsByProject,
+  getMasterData, saveMasterDataField, deleteDraftsByProject,
   fetchEmployees, saveEmployee, deleteEmployee 
 } from '../services/firebaseService';
 import { EXPERIENCE_REFERENCE_LABEL } from '../utils/experience';
@@ -84,16 +84,17 @@ const ProjectDeleteModal: React.FC<{
 const MasterSection: React.FC<{
   title: string;
   items: string[];
-  onUpdate: (items: string[]) => void;
+  onUpdate: (items: string[]) => Promise<boolean>;
   onDeleteRequest: (index: number, item: string) => void;
   onBack: () => void;
-}> = ({ title, items, onUpdate, onDeleteRequest, onBack }) => {
+  isSaving: boolean;
+}> = ({ title, items, onUpdate, onDeleteRequest, onBack, isSaving }) => {
   const [newItem, setNewItem] = useState("");
   const safeItems = title === '機械' ? [...(items || [])].sort((a, b) => a.localeCompare(b, 'ja')) : (items || []);
-  const handleAdd = () => {
-    if (newItem.trim()) {
-      onUpdate([...safeItems, newItem.trim()]);
-      setNewItem("");
+  const handleAdd = async () => {
+    if (newItem.trim() && !isSaving) {
+      const saved = await onUpdate([...safeItems, newItem.trim()]);
+      if (saved) setNewItem("");
     }
   };
   return (
@@ -116,6 +117,7 @@ const MasterSection: React.FC<{
               <span className="text-sm text-gray-800 break-all mr-2">{item}</span>
               <button
                 onClick={(e) => { e.stopPropagation(); onDeleteRequest(idx, item); }}
+                disabled={isSaving}
                 className="text-gray-400 hover:text-red-600 p-2 rounded hover:bg-red-50"
               >
                 <i className="fa-solid fa-trash"></i>
@@ -134,11 +136,12 @@ const MasterSection: React.FC<{
             className="flex-1 border border-gray-300 rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="新規項目を追加..."
             value={newItem}
+            disabled={isSaving}
             onChange={(e) => setNewItem(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+            onKeyDown={(e) => { if (e.key === 'Enter') void handleAdd(); }}
           />
-          <button onClick={handleAdd} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md">
-            <i className="fa-solid fa-plus mr-1"></i>追加
+          <button onClick={() => void handleAdd()} disabled={isSaving} className="bg-blue-600 text-white px-6 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md disabled:opacity-50">
+            <i className="fa-solid fa-plus mr-1"></i>{isSaving ? '保存中...' : '追加'}
           </button>
         </div>
       </div>
@@ -497,6 +500,8 @@ type TabType = 'BASIC' | 'TRAINING' | 'EMPLOYEES';
 
 const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
+  const [masterLoadState, setMasterLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [isSavingMaster, setIsSavingMaster] = useState(false);
   const [masterTab, setMasterTab] = useState<TabType>('BASIC');
   const [selectedMasterKey, setSelectedMasterKey] = useState<keyof MasterData | null>(null);
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, message: '', onConfirm: () => {} });
@@ -507,23 +512,38 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
   const [isEditingEmployee, setIsEditingEmployee] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<EmployeeData | null>(null);
 
+  const loadMasterData = async () => {
+    setMasterLoadState('loading');
+    try {
+      const data = await getMasterData();
+      setMasterData(data);
+      setMasterLoadState('ready');
+    } catch (error) {
+      console.error('マスタデータの読み込みに失敗しました', error);
+      setMasterLoadState('error');
+    }
+  };
+
   useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await getMasterData();
-        setMasterData(data);
-        // 社員データもロード
-        const emps = await fetchEmployees();
-        setEmployees(emps);
-      } catch (e) { console.error(e); }
-    };
-    load();
+    void loadMasterData();
+    // 社員データの取得失敗とマスタデータの取得失敗は別々に扱う。
+    fetchEmployees().then(setEmployees).catch(console.error);
   }, []);
 
-  const handleUpdate = async (key: keyof MasterData, newItems: string[]) => {
-    const newData = { ...masterData, [key]: newItems };
-    setMasterData(newData);
-    await saveMasterData(newData);
+  const handleUpdate = async (key: keyof MasterData, newItems: string[]): Promise<boolean> => {
+    if (masterLoadState !== 'ready' || isSavingMaster) return false;
+    setIsSavingMaster(true);
+    try {
+      await saveMasterDataField(key, newItems);
+      setMasterData(prev => ({ ...prev, [key]: newItems }));
+      return true;
+    } catch (error) {
+      console.error('マスタデータの保存に失敗しました', error);
+      alert('保存に失敗しました。変更は反映されていません。通信状態を確認して、もう一度お試しください。');
+      return false;
+    } finally {
+      setIsSavingMaster(false);
+    }
   };
 
   // 社員編集開始（新規）
@@ -595,7 +615,19 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
 
       <div className="p-4 max-w-4xl mx-auto w-full flex-1 flex flex-col">
         {/* 社員編集中ならフォームを表示 */}
-        {isEditingEmployee && editingEmployee ? (
+        {masterLoadState !== 'ready' ? (
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center" role="status">
+            {masterLoadState === 'loading' ? (
+              <p className="text-gray-700">マスタデータを読み込んでいます...</p>
+            ) : (
+              <>
+                <p className="font-bold text-red-700 mb-2">マスタデータを読み込めませんでした</p>
+                <p className="text-gray-700 mb-4">保存済みデータを守るため、読み込みが成功するまで編集できません。</p>
+                <button onClick={() => void loadMasterData()} className="bg-blue-600 text-white px-5 py-2 rounded-lg font-bold hover:bg-blue-700">再読み込み</button>
+              </>
+            )}
+          </div>
+        ) : isEditingEmployee && editingEmployee ? (
           <div className="flex-1 overflow-hidden h-full">
             <EmployeeEditForm
               employee={editingEmployee}
@@ -610,6 +642,7 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
             <MasterSection
               title={LABEL_MAP[selectedMasterKey]}
               items={masterData[selectedMasterKey]}
+              isSaving={isSavingMaster}
               onBack={() => setSelectedMasterKey(null)}
               onUpdate={(items) => handleUpdate(selectedMasterKey, items)}
               onDeleteRequest={(index, item) => {
@@ -622,8 +655,9 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
                     onConfirm: async () => {
                       const items = [...masterData[selectedMasterKey]];
                       items.splice(index, 1);
-                      handleUpdate(selectedMasterKey, items);
-                      setConfirmModal({ ...confirmModal, isOpen: false });
+                      if (await handleUpdate(selectedMasterKey, items)) {
+                        setConfirmModal({ ...confirmModal, isOpen: false });
+                      }
                     }
                   });
                 }
@@ -712,9 +746,13 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
           onConfirm={async () => {
             const items = [...masterData.projects];
             items.splice(projectDeleteTarget.index, 1);
-            await deleteDraftsByProject(projectDeleteTarget.name);
-            handleUpdate('projects', items);
-            setProjectDeleteTarget(null);
+            try {
+              await deleteDraftsByProject(projectDeleteTarget.name);
+              if (await handleUpdate('projects', items)) setProjectDeleteTarget(null);
+            } catch (error) {
+              console.error('工事データの削除に失敗しました', error);
+              alert('工事データの削除に失敗しました。通信状態を確認して、もう一度お試しください。');
+            }
           }}
         />
       )}
