@@ -117,14 +117,14 @@ export const getMasterData = async (): Promise<MasterData> => {
     }
   } catch (error) {
     console.error("マスタデータの読み込み失敗: ", error);
-    return INITIAL_MASTER_DATA;
+    throw error;
   }
 };
 
-// ■ マスタデータを保存する
-export const saveMasterData = async (data: MasterData): Promise<void> => {
+// ■ 変更したマスタ項目だけを保存し、他の項目は上書きしない
+export const saveMasterDataField = async (key: keyof MasterData, items: string[]): Promise<void> => {
   try {
-    await setDoc(doc(db, MASTER_COLLECTION, MASTER_DOC_ID), data);
+    await setDoc(doc(db, MASTER_COLLECTION, MASTER_DOC_ID), { [key]: items }, { merge: true });
   } catch (error) {
     console.error("マスタデータの保存失敗: ", error);
     throw error;

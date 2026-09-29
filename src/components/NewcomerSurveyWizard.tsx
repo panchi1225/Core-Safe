@@ -167,9 +167,12 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
       try { 
         const mData = await getMasterData(); 
         setMasterData({ ...INITIAL_MASTER_DATA, ...mData }); 
+      } catch (e) { console.error("データ取得エラー", e); }
+      // マスタの取得に失敗しても社員名簿は読み込む。
+      try {
         const eData = await fetchEmployees();
         setEmployees(eData);
-      } catch (e) { console.error("データ取得エラー", e); } 
+      } catch (e) { console.error("社員データ取得エラー", e); }
     }; 
     loadData(); 
   }, []);
