@@ -889,9 +889,9 @@ const App: React.FC = () => {
           </button>
 
           <button onClick={() => setCurrentView('BULK_DOWNLOAD')}
-            className="flex flex-col items-center p-8 bg-white rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-t-4 border-green-600 group">
-            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-green-100 transition-colors">
-              <i className="fa-solid fa-file-arrow-down text-4xl text-green-600"></i>
+            className="flex flex-col items-center p-8 bg-white rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-t-4 border-[#D4A017] group">
+            <div className="w-20 h-20 bg-[#FFF4CC] rounded-full flex items-center justify-center mb-4 group-hover:bg-[#FFE7A3] transition-colors">
+              <i className="fa-solid fa-file-arrow-down text-4xl text-[#D4A017]"></i>
             </div>
             <h3 className="text-lg font-bold text-gray-800 mb-2">帳票一括ダウンロード</h3>
             <p className="text-xs text-gray-500 text-center">現場・期間・帳票種別を指定して<br />PDFをまとめて保存します。</p>
