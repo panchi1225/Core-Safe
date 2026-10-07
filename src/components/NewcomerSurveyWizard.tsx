@@ -4,7 +4,9 @@ import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Q
 import { getMasterData, saveDraft, deleteDraftsByProject, fetchEmployees } from '../services/firebaseService';
 import { calculateCurrentExperience } from '../utils/experience';
 import SignatureCanvas from './SignatureCanvas';
+import { sanitizeReportData } from '../utils/reportRestore';
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
+import ReportPdfButton from './ReportPdfButton';
 
 interface Props {
   initialData?: any;
@@ -21,40 +23,6 @@ const range = (start: number, end: number) => Array.from({ length: end - start +
 const PRESET_JOB_TYPES = ["土工", "鳶", "大工", "オペ", "鉄筋工", "交通整理人"];
 
 // --- 安全装置 ---
-const sanitizeReportData = (data: any, useNewDefaults = !data): NewcomerSurveyReportData => {
-  let base = INITIAL_NEWCOMER_SURVEY_REPORT;
-
-  if (useNewDefaults) {
-    base = {
-      ...base,
-      experienceYears: null as any,
-      experienceMonths: null as any,
-      healthCheckYear: null as any,
-      healthCheckMonth: null as any,
-      healthCheckDay: null as any,
-      pledgeDateYear: null as any,
-      pledgeDateMonth: null as any,
-      pledgeDateDay: null as any,
-      project: "",
-      director: "",
-      company: ""
-    };
-
-    // 当日日付の自動設定
-    const today = new Date();
-    const reiwaYear = today.getFullYear() - 2018;
-    base.pledgeDateYear = reiwaYear;
-    base.pledgeDateMonth = today.getMonth() + 1;
-    base.pledgeDateDay = today.getDate();
-  }
-
-  if (data) {
-    const safeQualifications = { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...(data.qualifications || {}) };
-    base = { ...base, ...data, qualifications: safeQualifications };
-  }
-
-  return base;
-};
 
 // --- Modals ---
 interface ConfirmModalProps { 
@@ -692,6 +660,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
           {isDirectPreview ? 'ホームに戻る' : '閉じる'}
         </button>
         <div className="flex items-center gap-3">
+          <ReportPdfButton type="NEWCOMER_SURVEY" data={report} />
           <button
             onClick={handleSaveAndPrint}
             className="px-6 py-2 bg-pink-600 text-white rounded-lg font-bold text-sm hover:bg-pink-700 transition-colors shadow"

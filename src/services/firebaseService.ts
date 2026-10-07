@@ -2,6 +2,7 @@ import { db } from '../firebase';
 import { 
   collection, 
   getDocs, 
+  getDocsFromServer,
   deleteDoc, 
   doc, 
   query, 
@@ -10,15 +11,59 @@ import {
   setDoc,     
   addDoc,     
   getDoc,     
-  writeBatch
+  getDocFromServer,
+  writeBatch,
+  where,
+  documentId,
+  limit,
+  startAfter,
+  QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { SavedDraft, MasterData, INITIAL_MASTER_DATA, EmployeeData, DiagramImage } from '../types';
+import { exportItem, conditionError, ExportConditions, ExportItem } from '../utils/bulkReports';
 
 const DRAFTS_COLLECTION = 'drafts';
 const MASTER_COLLECTION = 'masterData';
 const MASTER_DOC_ID = 'general';
 const EMPLOYEES_COLLECTION = 'employees';
 const DIAGRAM_IMAGES_COLLECTION = 'diagramImages'; // 配置図元画像コレクション
+
+// The same client SDK and db as individual reports; never use Admin credentials or
+// a proxy that bypasses deployed Firestore Rules. Keep image-heavy data page-local.
+export const fetchExportItems = async (conditions: ExportConditions, signal?: AbortSignal): Promise<ExportItem[]> => {
+  const invalid = conditionError(conditions);
+  if (invalid) throw new Error(invalid);
+  const items: ExportItem[] = [];
+  let cursor: QueryDocumentSnapshot | undefined;
+  do {
+    signal?.throwIfAborted();
+    const constraints = [where('data.project', '==', conditions.project), orderBy(documentId()), limit(25)];
+    const page = await getDocsFromServer(query(collection(db, DRAFTS_COLLECTION), ...constraints, ...(cursor ? [startAfter(cursor)] : [])));
+    signal?.throwIfAborted();
+    for (const snapshot of page.docs) {
+      const raw = snapshot.data();
+      const item = exportItem({ id: snapshot.id, type: raw.type, data: raw.data,
+        lastModified: raw.lastModified instanceof Timestamp ? raw.lastModified.toMillis() : raw.lastModified }, conditions);
+      if (item) items.push(item);
+    }
+    cursor = page.size === 25 ? page.docs[page.size - 1] : undefined;
+  } while (cursor);
+  return items.sort((a, b) => a.date.localeCompare(b.date) || a.type.localeCompare(b.type) || a.id.localeCompare(b.id));
+};
+
+export const fetchExportDraft = async (item: ExportItem, conditions: ExportConditions): Promise<SavedDraft> => {
+  // Require a server read: offline cached data cannot prove current access.
+  const snapshot = await getDocFromServer(doc(db, DRAFTS_COLLECTION, item.id));
+  if (!snapshot.exists()) throw new Error('帳票が削除されています。対象件数を再確認してください。');
+  const raw = snapshot.data();
+  const draft: SavedDraft = { id: snapshot.id, type: raw.type, data: raw.data,
+    lastModified: raw.lastModified instanceof Timestamp ? raw.lastModified.toMillis() : raw.lastModified };
+  const current = exportItem(draft, conditions);
+  if (!current || current.type !== item.type || current.lastModified !== item.lastModified || current.date !== item.date || current.name !== item.name) {
+    throw new Error('確認後に帳票が変更されています。対象件数を再確認してください。');
+  }
+  return draft;
+};
 
 // ■ データを全件取得する
 export const fetchDrafts = async (): Promise<SavedDraft[]> => {
