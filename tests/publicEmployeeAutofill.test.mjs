@@ -57,6 +57,7 @@ const Wizard=(await loadModule('src/components/NewcomerSurveyWizard.tsx',{
   publicNewcomerService:`export const newSubmissionId=()=> 'id';export const submitPublicNewcomerSurvey=async()=>{};`,
   PublicEmployeeAutofill:`export default function Mock(props){globalThis.publicAutofillProps=props;return null;}`,
   'react-to-print':`export const useReactToPrint=()=>()=>{};`,SignatureCanvas:`export default()=>null;`,NewcomerSurveyPrintLayout:`export default()=>null;`,
+  ReportPdfButton:`export default()=>null;`,
 })).default;
 test('verified public autofill and normal staff name selection apply the same necessary fields, without a DOB check in staff mode',async()=>{
   globalThis.internalMaster=INITIAL_MASTER_DATA;globalThis.internalEmployees=[employee];let internal,publicTree;

@@ -3,6 +3,7 @@ import { MasterData, ReportData, WorkerSignature, INITIAL_REPORT, INITIAL_MASTER
 import { getMasterData, compressImage, saveDraft } from '../services/firebaseService';
 import SignatureCanvas from './SignatureCanvas';
 import PrintLayout from './PrintLayout';
+import ReportPdfButton from './ReportPdfButton';
 
 interface Props {
   initialData?: ReportData;
@@ -467,6 +468,7 @@ const SafetyTrainingWizard: React.FC<Props> = ({ initialData, initialDraftId, in
             {isDirectPreview ? 'ホームに戻る' : '閉じる'}
           </button>
           <div className="flex items-center gap-3">
+            <ReportPdfButton type="SAFETY_TRAINING" data={report} />
             <button
               onClick={handlePrint}
               className="px-6 py-2 bg-pink-600 text-white rounded-lg font-bold text-sm hover:bg-pink-700 transition-colors shadow"

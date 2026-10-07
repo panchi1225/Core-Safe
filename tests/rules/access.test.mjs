@@ -2,7 +2,7 @@ import { before, after, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, collection, getDoc, getDocs, setDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp, writeBatch } from 'firebase/firestore';
+import { doc, collection, getDoc, getDocs, getDocsFromServer, getDocFromServer, query, where, orderBy, documentId, limit, setDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp, writeBatch } from 'firebase/firestore';
 import { INITIAL_NEWCOMER_SURVEY_REPORT } from '../../src/types.ts';
 import { surveyPayload } from '../../src/utils/newcomerAccess.ts';
 
@@ -16,6 +16,15 @@ const submission = () => ({ type: 'NEWCOMER_SURVEY', token, project: '現場A', 
 const anon = () => env.unauthenticatedContext().firestore();
 const user = (uid = 'staff') => env.authenticatedContext(uid).firestore();
 const send = (body = submission(), id = 'new', db = anon()) => setDoc(doc(db, 'publicNewcomerSubmissions', id), body);
+test('integration export server queries/read deny anonymous and outsiders, allow staff, then deny revoked staff for both sources',async()=>{
+  for(const [name,field] of [['drafts','data.project'],['publicNewcomerSubmissions','project']]){
+    const page=db=>getDocsFromServer(query(collection(db,name),where(field,'==','現場A'),orderBy(documentId()),limit(25)));
+    for(const db of [anon(),user('outsider')]){await assertFails(page(db));await assertFails(getDocFromServer(doc(db,name,'existing')));}
+    const db=user();assert.equal((await assertSucceeds(page(db))).size,1);await assertSucceeds(getDocFromServer(doc(db,name,'existing')));
+    await seed('staffUsers/staff',{active:false});await assertFails(page(db));await assertFails(getDocFromServer(doc(db,name,'existing')));
+    await seed('staffUsers/staff',{active:true});
+  }
+});
 const seed = async (path, data) => env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), path), data));
 before(async () => {
   const rules = await readFile(new URL('../../firestore.rules', import.meta.url), 'utf8');

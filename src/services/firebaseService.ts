@@ -2,6 +2,7 @@ import { db } from '../firebase';
 import { 
   collection, 
   getDocs, 
+  getDocsFromServer,
   deleteDoc, 
   doc, 
   query, 
@@ -10,11 +11,13 @@ import {
   setDoc,     
   addDoc,     
   getDoc,     
-  writeBatch, updateDoc, serverTimestamp, where, limit, getDocFromServer
+  writeBatch, updateDoc, serverTimestamp, where, limit, getDocFromServer,
+  documentId, startAfter, QueryDocumentSnapshot
 } from 'firebase/firestore';
 import { SavedDraft, MasterData, INITIAL_MASTER_DATA, EmployeeData, DiagramImage } from '../types';
 import { asPublicDraft, reportLocation, surveyPayload } from '../utils/newcomerAccess';
 import { PUBLIC_FORMS, PUBLIC_SUBMISSIONS } from './publicNewcomerService';
+import { exportItem, conditionError, ExportConditions, ExportItem } from '../utils/bulkReports';
 
 const DRAFTS_COLLECTION = 'drafts';
 const MASTER_COLLECTION = 'masterData';
@@ -22,7 +25,7 @@ const MASTER_DOC_ID = 'general';
 const EMPLOYEES_COLLECTION = 'employees';
 const DIAGRAM_IMAGES_COLLECTION = 'diagramImages'; // 配置図元画像コレクション
 
-// Shared source adapter for individual reports and future PR #32 integration.
+// Shared source adapter for individual reports and bulk export.
 export const REPORT_SOURCES = [
   { collection: DRAFTS_COLLECTION, projectField: 'data.project' },
   { collection: PUBLIC_SUBMISSIONS, projectField: 'project' }
@@ -30,9 +33,12 @@ export const REPORT_SOURCES = [
 export async function getReportFromServer(id: string): Promise<SavedDraft> {
   const location = reportLocation(id);
   const snapshot = await getDocFromServer(doc(db, location.collection, location.id));
-  if (!snapshot.exists()) throw new Error('帳票が見つかりません。');
+  if (!snapshot.exists()) throw new Error('帳票が削除されているか見つかりません。対象件数を再確認してください。');
   const raw = snapshot.data();
-  if (location.collection === PUBLIC_SUBMISSIONS) return asPublicDraft(snapshot.id, raw);
+  if (location.collection === PUBLIC_SUBMISSIONS) {
+    if (raw.type !== 'NEWCOMER_SURVEY') throw new Error('確認後に帳票種別が変更されています。対象件数を再確認してください。');
+    return asPublicDraft(snapshot.id, raw);
+  }
   return { id: snapshot.id, type: raw.type, data: raw.data, lastModified: raw.lastModified instanceof Timestamp ? raw.lastModified.toMillis() : raw.lastModified };
 }
 
@@ -52,6 +58,48 @@ async function retireProjectPublicForms(projectName: string): Promise<void> {
     await batch.commit();
   }
 }
+
+// The same client SDK and db as individual reports; never use Admin credentials or
+// a proxy that bypasses deployed Firestore Rules. Paging bounds retained memory
+// only: Firestore still transfers complete image-heavy documents. A separate
+// lightweight index requires a coordinated migration (docs/bulk-export-metadata-plan.txt).
+export const fetchExportItems = async (conditions: ExportConditions, signal?: AbortSignal): Promise<ExportItem[]> => {
+  const invalid = conditionError(conditions);
+  if (invalid) throw new Error(invalid);
+  const items: ExportItem[] = [];
+  for (const source of REPORT_SOURCES) {
+    let cursor: QueryDocumentSnapshot | undefined;
+    do {
+    signal?.throwIfAborted();
+    const constraints = [where(source.projectField, '==', conditions.project), orderBy(documentId()), limit(25)];
+    const page = await getDocsFromServer(query(collection(db, source.collection), ...constraints, ...(cursor ? [startAfter(cursor)] : [])));
+    signal?.throwIfAborted();
+    for (const snapshot of page.docs) {
+      const raw = snapshot.data();
+      if (source.collection === PUBLIC_SUBMISSIONS && raw.type !== 'NEWCOMER_SURVEY') continue;
+      const draft = source.collection === PUBLIC_SUBMISSIONS ? asPublicDraft(snapshot.id, raw)
+        : { id: snapshot.id, type: raw.type, data: raw.data,
+          lastModified: raw.lastModified instanceof Timestamp ? raw.lastModified.toMillis() : raw.lastModified };
+      const item = exportItem(draft, conditions);
+      if (item) items.push(item);
+    }
+    cursor = page.size === 25 ? page.docs[page.size - 1] : undefined;
+    } while (cursor);
+  }
+  return items.sort((a, b) => a.date.localeCompare(b.date) || a.type.localeCompare(b.type) || a.id.localeCompare(b.id));
+};
+
+export const fetchExportDraft = async (item: ExportItem, conditions: ExportConditions, signal?: AbortSignal): Promise<SavedDraft> => {
+  // Require a server read: offline cached data cannot prove current access.
+  signal?.throwIfAborted();
+  const draft = await getReportFromServer(item.id);
+  signal?.throwIfAborted();
+  const current = exportItem(draft, conditions);
+  if (!current || current.type !== item.type || current.lastModified !== item.lastModified || current.date !== item.date || current.name !== item.name) {
+    throw new Error('確認後に帳票が変更されています。対象件数を再確認してください。');
+  }
+  return draft;
+};
 
 // ■ データを全件取得する
 export const fetchDrafts = async (): Promise<SavedDraft[]> => {

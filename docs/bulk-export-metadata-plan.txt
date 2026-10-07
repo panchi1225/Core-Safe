@@ -1,0 +1,99 @@
+一括PDF検索の軽量メタデータ化：互換性を保つ改善案（本PRでは未適用）
+
+PR #32＋#33統合時の追記
+検索元はREPORT_SOURCESのdrafts（data.project）とpublicNewcomerSubmissions（project）の両方。
+公開回答も署名を含む本文全体を件数確認時に転送し、生成直前にWeb SDKの社員権限で再取得する。
+25件ページングは保持メモリのみを制限する。この統合ではindex導入・migration・backfillは実施しない。
+将来のreportExportIndexはsourceCollection/sourceDocumentIdを持ち、index IDにもソースの名前空間を含めて旧新ID衝突を避ける。
+draftsのsaveDraft/removeDraft/現場削除に加え、公開create・社員による公開回答編集/削除を同期・バックフィル対象とする。
+匿名createを維持するにはAdminトリガー等によるindex同期が適する。匿名へindex read/writeを追加しない。
+氏名・ID・帳票存在を含むindexの全読取りをAuth＋staffUsers.activeの社員に限定し、両ソースの件数・整合性を照合する。
+以下の「アクセス制御調査」はPR #32単体時点の記録。統合版にはPR #33のAuth/Rules/Functionsが存在するが、本番設定は未確認・未反映。
+
+確認結果
+現行fetchExportItemsはdata.projectの等値で現場内のdraftsを全ページ取得し、期間・種別をクライアントで絞り込む。
+Firestore Web SDKはドキュメント全体を取得する。配列に画像を残さなくても転送量は減らない。
+生成直前のgetDocFromServerで対象帳票本体を再取得するので、対象の本体は2回取得する。
+25件のページ化はピーク保持メモリを抑えるが、現場内全件の通信量・読み取り回数は抑えない。
+現行draftsの日付は種別ごとに異なり、令和年月日、workDate、meetingDate、date、旧データのlastModifiedに分かれる。
+projectは名称文字列で、安定した現場ID・認証ユーザーとの紐付けはリポジトリでは確認できない。
+
+今回の判断
+破壊的変更や不完全な新旧検索の混在を避け、現行の保存・削除・検索とデータを維持する。
+既存データのバックフィル、全保存経路、index、デプロイ済みRulesとユーザー権限の確認が必要なため、今回移行しない。
+帳票本体に検索フィールドを追加するだけでは画像の転送を回避できない。軽量な別ドキュメントが必要。
+本番マージ前には現場内全件スキャンの残存コストを把握し、想定最大データで件数確認時間を検証する。
+
+推奨スキーマ（新しいコレクションの追加。draftsは保持）
+reportExportIndex/{draftId}
+  schemaVersion: 1
+  project: 既存のdata.projectと完全一致する名称文字列
+  type: DAILY_SAFETY | NEWCOMER_SURVEY | SAFETY_TRAINING | DISASTER_COUNCIL
+  reportDate: YYYY-MM-DD（現行reportDate関数と同じ規則）
+  dateSource: workDate | meetingDate | pledgeDate | date | lastModified
+  displayName: アンケート氏名、それ以外は空文字列
+  lastModified: 本体と同一のFirestore Timestamp
+住所・電話・健康情報・署名・写真・配置図・帳票本文は持たない。氏名も個人情報としてアクセス制御する。
+現場IDを将来導入するときは別の互換性移行として行い、本体とindexの現場識別を一致させる。
+日付不明を黙って除外しない。旧データの最終保存日フォールバックには移行時に合意したタイムゾーンを使用し、日付境界を照合する。
+
+新規・更新・削除データ
+同じdraftIdとlastModifiedで本体とindexをatomic writeBatchで保存する。
+新規は先にdoc(collection(...))でIDを確保し、set本体+set indexを同じbatchにする。
+更新は本体の現行merge挙動を保ち、indexの古いproject/type/date/nameを残さず置換する。
+削除は本体+indexのatomic batch。現場一括削除・従業員関連更新等、draftsへ書く全経路を棚卸しする。
+firebaseService.saveDraft/removeDraft/deleteDraftsByProjectとmockService等の別書込み経路を確認し、片方だけを更新しない。
+旧バージョンのクライアントがindexなしで書く可能性があるため、全クライアント更新の保証がなければサーバー側トリガーで同期する。
+トリガー方式は反映遅延・イベント順序・再送を想定し、lastModifiedを比較して古いイベントによる上書きを防ぐ。
+どちらの方式でも保存・削除時の権限とatomic性をエミュレータで確認してから採用する。
+
+既存データと移行方法
+1. 本番Auth/Rulesを確認し、バックアップと読み取り専用dry-runで全件を分類する。
+2. 対象件数、日付形式異常、現場名不整合、欠損、最大ドキュメントサイズを確認する。
+3. 本体を変更しない冪等バックフィルを、明示的に承認された管理用環境で実施する。
+   ページ・小さいバッチ・進捗記録・再開可能なカーソルを使用し、個人情報をログへ出さない。
+   再読込またはtransactionで本体の更新日時を比較し、移行中の更新を古いindexで上書きしない。
+   失敗件を記録し、未同期件がある現場は軽量検索へ切り替えない。
+4. 全書込み経路の同期を稼働させ、削除済みindexの検出も含めて現場単位で件数・ID・条件別結果を照合する。
+5. バックフィルと同期の完全性を確認した現場にだけ、管理側のバージョン付き完了フラグを設定する。
+6. 完了フラグのある現場は軽量index検索へ切替。未完了現場は現行全件検索を維持し、遅い方式であることを表示する。
+7. 新旧の条件別件数・ID・日付・権限拒否を照合してから段階公開する。問題時はフラグを戻す。
+既存draftsの削除・一括書換え・日付や現場名称の勝手な変更はしない。このPRで移行スクリプトは実行していない。
+
+Firestore側の検索とindex
+各選択種別ごとに軽量コレクションへ以下のクエリを実行し、ページ化して結果を結合する。
+where('project','==',project)
+where('type','==',type)
+where('reportDate','>=',start)
+where('reportDate','<=',end)
+orderBy('reportDate')
+orderBy(documentId())
+limit(適切なページサイズ)
+必要なcomposite indexはreportExportIndexのproject ASC, type ASC, reportDate ASC（__name__ ASC）。
+正式導入時にFirestoreの要求する定義を検証し、firestore.indexes.jsonをリポジトリ管理して事前デプロイする。
+orderByは欠損フィールドを返さないため、完了フラグと完全性照合が必要。
+件数だけは同じ条件のcount aggregationも検討する。PDF生成時は対象indexをページ取得し本体を1件ずつサーバー取得する。
+Security Rulesはフィルタではないため、検索条件と現場ACLが整合していなければクエリ全体が拒否される。
+
+Security Rulesへの影響と公開条件
+新コレクションの読み取りを本体と同等以下の権限にし、匿名公開や現場外アクセスを許可しない。
+resource.data.projectを勝手に書き換えたindexで別現場の帳票情報を取得できないよう、本体の所属・ユーザーACLと整合させる。
+クライアントatomic書込み方式ではgetAfter等で本体とindexの対応・更新日時・型・許可フィールドを検証する。
+サーバートリガー方式ではクライアントからindexへ書き込めないRulesにする。
+indexを通じてID・氏名・帳票存在を漏らすケース、未認証/別現場/失効ユーザーをエミュレータで検証する。
+既存権限構造が不明なため、具体的なRulesを推測して追加・緩和しない。
+
+本リポジトリのアクセス制御調査
+src/firebase.tsはinitializeApp/getFirestoreのみ。authDomain設定はあるがgetAuthやサインイン実装はない。
+src/services/mockService.tsの別初期化にもFirebase Authentication処理はない。
+追跡ファイルにfirebase.json、firestore.rules、firestore.indexes.json、Rules定義を確認できない。
+MasterSettingsに固定値によるクライアント内パスワード確認があるが、Firebase Authenticationやサーバー側ACLを構成しない。
+一括機能は既存dbとWeb SDKのgetDocsFromServer/getDocFromServerを使い、Admin SDKやRules迂回APIを追加していない。
+新機能がRulesに従うことと、本番Rulesが適切であることは別問題。本番のAuth設定、Rules内容、現場ACL、匿名読み取り可否は未確認。
+既存画面でデータが読めることだけで、適切なアクセス制御が確認済みとは判断しない。
+本番公開前にFirebase側で未認証・権限あり・別現場・失効の各条件を実データを漏らさない環境で検証する必要がある。
+
+参考（公式資料）
+https://firebase.google.com/docs/firestore/query-data/queries
+https://firebase.google.com/docs/firestore/query-data/indexing
+https://firebase.google.com/docs/firestore/security/rules-conditions

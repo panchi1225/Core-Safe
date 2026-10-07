@@ -35,7 +35,8 @@ const wizard = (await loadModule('src/components/NewcomerSurveyWizard.tsx', {
   publicNewcomerService: `export const newSubmissionId = () => 'new-id'; export const submitPublicNewcomerSurvey = (...a) => globalThis.wizardServices.submit(...a);`,
   publicEmployeeAutofillService: `export const listPublicEmployeeCandidates = async () => globalThis.wizardServices.candidates?.() ?? []; export const verifyEmployeeAutofill = async () => { throw new Error('Not verified'); };`,
   'react-to-print': `export const useReactToPrint = () => () => {};`,
-  SignatureCanvas: `export default () => null;`, NewcomerSurveyPrintLayout: `export default () => null;`
+  SignatureCanvas: `export default () => null;`, NewcomerSurveyPrintLayout: `export default () => null;`,
+  ReportPdfButton: `export default () => null;`
 })).default;
 test('public wizard never fetches employees or internal master; locks project/director and supports other company', async () => {
   let master = 0, employees = 0;

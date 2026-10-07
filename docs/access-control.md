@@ -72,6 +72,8 @@ CIはpull_requestでテストとビルドだけを実行し、Rulesやアプリ�
 
 ## PR #32との統合
 
+統合専用ブランチでは[統合検証ガイド](integration-access-bulk-pdf.md)のとおり両ソースの一括PDFと権限失効時中断を追加しています。以下はPR #33単体作成時点の導入方針の記録です。元のPR #32と#33のブランチは更新していません。
+
 このブランチはmain（7c9105e）から分岐し、未マージのPR #32を取り込んでいません。画像PDF、html2canvas/jsPDF、フォルダ保存、ZIP、逐次生成のコードは変更していません。
 
 この認証PR側で`REPORT_SOURCES`、`reportLocation()`、`asPublicDraft()`、`getReportFromServer()`を用意しました。認証対応を先に導入し、その後PR #32を最新mainへ合わせます。PR #32側の対象一覧取得はREPORT_SOURCESの両コレクションを社員権限で取得し、現場・日付・帳票種別を判定する必要があります。公開回答はtypeがNEWCOMER_SURVEY、現場フィールドはproject、旧データはdata.projectです。表示IDのprefixを保持し、PDF直前の再取得にgetReportFromServerを使ってください。既存の帳票日付・ファイル名・サニタイズ関数とPDFレンダラーは共用し、新旧双方を対象にするテストと、権限失効・ログアウト時にバッチを中止するテストをPR #32側へ追加します。現状PR #32との統合動作は未検証です。

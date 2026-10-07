@@ -30,7 +30,9 @@ import {
   removeDiagramImage,
   fetchEmployees,
 } from '../services/firebaseService';
+import { restoreDailySafetyReport } from '../utils/reportRestore';
 import DailySafetyPrintLayout from './DailySafetyPrintLayout';
+import ReportPdfButton from './ReportPdfButton';
 
 // ============================
 // STEP4: 巡視時間の選択肢（30分刻み 8:00〜16:00 の17個）
@@ -401,60 +403,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
 
   const [report, setReport] = useState<DailySafetyReportData>(() => {
     if (initialData) {
-      const restored = { ...initialData };
-      const si = restored.safetyInstructions || [];
-      // 【修正】10個に合わせてリストア
-      restored.safetyInstructions = Array.from(
-        { length: SAFETY_INSTRUCTIONS_COUNT },
-        (_, i) => si[i] || ''
-      );
-      if (!restored.actualWorkers) restored.actualWorkers = [];
-      if (!restored.step3AdditionalWorkEntries) restored.step3AdditionalWorkEntries = [];
-      if (!restored.step3MachineryEntries || !Array.isArray(restored.step3MachineryEntries)) restored.step3MachineryEntries = [];
-      if (!restored.step3MaterialEntries || !Array.isArray(restored.step3MaterialEntries)) restored.step3MaterialEntries = [];
-      /* 【修正】基本確認事項: 10項目対応のフォールバック（item8〜item10を補完） */
-      if (!restored.step3ConfirmationItems) {
-        restored.step3ConfirmationItems = { item1: '', item2: '', item3: '', item4: '', item5: '', item6: '', item7: '', item8: '', item9: '', item10: '' };
-      } else {
-        if (!('item8' in restored.step3ConfirmationItems)) (restored.step3ConfirmationItems as any).item8 = '';
-        if (!('item9' in restored.step3ConfirmationItems)) (restored.step3ConfirmationItems as any).item9 = '';
-        if (!('item10' in restored.step3ConfirmationItems)) (restored.step3ConfirmationItems as any).item10 = '';
-      }
-      /* 【修正】当現場確認事項: 10項目対応のフォールバック（item8〜item10を補完） */
-      if (!restored.step3SiteConfirmationItems) {
-        restored.step3SiteConfirmationItems = { item1: '', item2: '', item3: '', item4: '', item5: '', item6: '', item7: '', item8: '', item9: '', item10: '' };
-      } else {
-        if (!('item8' in restored.step3SiteConfirmationItems)) (restored.step3SiteConfirmationItems as any).item8 = '';
-        if (!('item9' in restored.step3SiteConfirmationItems)) (restored.step3SiteConfirmationItems as any).item9 = '';
-        if (!('item10' in restored.step3SiteConfirmationItems)) (restored.step3SiteConfirmationItems as any).item10 = '';
-      }
-      if (!restored.stageConfirmation) restored.stageConfirmation = '';
-      if (!restored.witnessConfirmation) restored.witnessConfirmation = '';
-      if (!restored.machineryEntries || !Array.isArray(restored.machineryEntries)) restored.machineryEntries = [''];
-      if (restored.participantsPrimeCount === undefined) restored.participantsPrimeCount = 0;
-      if (restored.participantsSubCompanyCount === undefined) restored.participantsSubCompanyCount = 0;
-      if (restored.participantsSubWorkerCount === undefined) restored.participantsSubWorkerCount = 0;
-      if (!restored.dumpTrucks) restored.dumpTrucks = { incoming: 0, outgoing: 0 };
-      if (!restored.patrolRecord) {
-        restored.patrolRecord = {
-          coordinationNotes: '',
-          inspector: '',
-          inspectionTime: '14:00',
-          findings: '',
-        };
-      }
-      /* STEP5: step5InspectionChecklistのフォールバック */
-      if (!restored.step5InspectionChecklist) {
-        restored.step5InspectionChecklist = INITIAL_DAILY_SAFETY_REPORT.step5InspectionChecklist;
-      }
-      /* 【修正1】既存データの workEntries に machine2 がない場合のフォールバック */
-      if (restored.workEntries) {
-        restored.workEntries = restored.workEntries.map((entry: any) => ({
-          ...entry,
-          machine2: entry.machine2 ?? '',
-        }));
-      }
-      return restored;
+      return restoreDailySafetyReport(initialData);
     }
     const init = { ...INITIAL_DAILY_SAFETY_REPORT };
     if (init.workEntries.length === 0) {
@@ -2708,6 +2657,7 @@ const DailySafetyWizard: React.FC<Props> = ({ initialData, initialDraftId, initi
               {isDirectPreview ? 'ホームに戻る' : '閉じる'}
             </button>
             <div className="flex items-center gap-3">
+              <ReportPdfButton type="DAILY_SAFETY" data={report} />
               {isDirectPreview && (
                 <>
                   <button

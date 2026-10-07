@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import PublicQRManager from './components/PublicQRManager';
 import SafetyTrainingWizard from './components/SafetyTrainingWizard';
 import DisasterCouncilWizard from './components/DisasterCouncilWizard';
@@ -6,6 +6,7 @@ import SafetyPlanWizard from './components/SafetyPlanWizard';
 import NewcomerSurveyWizard from './components/NewcomerSurveyWizard';
 import DailySafetyWizard from './components/DailySafetyWizard';
 import MasterSettings from './components/MasterSettings';
+const BulkReportDownload = lazy(() => import('./components/BulkReportDownload'));
 
 // Firebase機能
 import { fetchDrafts, removeDraft, fetchEmployees } from './services/firebaseService';
@@ -47,7 +48,7 @@ const ConfirmationModal: React.FC<ConfirmModalProps> = ({ isOpen, message, onCon
 };
 
 // ViewState 型: 'HOME' | すべてのReportTypeString | 'SETTINGS'
-type ViewState = 'HOME' | ReportTypeString | 'SETTINGS';
+type ViewState = 'HOME' | ReportTypeString | 'SETTINGS' | 'BULK_DOWNLOAD';
 
 // ============================
 // 【修正3】安全衛生日誌ドラフトから月を抽出するヘルパー関数
@@ -311,6 +312,10 @@ const App: React.FC = () => {
         onBackToMenu={() => { setCurrentView('HOME'); setWizardInitialStep(1); }}
       />
     );
+  }
+
+  if (currentView === 'BULK_DOWNLOAD') {
+    return <Suspense fallback={<p className="p-8 text-center">読み込み中…</p>}><BulkReportDownload onBack={() => setCurrentView('HOME')} /></Suspense>;
   }
 
   if (currentView === 'SETTINGS') {
@@ -881,6 +886,15 @@ const App: React.FC = () => {
             <p className="text-xs text-gray-500 text-center">
               新規入場者書類を作成します。<br />※QRコードから作成可能
             </p>
+          </button>
+
+          <button onClick={() => setCurrentView('BULK_DOWNLOAD')}
+            className="flex flex-col items-center p-8 bg-white rounded-xl shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 border-t-4 border-green-600 group">
+            <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-green-100 transition-colors">
+              <i className="fa-solid fa-file-arrow-down text-4xl text-green-600"></i>
+            </div>
+            <h3 className="text-lg font-bold text-gray-800 mb-2">帳票一括ダウンロード</h3>
+            <p className="text-xs text-gray-500 text-center">現場・期間・帳票種別を指定して<br />PDFをまとめて保存します。</p>
           </button>
 
           {/* Card 5: Master Settings */}
