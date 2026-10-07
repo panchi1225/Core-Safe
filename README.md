@@ -29,7 +29,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/17T1NzjZZ7wXz5fTDypiXZ1
 
 ## 帳票一括ダウンロード
 
-社員認証と一括PDFを組み合わせた検証専用ブランチです。[統合方針・検証・未確認事項](docs/integration-access-bulk-pdf.md)を参照してください。公開QRから一括ダウンロードは利用できません。旧draftsと公開回答の新規入場者アンケートは両方が対象です。
+社員認証と一括PDFを組み合わせたPR #34の最終統合候補です。[統合記録](docs/integration-access-bulk-pdf.md)、[Windows Chrome実機確認](docs/windows-chrome-verification.md)、[未実行の本番導入手順](docs/production-rollout.md)、[依存監査](docs/dependency-audit.md)を参照してください。公開QRから一括ダウンロードは利用できません。旧draftsと公開回答の新規入場者アンケートは両方が対象です。
 
 ホームの「帳票一括ダウンロード」から、現場・開始日・終了日・帳票種別を指定し、「対象件数を確認」→「PDF一括保存」を押します。安全衛生日誌、新規入場者アンケート、安全訓練、災害防止協議会に対応します。
 
@@ -47,9 +47,9 @@ View your app in AI Studio: https://ai.studio/apps/drive/17T1NzjZZ7wXz5fTDypiXZ1
 
 ### データ取得とメモリ
 
-既存のFirebase Web SDK・`db`を使用し、Admin SDKや権限を迂回するAPIは追加しません。現場を指定したクエリで25件ずつ取得し、一覧にはID・種別・日付・氏名・更新日時だけを保持します。一括機能は`getDocsFromServer`／`getDocFromServer`でサーバーから取得し、オフラインの古いキャッシュで権限確認を省略しません。生成時に1件ずつ再取得して、取得拒否・変更・削除を検出します。リポジトリにはAuthenticationの実装やSecurity Rulesの定義がないため、デプロイ済みRulesの現場・ユーザー別の権限保証はFirebase側で確認が必要です。この変更でRulesを緩和することはありません。
+一括PDFは既存のFirebase Web SDK・`db`を使用し、権限を迂回するAdmin取得APIを追加しません。現場を指定したクエリで25件ずつ取得し、一覧にはID・種別・日付・氏名・更新日時だけを保持します。`getDocsFromServer`／`getDocFromServer`でサーバーから取得し、オフラインの古いキャッシュで権限確認を省略しません。生成時に1件ずつ再取得して、取得拒否・変更・削除を検出します。PR #34にはAuthenticationとfirestore.rulesがあり、認証かつstaffUsers.active社員の保護を定義します。本番反映・現在のRulesは未確認です。現場別ACLは導入しておらず、許可社員は全現場を利用するモデルです。
 
-25件のページ取得と軽量な一覧配列は保持メモリへの対策です。Firestoreは各帳票本体（画像を含む）を転送するため、件数確認の通信量を削減していません。選択帳票は生成直前に再取得します。軽量な別コレクション・サーバー側絞り込みへの改善案と、安全に移行する前提は[docs/bulk-export-metadata-plan.txt](docs/bulk-export-metadata-plan.txt)に整理しています。このPRでは保存形式・既存データ・Rulesを変更せず、移行を行いません。
+25件のページ取得と軽量な一覧配列は保持メモリへの対策です。Firestoreは各帳票本体（画像を含む）を転送するため、件数確認の通信量を削減していません。選択帳票は生成直前に再取得します。軽量な別コレクション・サーバー側絞り込みへの改善案と、安全に移行する前提は[メタデータ案](docs/bulk-export-metadata-plan.txt)に整理しています。メタデータ移行や、そのためのRules変更は行いません。
 
 PDFごとに生成→保存→canvas・iframe・画像URLの解放を行います。ZIPはOPFSとWeb Locksが利用可能ならOPFSへ逐次書き込み、利用できなければZIPバイトのみをメモリに保持し、256MBを上限にします。ZIP結果を画面で保持している間は手動ダウンロードが可能です。結果を破棄した後にダウンロード猶予を置いて一時ファイルを削除します。
 
@@ -60,7 +60,7 @@ ZIPのメモリ上限を事前検出した場合は、それまでのPDFを有�
 ### 検証
 
 ```sh
-npm ci
+npm ci --ignore-scripts
 npm test
 npm run typecheck
 npm run build

@@ -40,12 +40,7 @@ URLのtokenを消さず、再読み込みでも同じ公開入口を保持しま
 
 ## 本番設定を人が行う手順（未実行）
 
-1. 本番の現行Rules・Firestore設定・既存コレクションを確認し、バックアップとロールバック手順を用意する。staffUsers等の新しい名称が本番にすでに存在する場合は内容を監査し、無条件に上書きしない。
-2. ステージングFirebaseでEmail/PasswordプロバイダとWeb設定、authorized domains（GitHub Pagesならpanchi1225.github.io）を確認する。テスト用demo設定を本番ビルドに流用しない。
-3. Firebase Consoleで管理者が社員Authアカウントを発行し、その正確なUIDのstaffUsersにactiveを登録する。クライアントの自己登録で社員許可を作らない。Console/IAM管理者を限定する。取消時はstaffUsers.active=falseで即時にデータアクセスを止め、必要に応じAuthアカウントも無効化する。
-4. 本Rulesをステージングに反映して本物の社員権限・匿名フォーム・無効化・期限切れを検証する。既存データの読取・保存・削除・4帳票の印刷を確認する。
-5. 本番導入は承認後、メンテナンス時間に新フロントとRulesを整合させて反映する。旧画面のまま新Rulesだけ反映すると社員機能と旧QRが利用できなくなる。逆順でもRules反映までサーバーの保護は完了しない。準備した許可UID以外がactiveになっていないことも確認する。
-6. 社員ログイン後に現場ごとの期限付きQRを発行し直し、掲示物を交換する。tokenなしの旧QRは再発行依頼画面になり、送信の迂回経路にはならない。
+PR #34の[本番導入・切戻し手順](production-rollout.md)を使用してください。現行Rulesの保存・構造確認、AuthアカウントとUID台帳、Secret/IAM、事前buildを準備し、メンテナンス中に新Rulesを反映して伝播を確認してからstaffUsers.activeを登録し、2Functions、Pages、期限付きQRの順で切り替えます。旧Rulesが未確認のまま許可UIDや公開有効QRを先行登録しません。今回の本番確認・変更は一切行っていません。
 
 複合indexはこのPRでは不要です。社員限定の一覧はlastModified/createdAtの単一フィールドorderBy、現場削除はprojectへの単一フィールド等価クエリです。本番で単一フィールドindexを無効化している場合は管理者が確認してください。匿名の一覧取得を許可するRulesではありません。
 
@@ -66,20 +61,18 @@ git diff --check
 
 Rulesテストは起動済みサーバーに勝手に本番接続せず、Firebase CLIが起動したdemo Emulatorで行います。`tests/rules/access.test.mjs`の拒否系だけでなく正常な作成・編集も実行します。プロキシ環境では127.0.0.1/localhostをNO_PROXYへ追加してください。
 
-ブラウザ検証用には別ターミナルで`npx firebase emulators:start --only auth,firestore --project demo-core-safe`を起動。`FIRESTORE_EMULATOR_HOST=127.0.0.1:18080 node tests/seed-local.mjs`で架空データを用意し、`VITE_USE_FIREBASE_EMULATORS=true npm run dev`を実行します。PowerShellでは`$env:変数名='値'`で指定してください。staff@core-safe.local / Local-test-12345!はローカル専用の架空アカウントです。outsider@core-safe.localは同じパスワードでAuth認証できますが社員許可がありません。本番へ作成しないでください。
+ブラウザ検証用にはFunctions依存導入・build:functionsとローカル専用の架空鍵を準備してから、別ターミナルで`npx firebase emulators:start --only auth,firestore,functions --project demo-core-safe`を起動（鍵を上書きしない詳細は[Functionsガイド](public-employee-autofill.md)）。`FIRESTORE_EMULATOR_HOST=127.0.0.1:18080 node tests/seed-local.mjs`で架空データを用意し、`VITE_USE_FIREBASE_EMULATORS=true npm run dev`を実行します。PowerShellでは`$env:変数名='値'`で指定してください。staff@core-safe.local / Local-test-12345!はローカル専用の架空アカウントです。outsider@core-safe.localは同じパスワードでAuth認証できますが社員許可がありません。本番へ作成しないでください。
 
 CIはpull_requestでテストとビルドだけを実行し、Rulesやアプリをデプロイしません。Node/Javaセットアップは[公式Node Action](https://github.com/actions/setup-node)と[公式Java Action](https://github.com/actions/setup-java)を使用します。
 
-## PR #32との統合
+## PR #34の最終統合候補
 
-統合専用ブランチでは[統合検証ガイド](integration-access-bulk-pdf.md)のとおり両ソースの一括PDFと権限失効時中断を追加しています。以下はPR #33単体作成時点の導入方針の記録です。元のPR #32と#33のブランチは更新していません。
+PR #34はPR #32/#33のコミットを両方含みます。[統合記録](integration-access-bulk-pdf.md)に競合解消、両ソースserver read、個別PDF共用、権限取消/ログアウト時の中断を記録しています。PR #34採用時は元PRの個別mergeは不要です。元ブランチは変更せず、今回main mergeやcloseは行いません。
 
-このブランチはmain（7c9105e）から分岐し、未マージのPR #32を取り込んでいません。画像PDF、html2canvas/jsPDF、フォルダ保存、ZIP、逐次生成のコードは変更していません。
+## Windows確認と残る確認
 
-この認証PR側で`REPORT_SOURCES`、`reportLocation()`、`asPublicDraft()`、`getReportFromServer()`を用意しました。認証対応を先に導入し、その後PR #32を最新mainへ合わせます。PR #32側の対象一覧取得はREPORT_SOURCESの両コレクションを社員権限で取得し、現場・日付・帳票種別を判定する必要があります。公開回答はtypeがNEWCOMER_SURVEY、現場フィールドはproject、旧データはdata.projectです。表示IDのprefixを保持し、PDF直前の再取得にgetReportFromServerを使ってください。既存の帳票日付・ファイル名・サニタイズ関数とPDFレンダラーは共用し、新旧双方を対象にするテストと、権限失効・ログアウト時にバッチを中止するテストをPR #32側へ追加します。現状PR #32との統合動作は未検証です。
+2026-10-08に人間がdemo-core-safeと架空データのWindows Chromeで、実フォルダへのPDF保存・目視・重複連番・ZIP展開、公開QRの生年月日照合/自動入力/署名/公開提出から社員一覧/一括PDF対象化まで確認しました。[実機記録](windows-chrome-verification.md)を参照してください。
 
-## 残る確認
+本番Firebase/Authentication/Rules/Functions/Secret/IAM/App Checkは未確認です。本番実スマートフォン、iOS Safari、Android Chrome、Edgeの全機能、実運用大量件数、実ディスク容量不足のOS挙動、本番権限取消中バッチ、全4帳票の通常入力・編集・保存・従来印刷の網羅確認も含めて未確認範囲を区別します。
 
-本番の現行Rules、Authプロバイダ・UID・authorized domains・index設定・Console/IAM権限・App Check・データ量は未確認です。スマートフォンのカメラから実QRを開く操作、iOS/Safari/Android/Edgeの実端末、実署名、実際の印刷PDF保存、長時間オフライン、PR #32との組合せは本番投入前にステージングで確認してください。Chromeのローカルエミュレータ画面とスマートフォン幅、匿名の社内データ取得ゼロのコンポーネントテストは別の検証です。
-
-依存監査では既存mainにもあるfabric 7.2.0、Firebase 12.9.0配下の@grpc/grpc-js 1.9.15とwebsocket-driver 0.7.4に警告があります。このPRで本番依存のバージョンは変更せず、互換性を評価した更新は別途必要です。ビルドには既存Firebase SDKを含む500KB超チャンクの警告があります。
+[依存監査](dependency-audit.md)に現行mainとの比較とブラウザ配布モジュールの確認を記録しました。rootの警告は残り、Functionsは0件です。互換性未検証のforce更新はしていません。既存の500KB超チャンク警告も残ります。

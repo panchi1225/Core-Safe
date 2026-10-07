@@ -61,16 +61,16 @@ Functionsの実HTTPテストはdemo-core-safe限定。起動スクリプトが�
 
 新規Functions依存のgaxios 6.7.1配下でuuidの利用がv4のみであることを確認し、API互換性のある修正版11.1.1以上へ限定overrideしています。既存フロント依存は変更していません。
 
+## Windows Chrome実機確認
+
+2026-10-08に利用者がdemo-core-safeだけで、ログイン不要QRから架空社員「検証 社員」を選択し、19950101による照合・自動入力・署名・公開送信に成功したことを報告しました。社員一覧で追加回答が合計6件の一括PDF対象へ反映されるまで確認済みです。[確認範囲](windows-chrome-verification.md)に記録しています。本番・実スマートフォンの確認ではありません。
+
 ## 将来の本番設定・デプロイ（未実行）
 
-1. 社員認証・staffUsers・Rulesの導入手順をステージングで完了し、既存employeesの生年月日形式と公開可能な氏名範囲を確認。
-2. 管理者がFunctions用の課金プラン・API・IAM・Firestoreへの実行サービスアカウント権限・asia-northeast1の利用を確認し、必要範囲に限定。
-3. Secret ManagerにEMPLOYEE_AUTOFILL_KEYを32バイト乱数hexとして登録し、実行サービスアカウントだけに参照権限を付与。リポジトリ／静的サイトへ鍵を含めない。
-4. Node 22でFunctions依存をclean installしてbuild。人がステージングへ`firebase deploy --only functions:listPublicEmployeeCandidates,functions:verifyEmployeeAutofill --project <staging-project>`を実行。公開Callableを呼べるCloud Run invoker設定を確認。CORSは本番GitHub Pages originを許可しているため、別のステージングoriginは明示的にコードへ設定。
-5. Rulesをレビューしステージングに反映。WebのregionとAPIを整合させ、匿名の直接Firestore拒否、候補・全照合・制限・手入力を実機検証。
-6. カウンタexpiresAtのTTL、ログ保持・監視・予算通知を必要に応じ設定。TTLはレート制限の正しさに必須ではありません。
-7. 別途承認後にのみ本番鍵・Functions・Rules・フロントを反映。CLIのprojectを毎回明示し、架空鍵は本番で使用しない。
+[PR #34の本番導入手順](production-rollout.md)にcore-safeへの正確な2Functions限定deploy、Secret生成/登録、実行SAの最小権限候補、Rules/Pagesの切替と切戻しをまとめました。FunctionsのserviceAccountは現行コードで未指定なので、実際のSA/IAMを管理者が確認できるまで投入を保留します。Secret値をリポジトリやCIへ保存しません。
 
-このPR更新ではAuth／Rules／Functions／Hosting／App Checkの本番反映、社員データの一括変更は行いません。CIにもデプロイはありません。
+Web初期化は本番core-safe固定、CORSは本番Pages origin固定です。別Firebase/別originのステージングへこのままdeployする手順ではなく、別途Web設定とCORSのレビューが必要です。現在確認した環境はdemo Emulatorのみです。カウンタTTLは任意で、レート制限の正しさはTTL削除に依存しません。
+
+本作業ではAuth／Rules／Functions／Hosting／Pages／Secret／App Checkの本番反映や、社員データ変更を行いません。CIにもdeployはありません。
 
 参考: [Callable Functions](https://firebase.google.com/docs/functions/callable)、[ローカル検証](https://firebase.google.com/docs/functions/local-emulator)、[Secret管理](https://firebase.google.com/docs/functions/config-env)。
