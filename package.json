@@ -7,6 +7,10 @@
   "scripts": {
     "test": "node --test src/utils/*.test.mjs tests/*.test.mjs",
     "test:rules": "firebase emulators:exec --only firestore --project demo-core-safe \"node --test tests/rules/*.test.mjs\"",
+    "test:functions": "npm --prefix functions test",
+    "test:functions:emulator": "npm --prefix functions run build && node scripts/test-functions-emulator.mjs",
+    "typecheck:functions": "npm --prefix functions run typecheck",
+    "build:functions": "npm --prefix functions run build",
     "typecheck": "tsc --noEmit",
     "dev": "vite",
     "build": "vite build",

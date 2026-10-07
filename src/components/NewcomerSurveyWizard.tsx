@@ -6,6 +6,8 @@ import { PublicNewcomerForm } from '../utils/newcomerAccess';
 import { newSubmissionId, submitPublicNewcomerSurvey } from '../services/publicNewcomerService';
 import SignatureCanvas from './SignatureCanvas';
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
+import PublicEmployeeAutofill from './PublicEmployeeAutofill';
+import type { EmployeeAutofillData } from '../services/publicEmployeeAutofillService';
 
 interface Props {
   initialData?: any;
@@ -226,7 +228,10 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
     
     const emp = employees.find(e => e.id === empId);
     if (!emp) return;
-    
+    applyEmployeeAutofill(emp);
+  };
+
+  const applyEmployeeAutofill = (emp: EmployeeData | EmployeeAutofillData) => {
     const currentExperience = calculateCurrentExperience(emp.experienceYears, emp.experienceMonths);
 
     const isPreset = PRESET_JOB_TYPES.includes(emp.jobType);
@@ -235,11 +240,12 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
 
     updateReport({
       company: "松浦建設株式会社",
+      ...(isPublicEntry ? { companyInputType: publicForm?.contractorOptions.includes('松浦建設株式会社') ? 'master' as const : 'other' as const } : {}),
       nameSei: emp.nameSei,
       nameMei: emp.nameMei,
       furiganaSei: emp.furiganaSei,
       furiganaMei: emp.furiganaMei,
-      birthEra: emp.birthEra,
+      birthEra: emp.birthEra as NewcomerSurveyReportData['birthEra'],
       birthYear: emp.birthYear,
       birthMonth: emp.birthMonth,
       birthDay: emp.birthDay,
@@ -437,6 +443,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
         }
         {isPublicEntry && <div className="bg-purple-50 p-4 rounded"><p>現場名：{publicForm?.project}</p><p>作業所長：{publicForm?.director}</p></div>}
         {/* 社員自動入力 */}
+        {isPublicEntry && publicForm && <PublicEmployeeAutofill token={publicForm.token} onVerified={applyEmployeeAutofill} />}
         {!isPublicEntry &&
         <div className="bg-green-50 p-4 rounded border border-green-200 w-full">
            <div className="text-sm text-green-700 font-bold mb-2">

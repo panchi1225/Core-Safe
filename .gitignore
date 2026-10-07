@@ -27,3 +27,7 @@ pdf_screenshot.png
 # Local Firebase emulator / test artifacts
 .firebase/
 tests/.generated-*.mjs
+functions/lib/
+functions/.secret.local
+functions/.env*
+!functions/.env.example

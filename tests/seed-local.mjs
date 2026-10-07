@@ -22,7 +22,7 @@ await env.withSecurityRulesDisabled(async c => {
   const db = c.firestore();
   await setDoc(doc(db, 'staffUsers', staffUid), { active: true });
   await setDoc(doc(db, 'masterData/general'), { ...INITIAL_MASTER_DATA, projects: ['検証現場'], supervisors: ['検証所長'], contractors: ['検証会社'] });
-  await setDoc(doc(db, 'employees/synthetic'), { ...report, nameMei: '社員', experienceYears: 1, experienceMonths: 0 });
+  await setDoc(doc(db, 'employees/synthetic'), { ...report, nameMei: '社員', birthYear: 7, experienceYears: 1, experienceMonths: 0, sealImage: 'PRIVATE-ELECTRONIC-SEAL' });
   await setDoc(doc(db, 'publicNewcomerForms', token), { project: report.project, director: report.director, active: true, createdAt: Timestamp.now(), createdBy: 'staff', expiresAt: Timestamp.fromMillis(Date.now() + 86400000), contractorOptions: ['検証会社'] });
   await setDoc(doc(db, 'drafts/legacy-survey'), { type: 'NEWCOMER_SURVEY', data: { ...report, nameSei: '旧', name: '旧太郎' }, lastModified: Timestamp.now() });
   await setDoc(doc(db, 'publicNewcomerSubmissions/public-survey'), { type: 'NEWCOMER_SURVEY', token, project: report.project, director: report.director, company: report.company, data: surveyPayload({ ...report, nameSei: '公開' }), createdAt: Timestamp.now(), lastModified: Timestamp.now() });
