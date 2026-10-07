@@ -29,7 +29,9 @@ const EMPLOYEES_COLLECTION = 'employees';
 const DIAGRAM_IMAGES_COLLECTION = 'diagramImages'; // 配置図元画像コレクション
 
 // The same client SDK and db as individual reports; never use Admin credentials or
-// a proxy that bypasses deployed Firestore Rules. Keep image-heavy data page-local.
+// a proxy that bypasses deployed Firestore Rules. Paging bounds retained memory
+// only: Firestore still transfers complete image-heavy documents. A separate
+// lightweight index requires a coordinated migration (docs/bulk-export-metadata-plan.txt).
 export const fetchExportItems = async (conditions: ExportConditions, signal?: AbortSignal): Promise<ExportItem[]> => {
   const invalid = conditionError(conditions);
   if (invalid) throw new Error(invalid);

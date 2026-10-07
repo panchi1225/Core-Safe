@@ -71,18 +71,39 @@ export function fileName(item: ExportItem): string {
 }
 
 export interface ExportFailure { item: ExportItem; message: string }
-export interface BatchResult { succeeded: number; failures: ExportFailure[]; cancelled: boolean }
+export class PdfDestinationError extends Error {
+  constructor(message: string, cause?: unknown) {
+    super(message, { cause });
+    this.name = 'PdfDestinationError';
+  }
+}
+export function isDestinationError(error: unknown): error is PdfDestinationError {
+  return error instanceof Error && error.name === 'PdfDestinationError';
+}
+export interface BatchResult {
+  succeeded: number; failures: ExportFailure[]; cancelled: boolean;
+  unprocessed: ExportItem[]; destinationError?: string;
+}
 
 // Only one generate+save promise is in flight; no PDF/DOM/canvas collection is retained.
 export async function runBatch(items: ExportItem[], process: (item: ExportItem) => Promise<void>,
   progress: (done: number, total: number, item: ExportItem) => void, cancelled: () => boolean = () => false): Promise<BatchResult> {
-  const result: BatchResult = { succeeded: 0, failures: [], cancelled: false };
+  const result: BatchResult = { succeeded: 0, failures: [], cancelled: false, unprocessed: [] };
   for (let index = 0; index < items.length; index++) {
-    if (cancelled()) { result.cancelled = true; break; }
+    if (cancelled()) { result.cancelled = true; result.unprocessed = items.slice(index); break; }
     const item = items[index];
     progress(index, items.length, item);
     try { await process(item); result.succeeded++; }
-    catch (error) { result.failures.push({ item, message: error instanceof Error ? error.message : 'PDF保存に失敗しました。' }); }
+    catch (error) {
+      if (isDestinationError(error)) {
+        result.destinationError = error.message;
+        // The failing write is not a saved report; include it in the remaining
+        // work. Do not generate even one additional PDF after a sink failure.
+        result.unprocessed = items.slice(index);
+        break;
+      }
+      result.failures.push({ item, message: error instanceof Error ? error.message : 'PDF保存に失敗しました。' });
+    }
     progress(index + 1, items.length, item);
     await new Promise(resolve => setTimeout(resolve, 0));
   }

@@ -21,17 +21,23 @@ function Harness() {
   const [message, setMessage] = useState('');
   const [output, setOutput] = useState<Blob | null>(null);
   const [written, setWritten] = useState(0);
+  const [generated, setGenerated] = useState(0);
+  const [pickerCalls, setPickerCalls] = useState(0);
+  const writeAttempts = useRef(0);
   const didFail = useRef(false);
   const fakeDirectory: DirectoryHandle = {
     async getDirectoryHandle() { return fakeDirectory; },
     async getFileHandle(_name, options) {
       if (!options?.create) throw new DOMException('missing', 'NotFoundError');
-      return { async createWritable() { return { async write() { setWritten(n => n + 1); }, async close() {}, async abort() {} }; } };
+      return { async createWritable() { return { async write() {
+        if (++writeAttempts.current === 50 && mode === 'fatal') throw new DOMException('検証用ディスク容量不足', 'QuotaExceededError');
+        setWritten(n => n + 1);
+      }, async close() {}, async abort() {} }; } };
     },
   };
   const testWindow = window as unknown as { showDirectoryPicker?: () => Promise<DirectoryHandle> };
   testWindow.showDirectoryPicker = mode === 'zip' ? undefined : mode === 'cancel'
-    ? () => Promise.reject(new DOMException('cancelled', 'AbortError')) : () => Promise.resolve(fakeDirectory);
+    ? () => Promise.reject(new DOMException('cancelled', 'AbortError')) : () => { setPickerCalls(n => n + 1); return Promise.resolve(fakeDirectory); };
   const records: SavedDraft[] = scenario === 'empty' ? [] : scenario === 'case3'
     ? Array.from({ length: 300 }, (_, i) => ({ id: `d${i}`, type: 'DAILY_SAFETY', data: diary, lastModified: 100 }))
     : [...Array.from({ length: 31 }, (_, i) => ({ id: `d${i}`, type: 'DAILY_SAFETY' as const, data: { ...diary, workDate: `2026-10-${String(i + 1).padStart(2, '0')}` }, lastModified: 100 })),
@@ -41,6 +47,7 @@ function Harness() {
     async fetchExportItems(conditions: ExportConditions) { return records.map(draft => exportItem(draft, conditions)).filter(item => item !== null); },
     async fetchExportDraft(item: { id: string }) { return records.find(draft => draft.id === item.id)!; },
     async generatePdf(item: ExportItem) {
+      setGenerated(n => n + 1);
       if (scenario !== 'case3') return generateReportPdf(item.type, records.find(draft => draft.id === item.id)!.data);
       await new Promise(resolve => setTimeout(resolve, 5));
       if (scenario === 'case3' && item.id === 'd100' && !didFail.current) { didFail.current = true; throw new Error('テスト用の1件失敗'); }
@@ -66,9 +73,9 @@ function Harness() {
   };
   return <><div className="p-3 bg-yellow-100 space-x-3">
     <span>架空データ・本番接続なし</span>
-    <label>検証ケース <select aria-label="検証ケース" value={scenario} onChange={e => { setScenario(e.target.value); setWritten(0); didFail.current = false; }}><option value="case1">ケース1：日誌31件</option><option value="case2">ケース2：31＋18件</option><option value="case3">ケース3：300件中1件失敗</option><option value="empty">0件</option></select></label>
-    <label>検証保存先 <select aria-label="検証保存先" value={mode} onChange={e => setMode(e.target.value)}><option value="folder">メモリ内のフォルダ</option><option value="zip">実ZIP</option><option value="cancel">フォルダ選択キャンセル</option></select></label>
-    <span>書込み完了 {written}件</span>
+    <label>検証ケース <select aria-label="検証ケース" value={scenario} onChange={e => { setScenario(e.target.value); setWritten(0); setGenerated(0); setPickerCalls(0); writeAttempts.current = 0; didFail.current = false; }}><option value="case1">ケース1：日誌31件</option><option value="case2">ケース2：31＋18件</option><option value="case3">ケース3：300件中1件失敗</option><option value="empty">0件</option></select></label>
+    <label>検証保存先 <select aria-label="検証保存先" value={mode} onChange={e => { setMode(e.target.value); setWritten(0); setGenerated(0); setPickerCalls(0); writeAttempts.current = 0; }}><option value="folder">メモリ内のフォルダ</option><option value="zip">実ZIP</option><option value="cancel">フォルダ選択キャンセル</option><option value="fatal">50件目の保存先致命エラー</option></select></label>
+    <span>書込み完了 {written}件 ／ 生成 {generated}件 ／ フォルダ選択 {pickerCalls}回</span>
     <button className="border p-2" onClick={() => void samples()}>実PDF4帳票を検証</button>
     {output && <button className="border p-2" onClick={() => downloadBlob(output, 'Core-Safe-test-pdfs.zip')}>検証PDF ZIPを保存</button>}
     <p role="status">{message}</p>
