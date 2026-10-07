@@ -14,6 +14,39 @@ const service = await loadModule('src/services/firebaseService.ts', { firebase, 
 const publicService = await loadModule('src/services/publicNewcomerService.ts', { firebase, 'firebase/firestore': sdk });
 const record = (id, raw) => ({ id, data: () => raw });
 const form = { token: '11111111-1111-4111-8111-111111111111', project: '現場', director: '所長', expiresAt: Date.now()+3600000, active: true, contractorOptions: ['会社'] };
+const organizationMasterFields = ['projects', 'supervisors', 'workplaces', 'contractors', 'locations'];
+
+test('missing staff master uses empty organization choices and generic templates without initializing Firestore', async () => {
+  const reads = [];
+  globalThis.sdkMock = { writes: [], getDoc(ref) { reads.push(ref); return { exists: () => false }; } };
+  const master = await service.getMasterData();
+  assert.deepEqual(reads, [{ collection: 'masterData', id: 'general' }]);
+  for (const field of organizationMasterFields) assert.deepEqual(master[field], []);
+  for (const value of Object.values(master)) assert.ok(Array.isArray(value));
+  for (const field of ['roles', 'topics', 'jobTypes', 'goals', 'predictions', 'countermeasures']) assert.ok(master[field].length > 0);
+  assert.deepEqual(globalThis.sdkMock.writes, []);
+});
+
+test('partial staff master falls back safely without replacing explicitly empty saved templates', async () => {
+  globalThis.sdkMock = { writes: [], getDoc() { return { exists: () => true, data: () => ({ topics: [], goals: [], locations: ['架空会議室'] }) }; } };
+  const master = await service.getMasterData();
+  for (const field of organizationMasterFields.filter(field => field !== 'locations')) assert.deepEqual(master[field], []);
+  assert.deepEqual(master.locations, ['架空会議室']);
+  assert.deepEqual(master.topics, []); assert.deepEqual(master.goals, []);
+  for (const value of Object.values(master)) assert.ok(Array.isArray(value));
+  assert.deepEqual(globalThis.sdkMock.writes, []);
+});
+
+test('saved staff organization choices take priority and field registration preserves other master fields', async () => {
+  const stored = { projects: ['架空工事'], supervisors: ['架空所長'], workplaces: ['架空作業所'], contractors: ['架空会社'], locations: ['架空場所'] };
+  globalThis.sdkMock = { writes: [], getDoc() { return { exists: () => true, data: () => stored }; } };
+  const master = await service.getMasterData();
+  for (const field of organizationMasterFields) assert.deepEqual(master[field], stored[field]);
+  assert.deepEqual(globalThis.sdkMock.writes, []);
+  await service.saveMasterDataField('projects', ['追加の架空工事']);
+  assert.deepEqual(globalThis.sdkMock.writes, [{ op: 'set', ref: { collection: 'masterData', id: 'general' }, data: { projects: ['追加の架空工事'] }, args: [{ merge: true }] }]);
+});
+
 test('staff list merges legacy and public data with unique IDs and timestamp order', async () => {
   const read = [];
   globalThis.sdkMock = { writes: [], async getDocs(ref) { read.push(ref.collection); return { docs: ref.collection === 'drafts' ? [record('same', { type: 'NEWCOMER_SURVEY', data: { company: '旧会社' }, lastModified: 1 }), record('diary', { type: 'DAILY_SAFETY', data: {}, lastModified: 2 })] : [record('same', { data: { company: '新会社', nameSei: '山田', nameMei: '太郎' }, lastModified: { toMillis: () => 3 } })] }; } };

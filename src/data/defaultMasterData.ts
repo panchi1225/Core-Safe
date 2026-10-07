@@ -1,27 +1,13 @@
 import type { MasterData } from '../types';
 
 export const INITIAL_MASTER_DATA: MasterData = {
-  projects: [
-    "テスト",
-    "公共運動公園周辺地区整備工事（Ｒ７芝崎地区粗造成その２）"
-  ],
-  contractors: [
-    "テスト",
-    "松浦建設株式会社"
-  ],
-  supervisors: [
-    "テスト",
-    "大須賀 久敬"
-  ],
-  locations: [
-    "テスト",
-    "本社会議室",
-    "現場事務所"
-  ],
-  workplaces: [
-    "テスト",
-    "芝崎作業所"
-  ],
+  // Organization-specific values are maintained in staff-only masterData/general.
+  // These public frontend defaults contain generic templates only.
+  projects: [],
+  contractors: [],
+  supervisors: [],
+  locations: [],
+  workplaces: [],
   roles: [
     "テスト",
     "主任技術者",
