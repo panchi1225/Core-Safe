@@ -24,7 +24,7 @@ StaffGateの権限取消・ログアウトでBulkReportDownloadがunmountする�
 
 ## 検証
 
-Node 24、FunctionsはNode 22、Java 21を使用します。
+ローカルはNode 24、Java 21で検証しました（Functions EmulatorもローカルのNode 24を使用）。CIではフロントNode 24、Functions Node 22、Java 21を使用します。
 
 ```sh
 npm ci --ignore-scripts
@@ -43,6 +43,14 @@ git diff --check
 追加テストはintegrationAccess.test.mjs、integrationExport.test.mjs、Rulesの両ソースserver query/権限取消です。両PRの既存テストを削除していません。フロントテストはファイルごとに分離し、各PRのグローバルfixture同士の干渉を避けます。
 
 ローカルブラウザでは既存手順でauth/firestore/functionsのdemo-core-safe Emulator、架空鍵、VITE_USE_FIREBASE_EMULATORS=trueのViteを起動します。tests/seed-local.mjsで社員・QR・旧新アンケートと他3帳票を用意します。fixtureは本番へ使用しません。公開フォームの実提出に使う署名は画面で描画するPNGです。
+
+### 2026-10-07の結果
+
+npm testは65件、Rulesは36件、Functions単体は20件、Functions実HTTP Emulatorは19件成功。両方のnpm ci、フロント／Functionsのtypecheckとbuild、git diff --checkも成功しました。CIで不足したoptional peer依存を検出したため、node_modulesのない作業ディレクトリでnpm 11.19.0を使ってlockfileを補正し、全ステップの成功を確認しました。
+
+Chrome＋demo Emulatorで社員ログインから4種別選択を行い、日誌1件、新旧アンケート2件、訓練1件、協議会1件の計5件を確認。順次PDF生成が完了し「5件 ZIP収録成功／0件 保存失敗」とダウンロード開始表示を確認しました。生成ZIPのローカルパス取得はブラウザ操作ツールのdownload待機がタイムアウトしたため、展開・PDFファイルの目視・OSへの保存完了は未確認です。画面表示を実ファイルの検証成功として扱いません。
+
+ログアウト後の公開QRから架空社員を選び、生年月日19950101のFunctions照合・本人情報の反映、資格入力、画面での架空署名、既存プレビュー、公開createの保存完了まで確認しました。公開プレビューに社員用PDF保存ボタンはありません。権限失効中の停止はコンポーネントとRulesテストで確認し、ブラウザのバッチ途中での失効は未確認です。既存4帳票のすべての通常入力・編集・保存・印刷ダイアログ操作をブラウザで完走した検証ではありません。
 
 ## 制限と導入順
 

@@ -63,5 +63,8 @@ test('legacy and public survey use exactly the same PDF layout including company
   const drafts=await Promise.all(items.map(x=>service.fetchExportDraft(x,conditions)));
   const html=drafts.map(d=>renderToStaticMarkup(pdf.reportLayout('NEWCOMER_SURVEY',d.data)));
   assert.equal(html[0],html[1]);for(const text of ['公開会社','山田','架空住所','data:image/png;base64,YQ==','資格'])assert.ok(html[1].includes(text),text);
+  for(const draft of drafts) draft.data.qualifications.slinging=true;
+  const qualified=drafts.map(d=>renderToStaticMarkup(pdf.reportLayout('NEWCOMER_SURVEY',d.data)));
+  assert.equal(qualified[0],qualified[1]);assert.ok(qualified[1].includes('✔'));assert.ok(qualified[1].includes('玉掛'));
   assert.equal(fileName(items[0]),fileName(items[1]));
 });
