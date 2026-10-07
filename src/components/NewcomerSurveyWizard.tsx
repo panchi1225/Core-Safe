@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, INITIAL_MASTER_DATA, EmployeeData } from '../types';
-import { getMasterData, saveDraft, deleteDraftsByProject, fetchEmployees } from '../services/firebaseService';
+import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, EmployeeData } from '../types';
 import { calculateCurrentExperience } from '../utils/experience';
+import { PublicNewcomerForm } from '../utils/newcomerAccess';
+import { newSubmissionId, submitPublicNewcomerSurvey } from '../services/publicNewcomerService';
 import SignatureCanvas from './SignatureCanvas';
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
 
@@ -11,6 +12,7 @@ interface Props {
   initialDraftId?: string | null;
   initialStep?: number;
   isPublicEntry?: boolean;
+  publicForm?: PublicNewcomerForm;
   onBackToMenu: () => void;
 }
 
@@ -19,6 +21,7 @@ const range = (start: number, end: number) => Array.from({ length: end - start +
 
 // --- 固定職種リスト ---
 const PRESET_JOB_TYPES = ["土工", "鳶", "大工", "オペ", "鉄筋工", "交通整理人"];
+const EMPTY_MASTER_DATA: MasterData = { projects: [], workplaces: [], contractors: [], supervisors: [], locations: [], roles: [], topics: [], jobTypes: [], goals: [], predictions: [], countermeasures: [], subcontractors: [], processes: [], cautions: [], machines: [], equipment: [], safetyInstructionItems: [] };
 
 // --- 安全装置 ---
 const sanitizeReportData = (data: any, useNewDefaults = !data): NewcomerSurveyReportData => {
@@ -120,11 +123,14 @@ const CompleteModal: React.FC<{ isOpen: boolean; onOk: () => void; isPublicEntry
   );
 };
 
-const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, initialStep, isPublicEntry = false, onBackToMenu }) => {
+const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, initialStep, isPublicEntry = false, publicForm, onBackToMenu }) => {
   const [step, setStep] = useState(1);
   const [report, setReport] = useState<NewcomerSurveyReportData>(sanitizeReportData(initialData, !initialDraftId));
   const [draftId, setDraftId] = useState<string | null>(initialDraftId || null);
-  const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
+  const [masterData, setMasterData] = useState<MasterData>(EMPTY_MASTER_DATA);
+  const submitBusy = useRef(false);
+  const submitted = useRef(false);
+  const publicSubmissionId = useRef<string | null>(null);
   const [showPreview, setShowPreview] = useState(initialStep === 99);
   const isDirectPreview = initialStep === 99;
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -163,10 +169,12 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
   }, [step]);
 
   useEffect(() => { 
+    if (isPublicEntry) return;
     const loadData = async () => { 
+      const { getMasterData, fetchEmployees } = await import('../services/firebaseService');
       try { 
         const mData = await getMasterData(); 
-        setMasterData({ ...INITIAL_MASTER_DATA, ...mData }); 
+        setMasterData(mData);
       } catch (e) { console.error("データ取得エラー", e); }
       // マスタの取得に失敗しても社員名簿は読み込む。
       try {
@@ -175,7 +183,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
       } catch (e) { console.error("社員データ取得エラー", e); }
     }; 
     loadData(); 
-  }, []);
+  }, [isPublicEntry]);
 
   useEffect(() => { if (!showPreview) return; const handleResize = () => { const A4_WIDTH_PX = 794; const PADDING_PX = 40; const availableWidth = window.innerWidth - PADDING_PX; setPreviewScale(availableWidth < A4_WIDTH_PX ? availableWidth / A4_WIDTH_PX : 1); }; window.addEventListener('resize', handleResize); handleResize(); return () => window.removeEventListener('resize', handleResize); }, [showPreview]);
 
@@ -303,25 +311,36 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
   const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
   
   const handleSave = async () => { 
+    if (submitBusy.current || submitted.current) return;
+    if (isPublicEntry && (!publicForm || publicForm.expiresAt <= Date.now())) { alert("このQRは利用できません。現場担当者へご確認ください。"); return; }
     if (!report.signatureDataUrl) {
       alert("署名がありません。\n署名を行ってください。");
       return;
     }
 
+    submitBusy.current = true;
     setSaveStatus('saving'); 
     try { 
       const fullName = (report.nameSei || '') + (report.nameMei || '');
       const dataToSave = { ...report, name: fullName || '氏名未入力' };
-      const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', dataToSave); 
-      setDraftId(newId); 
+      if (isPublicEntry) {
+        if (!publicForm) throw new Error('invalid-form');
+        publicSubmissionId.current ||= newSubmissionId();
+        await submitPublicNewcomerSurvey(publicSubmissionId.current, publicForm, dataToSave);
+        submitted.current = true;
+      } else {
+        const { saveDraft } = await import('../services/firebaseService');
+        const newId = await saveDraft(draftId, 'NEWCOMER_SURVEY', dataToSave);
+        setDraftId(newId);
+      }
       setSaveStatus('saved'); 
       setHasUnsavedChanges(false); 
       setShowCompleteModal(true);
     } catch (e) { 
-      console.error(e); 
-      alert("保存に失敗しました"); 
+      if (!isPublicEntry) console.error(e);
+      alert("保存に失敗しました。通信状況、QRの有効期限・有効状態をご確認ください。");
       setSaveStatus('idle'); 
-    } 
+    } finally { submitBusy.current = false; }
   };
 
   const handlePreviewClick = () => {
@@ -386,7 +405,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
         <p className="text-sm text-red-500 font-bold"><i className="fa-solid fa-circle-exclamation mr-1"></i>全ての項目が必須です</p>
         
         {/* 現場・作業所選択 */}
-        <div className="bg-purple-50 p-4 rounded border border-purple-100 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+        {!isPublicEntry && <div className="bg-purple-50 p-4 rounded border border-purple-100 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
            <div className="col-span-1 md:col-span-2 text-sm text-purple-700 font-bold mb-1"><i className="fa-solid fa-circle-info mr-1"></i>はじめに現場を選択してください</div>
            
            <div className="w-full overflow-hidden">
@@ -415,7 +434,10 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
            </div>
         </div>
 
+        }
+        {isPublicEntry && <div className="bg-purple-50 p-4 rounded"><p>現場名：{publicForm?.project}</p><p>作業所長：{publicForm?.director}</p></div>}
         {/* 社員自動入力 */}
+        {!isPublicEntry &&
         <div className="bg-green-50 p-4 rounded border border-green-200 w-full">
            <div className="text-sm text-green-700 font-bold mb-2">
              <i className="fa-solid fa-circle-info mr-1"></i>「松浦建設株式会社」の社員はこちらから名前を選択してください。
@@ -432,7 +454,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
                ))}
              </select>
            </div>
-        </div>
+        </div>}
 
         {/* Name */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -469,7 +491,8 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label font-bold text-gray-700">所属会社名 (マスタ選択)</label>
-            <select className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} value={report.company} onChange={(e) => updateReport({company: e.target.value})}><option value="">選択してください</option>{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select>
+            {isPublicEntry ? <><select aria-label="所属会社" className="w-full p-2 border rounded mb-2" value={report.companyInputType === 'other' ? '__other__' : report.company} onChange={e => updateReport(e.target.value === '__other__' ? { company: '', companyInputType: 'other' } : { company: e.target.value, companyInputType: 'master' })}><option value="">選択してください</option>{(publicForm?.contractorOptions || []).map(c => <option key={c} value={c}>{c}</option>)}<option value="__other__">その他（手入力）</option></select>{report.companyInputType === 'other' && <input aria-label="会社名入力" maxLength={200} className="w-full p-2 border rounded mb-2" value={report.company} onChange={e => updateReport({ company: e.target.value })} />}</> : <select className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} value={report.company} onChange={(e) => updateReport({company: e.target.value, companyInputType: 'master'})}><option value="">選択してください</option>{report.company && !masterData.contractors.includes(report.company) && <option value={report.company}>{report.company}</option>}{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select>}
+            {!isPublicEntry && report.companyInputType === 'other' && <input aria-label="会社名修正" maxLength={200} className="w-full p-2 border rounded mb-2" value={report.company} onChange={e => updateReport({company: e.target.value})} />}
             <div className="flex items-center gap-2 text-sm"><span>(</span><input type="text" className={`w-10 border-b text-center ${getErrorClass('subcontractorRank')}`} value={report.subcontractorRank} onChange={(e)=>updateReport({subcontractorRank: e.target.value})} /><span>次) 下請け</span></div>
           </div>
           <div className="form-control">
@@ -721,11 +744,11 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-md z-20">
           <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button></div>
           {step < 3 ? (
-             <button onClick={handleNext} className="px-8 py-3 bg-purple-600 text-white rounded-lg font-bold shadow hover:bg-purple-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>
+             <button onClick={handleNext} className="px-4 sm:px-8 py-3 bg-purple-600 text-white rounded-lg font-bold shadow hover:bg-purple-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>
           ) : (
              <div className="flex gap-4">
-               <button onClick={handleSave} className="px-8 py-3 bg-red-600 text-white rounded-lg font-bold shadow hover:bg-red-700 flex items-center"><i className="fa-solid fa-save mr-2"></i> 保存</button>
-               <button onClick={handlePreviewClick} className="px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>
+               <button disabled={saveStatus === 'saving' || (isPublicEntry && saveStatus === 'saved')} onClick={handleSave} className="px-4 sm:px-8 py-3 bg-red-600 text-white rounded-lg font-bold shadow hover:bg-red-700 flex items-center"><i className="fa-solid fa-save mr-2"></i> 保存</button>
+               <button onClick={handlePreviewClick} className="px-4 sm:px-8 py-3 bg-cyan-600 text-white rounded-lg font-bold shadow hover:bg-cyan-700 flex items-center"><i className="fa-solid fa-file-pdf mr-2"></i> プレビュー</button>
              </div>
           )}
         </footer>

@@ -5,6 +5,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test": "node --test src/utils/*.test.mjs tests/*.test.mjs",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-core-safe \"node --test tests/rules/*.test.mjs\"",
+    "typecheck": "tsc --noEmit",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
@@ -22,10 +25,14 @@
     "react-to-print": "^3.3.0"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.0",
     "@types/node": "^22.14.0",
     "@types/react-signature-canvas": "^1.0.7",
     "@vitejs/plugin-react": "^5.0.0",
+    "esbuild": "^0.28.2",
+    "firebase-tools": "^15.31.0",
     "gh-pages": "^6.3.0",
+    "react-test-renderer": "^19.2.4",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

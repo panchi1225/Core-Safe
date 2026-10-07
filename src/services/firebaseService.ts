@@ -10,9 +10,11 @@ import {
   setDoc,     
   addDoc,     
   getDoc,     
-  writeBatch
+  writeBatch, updateDoc, serverTimestamp, where, limit, getDocFromServer
 } from 'firebase/firestore';
 import { SavedDraft, MasterData, INITIAL_MASTER_DATA, EmployeeData, DiagramImage } from '../types';
+import { asPublicDraft, reportLocation, surveyPayload } from '../utils/newcomerAccess';
+import { PUBLIC_FORMS, PUBLIC_SUBMISSIONS } from './publicNewcomerService';
 
 const DRAFTS_COLLECTION = 'drafts';
 const MASTER_COLLECTION = 'masterData';
@@ -20,13 +22,45 @@ const MASTER_DOC_ID = 'general';
 const EMPLOYEES_COLLECTION = 'employees';
 const DIAGRAM_IMAGES_COLLECTION = 'diagramImages'; // 配置図元画像コレクション
 
+// Shared source adapter for individual reports and future PR #32 integration.
+export const REPORT_SOURCES = [
+  { collection: DRAFTS_COLLECTION, projectField: 'data.project' },
+  { collection: PUBLIC_SUBMISSIONS, projectField: 'project' }
+] as const;
+export async function getReportFromServer(id: string): Promise<SavedDraft> {
+  const location = reportLocation(id);
+  const snapshot = await getDocFromServer(doc(db, location.collection, location.id));
+  if (!snapshot.exists()) throw new Error('帳票が見つかりません。');
+  const raw = snapshot.data();
+  if (location.collection === PUBLIC_SUBMISSIONS) return asPublicDraft(snapshot.id, raw);
+  return { id: snapshot.id, type: raw.type, data: raw.data, lastModified: raw.lastModified instanceof Timestamp ? raw.lastModified.toMillis() : raw.lastModified };
+}
+
+async function retireProjectPublicForms(projectName: string): Promise<void> {
+  const forms = await getDocs(query(collection(db, PUBLIC_FORMS), where('project', '==', projectName)));
+  for (let i = 0; i < forms.docs.length; i += 400) {
+    const batch = writeBatch(db);
+    forms.docs.slice(i, i + 400).forEach(form => batch.update(form.ref, { active: false }));
+    await batch.commit();
+  }
+  // Re-read a small page after deletion; no large collection is retained in memory.
+  while (true) {
+    const page = await getDocs(query(collection(db, PUBLIC_SUBMISSIONS), where('project', '==', projectName), limit(100)));
+    if (page.empty) break;
+    const batch = writeBatch(db);
+    page.docs.forEach(report => batch.delete(report.ref));
+    await batch.commit();
+  }
+}
+
 // ■ データを全件取得する
 export const fetchDrafts = async (): Promise<SavedDraft[]> => {
   try {
     const q = query(collection(db, DRAFTS_COLLECTION), orderBy('lastModified', 'desc'));
-    const querySnapshot = await getDocs(q);
-    
-    return querySnapshot.docs.map(doc => {
+    const [querySnapshot, publicSnapshot] = await Promise.all([
+      getDocs(q), getDocs(query(collection(db, PUBLIC_SUBMISSIONS), orderBy('lastModified', 'desc')))
+    ]);
+    const legacy = querySnapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
@@ -37,6 +71,7 @@ export const fetchDrafts = async (): Promise<SavedDraft[]> => {
         data: data.data
       } as SavedDraft;
     });
+    return [...legacy, ...publicSnapshot.docs.map(d => asPublicDraft(d.id, d.data()))].sort((a, b) => b.lastModified - a.lastModified);
   } catch (error) {
     console.error("データの読み込みに失敗しました: ", error);
     throw error;
@@ -46,7 +81,8 @@ export const fetchDrafts = async (): Promise<SavedDraft[]> => {
 // ■ データを削除する
 export const removeDraft = async (id: string): Promise<void> => {
   try {
-    await deleteDoc(doc(db, DRAFTS_COLLECTION, id));
+    const location = reportLocation(id);
+    await deleteDoc(doc(db, location.collection, location.id));
   } catch (error) {
     console.error("データの削除に失敗しました: ", error);
     throw error;
@@ -60,6 +96,12 @@ export const saveDraft = async (
   data: any
 ): Promise<string> => {
   try {
+    if (draftId && reportLocation(draftId).collection === PUBLIC_SUBMISSIONS) {
+      if (type !== 'NEWCOMER_SURVEY') throw new Error('Invalid public report type');
+      const location = reportLocation(draftId);
+      await updateDoc(doc(db, location.collection, location.id), { data: surveyPayload(data), project: data.project, director: data.director, company: data.company, lastModified: serverTimestamp() });
+      return draftId;
+    }
     const draftData = {
       type,
       data,
@@ -280,6 +322,9 @@ export const deleteDiagramImagesByProject = async (projectName: string): Promise
 // ★修正: 一時保存データに加えて、配置図元画像もすべて削除する
 export const deleteDraftsByProject = async (projectName: string): Promise<void> => {
   try {
+    // This runs only after the existing staff-side project deletion confirmation.
+    // Retire QR entry first, so anonymous submissions cannot recreate deleted records.
+    await retireProjectPublicForms(projectName);
     // (1) 一時保存データの削除
     const allDrafts = await getDocs(collection(db, DRAFTS_COLLECTION));
     const batch = writeBatch(db);

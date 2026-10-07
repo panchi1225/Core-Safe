@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 pdf_screenshot.png
+
+# Local Firebase emulator / test artifacts
+.firebase/
+tests/.generated-*.mjs
