@@ -117,9 +117,6 @@ service cloud.firestore {
         && request.resource.data.token == resource.data.token && request.resource.data.createdAt == resource.data.createdAt
         && request.resource.data.lastModified == request.time;
     }
-    // Admin SDK only. No anonymous or authenticated client may use verification counters.
-    match /employeeAutofillRateLimits/{id} { allow read, write: if false; }
-    match /employeeAutofillMappings/{id} { allow read, write: if false; }
     match /{document=**} { allow read, write: if false; }
   }
 }

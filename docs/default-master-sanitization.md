@@ -1,5 +1,7 @@
 # 公開初期マスタの整理
 
+> 過去のPR #34時点の記録です。Cloud Functions、Secret Manager、EMPLOYEE_AUTOFILL_KEY、Functions IAM、公開社員氏名一覧・生年月日本人確認は現在未使用・Spark版では廃止しました。旧構成のコマンドや導入条件は適用せず、現行の[Spark導入手順](production-rollout.md)を使用してください。Spark版の新しい実機検証結果として扱わないでください。
+
 PR #34の`2236ce79ce09827f57fea6e631a007a95b7c5124`を基準に、公開ソース・今後の静的フロントJSへ個人/現場/会社固有のマスタ値を含めないよう整理した。本番Firebaseへの接続・更新、データ移行、Git履歴の書換えは行わない。
 
 ## 初期値と実マスタ

@@ -1,5 +1,7 @@
 # PR #34 最終統合候補と検証記録
 
+> 過去のPR #34時点の記録です。Cloud Functions、Secret Manager、EMPLOYEE_AUTOFILL_KEY、Functions IAM、公開社員氏名一覧・生年月日本人確認は現在未使用・Spark版では廃止しました。旧構成のコマンドや導入条件は適用せず、現行の[Spark導入手順](production-rollout.md)を使用してください。Spark版の新しい実機検証結果として扱わないでください。
+
 `integration/access-control-bulk-pdf` はPR #33の58e39499a11d5a92969cf5dc2e43ed1876f57ac1を土台に、PR #32の50c3f5cdcc287a0f1ac6b3d6494f5334a3c73574を取り込んだPR #34の最終統合候補です。両コミットが祖先であることをGitで再確認しました。元の両ブランチ、main、本番Firebaseは変更せず、統合PRはDraftで維持します。採用時はPR #34のみをmainへ反映し、#32/#33の個別mergeは不要です。
 
 [Windows Chromeの人間による実機確認](windows-chrome-verification.md)、[本番導入・切戻し](production-rollout.md)、[依存監査](dependency-audit.md)を参照してください。
