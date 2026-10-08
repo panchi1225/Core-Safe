@@ -1,5 +1,7 @@
 # 最終候補の依存監査（2026-10-08）
 
+> 過去のPR #34時点の記録です。Cloud Functions、Secret Manager、EMPLOYEE_AUTOFILL_KEY、Functions IAM、公開社員氏名一覧・生年月日本人確認は現在未使用・Spark版では廃止しました。旧構成のコマンドや導入条件は適用せず、現行の[Spark導入手順](production-rollout.md)を使用してください。Spark版の新しい実機検証結果として扱わないでください。
+
 比較対象はPR #34の実装SHA `7f06e65b229c608c36d60551c70de059ee6ed858`と、取得時点のorigin/main `7c9105e87ca3e81b83d7142e27adb232bf46bdf3`。root/Functionsとmainの各lockfileに`npm audit --package-lock-only --json`を実行した。監査は公開npmレジストリだけへ接続し、本番Firebaseへ接続していない。`npm audit fix`や依存更新は実行していない。
 
 | lockfile | Critical | High | Moderate | Low | 合計 |

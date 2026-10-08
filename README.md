@@ -2,26 +2,17 @@
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-# Run and deploy your AI Studio app
+# Core Safe（Spark版）
 
-This contains everything you need to run your app locally.
+本番はGitHub Pages + Firebase Authentication Email/Password + Cloud Firestore + Firestore Security Rulesで構成します。Firebase Spark無料プラン内で運用し、Blaze・Cloud Functions・Cloud Run・Secret Managerは使いません。課金変更は導入条件ではありません。[無料枠と導入手順](docs/production-rollout.md)を参照してください。
 
-View your app in AI Studio: https://ai.studio/apps/drive/17T1NzjZZ7wXz5fTDypiXZ1qUllXCxD3v
+## ローカル起動
 
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Node 24 / Java 21。npm ci --ignore-scriptsで依存を導入し、npm run devで起動します。安全な画面検証は[demo Emulator手順](docs/access-control.md)を使います。APIキーやSecretの追加は不要です。
 
 ## 社員認証・公開QRの導入
 
-公開QRでも有効token＋生年月日のサーバー照合後に、社員本人1名の必要情報だけを自動入力できます。[Functions設定・試行回数制限・テスト手順](docs/public-employee-autofill.md)を参照してください。手入力も維持します。
+公開QRは全利用者が通常入力し、社員も手入力します。社員氏名一覧・生年月日本人確認・公開社員自動入力は現在未使用・Spark版では廃止しました。匿名にemployeesを取得させません。許可社員画面での社員名選択による自動入力は維持します。
 
 通常画面はFirebase Auth＋staffUsersの社員許可、公開アンケートはログイン不要の期限付きtokenを使用します。本番設定・Rulesの反映・旧QRの再発行が必要です。コード変更だけでは本番のアクセス制御は完了しません。
 
@@ -29,7 +20,7 @@ View your app in AI Studio: https://ai.studio/apps/drive/17T1NzjZZ7wXz5fTDypiXZ1
 
 ## 帳票一括ダウンロード
 
-社員認証と一括PDFを組み合わせたPR #34の最終統合候補です。[統合記録](docs/integration-access-bulk-pdf.md)、[Windows Chrome実機確認](docs/windows-chrome-verification.md)、[未実行の本番導入手順](docs/production-rollout.md)、[依存監査](docs/dependency-audit.md)を参照してください。公開QRから一括ダウンロードは利用できません。旧draftsと公開回答の新規入場者アンケートは両方が対象です。
+社員認証と一括PDFを統合したmainを基準に、PR #35で公開社員自動入力だけを廃止したSpark版です。[統合記録](docs/integration-access-bulk-pdf.md)、[Windows Chrome実機確認](docs/windows-chrome-verification.md)、[未実行の本番導入手順](docs/production-rollout.md)、[依存監査](docs/dependency-audit.md)を参照してください。公開QRから一括ダウンロードは利用できません。旧draftsと公開回答の新規入場者アンケートは両方が対象です。
 
 ホームの「帳票一括ダウンロード」から、現場・開始日・終了日・帳票種別を指定し、「対象件数を確認」→「PDF一括保存」を押します。安全衛生日誌、新規入場者アンケート、安全訓練、災害防止協議会に対応します。
 

@@ -1,3 +1,5 @@
+Spark版更新: Cloud Functionsは現在未使用・Spark版では廃止。以下の過去記録にあるFunctionsは本番要件ではない。現行はAuth/Firestore/RulesとブラウザPDFのみ。
+
 一括PDF検索の軽量メタデータ化：互換性を保つ改善案（本PRでは未適用）
 
 PR #32＋#33統合時の追記

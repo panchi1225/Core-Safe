@@ -7,8 +7,6 @@ import { newSubmissionId, submitPublicNewcomerSurvey } from '../services/publicN
 import SignatureCanvas from './SignatureCanvas';
 import { sanitizeReportData } from '../utils/reportRestore';
 import NewcomerSurveyPrintLayout from './NewcomerSurveyPrintLayout';
-import PublicEmployeeAutofill from './PublicEmployeeAutofill';
-import type { EmployeeAutofillData } from '../services/publicEmployeeAutofillService';
 import ReportPdfButton from './ReportPdfButton';
 
 interface Props {
@@ -199,7 +197,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
     applyEmployeeAutofill(emp);
   };
 
-  const applyEmployeeAutofill = (emp: EmployeeData | EmployeeAutofillData) => {
+  const applyEmployeeAutofill = (emp: EmployeeData) => {
     const currentExperience = calculateCurrentExperience(emp.experienceYears, emp.experienceMonths);
 
     const isPreset = PRESET_JOB_TYPES.includes(emp.jobType);
@@ -208,7 +206,6 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
 
     updateReport({
       company: "松浦建設株式会社",
-      ...(isPublicEntry ? { companyInputType: publicForm?.contractorOptions.includes('松浦建設株式会社') ? 'master' as const : 'other' as const } : {}),
       nameSei: emp.nameSei,
       nameMei: emp.nameMei,
       furiganaSei: emp.furiganaSei,
@@ -411,7 +408,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
         }
         {isPublicEntry && <div className="bg-purple-50 p-4 rounded"><p>現場名：{publicForm?.project}</p><p>作業所長：{publicForm?.director}</p></div>}
         {/* 社員自動入力 */}
-        {isPublicEntry && publicForm && <PublicEmployeeAutofill token={publicForm.token} onVerified={applyEmployeeAutofill} />}
+        {isPublicEntry && <p className="text-sm text-gray-700">松浦建設株式会社の社員の方も、各項目を入力してください。</p>}
         {!isPublicEntry &&
         <div className="bg-green-50 p-4 rounded border border-green-200 w-full">
            <div className="text-sm text-green-700 font-bold mb-2">

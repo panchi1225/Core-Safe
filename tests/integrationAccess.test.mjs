@@ -38,6 +38,14 @@ const Bulk=(await loadModule('src/components/BulkReportDownload.tsx',{
 const targets=Array.from({length:3},(_,i)=>({id:String(i),type:'NEWCOMER_SURVEY',project:'現場',date:'2026-10-01',name:'山田',lastModified:1}));
 async function mounted(source){let tree;await act(async()=>{tree=create(React.createElement(Bulk,{source,onBack(){}}));});await act(async()=>tree.root.findByProps({id:'bulk-project'}).props.onChange({target:{value:'現場'}}));await act(async()=>tree.root.findAllByType('button').find(x=>x.children.includes('対象件数を確認')).props.onClick());return tree;}
 const saveButton=tree=>tree.root.findAllByType('button').find(x=>x.children.includes('ZIPでダウンロード'));
+async function waitForBatchCompletion(tree) {
+  const deadline=Date.now()+3000;
+  while(Date.now()<deadline) {
+    await act(async()=>{await new Promise(resolve=>setTimeout(resolve,10));});
+    if(!saveButton(tree).props.disabled)return;
+  }
+  assert.fail('Batch did not finish within the test deadline');
+}
 test('bulk unmount during pending server read never starts PDF generation or fetches a next report',async()=>{
   let release,reads=0,generated=0,saved=0;
   globalThis.batchMocks={prepare:async()=>({mode:'zip',save:async()=>saved++,finish:async()=>null,dispose:async()=>{},release:async()=>{}})};
@@ -64,16 +72,16 @@ test('bulk UI retries only failed reports and preserves ZIP or folder mode',asyn
     globalThis.batchMocks={prepare:async requested=>{modes.push(requested);return {mode,save:async()=>{},finish:async()=>null,dispose:async()=>{},release:async()=>{}};}};
     const tree=await mounted({getMasterData:async()=>({projects:['現場']}),fetchExportItems:async()=>targets,fetchExportDraft:async item=>({data:item}),generatePdf:async(_item,data)=>{generated.push(data.id);if(first){first=false;throw new Error('one report failed');}return new Blob();}});
     const initial=tree.root.findAllByType('button').find(x=>x.children.includes(mode==='zip'?'ZIPでダウンロード':'PDF一括保存'));
-    await act(async()=>{initial.props.onClick();await new Promise(r=>setTimeout(r,30));});
+    await act(async()=>initial.props.onClick());await waitForBatchCompletion(tree);
     assert.deepEqual(generated,['0','1','2']);const retry=tree.root.findAllByType('button').find(x=>x.children.includes('失敗・未処理の'));
-    assert.ok(retry);await act(async()=>{retry.props.onClick();await new Promise(r=>setTimeout(r,30));});
+    assert.ok(retry);await act(async()=>retry.props.onClick());await waitForBatchCompletion(tree);
     assert.deepEqual(modes,[mode==='zip'?'zip':'auto',mode]);assert.deepEqual(generated,['0','1','2','0']);await act(async()=>tree.unmount());
   }
 });
 const Wizard=(await loadModule('src/components/NewcomerSurveyWizard.tsx',{
   firebaseService:'export const getMasterData=async()=>globalThis.wizardMaster;export const fetchEmployees=async()=>[];export const saveDraft=async()=>{};',
   publicNewcomerService:'export const newSubmissionId=()=>"id";export const submitPublicNewcomerSurvey=async()=>{};',
-  PublicEmployeeAutofill:noop,SignatureCanvas:noop,NewcomerSurveyPrintLayout:noop,
+  SignatureCanvas:noop,NewcomerSurveyPrintLayout:noop,
   ReportPdfButton:'import React from "react";export default ()=>React.createElement("span",null,"STAFF-PDF");',
   'react-to-print':'export const useReactToPrint=()=>()=>{};',
 })).default;

@@ -44,9 +44,9 @@ beforeEach(async () => {
   });
 });
 
-for (const uid of [null, 'outsider', 'staff']) test(`${uid ?? 'anonymous'} cannot use server-only autofill counters or mappings`, async () => {
+for (const uid of [null, 'outsider', 'staff']) test(`${uid ?? 'anonymous'} catch-all denies retired autofill collections and unrelated collections`, async () => {
   const db = uid ? user(uid) : anon();
-  for (const name of ['employeeAutofillRateLimits', 'employeeAutofillMappings']) {
+  for (const name of ['employeeAutofillRateLimits', 'employeeAutofillMappings', 'unknownCollection']) {
     await seed(`${name}/existing`, { attempts: 1 });
     await assertFails(getDoc(doc(db, name, 'existing'))); await assertFails(getDocs(collection(db, name)));
     await assertFails(setDoc(doc(db, name, 'new'), { attempts: 0 })); await assertFails(updateDoc(doc(db, name, 'existing'), { attempts: 0 }));

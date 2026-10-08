@@ -28,6 +28,7 @@ pdf_screenshot.png
 .firebase/
 tests/.generated-*.mjs
 tests/.generated-*.css
+# Retain protection for ignored artifacts from the retired Functions version.
 functions/lib/
 functions/.secret.local
 functions/.env*

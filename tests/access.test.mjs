@@ -33,7 +33,6 @@ const serviceStub = `export const getMasterData = (...a) => globalThis.wizardSer
 const wizard = (await loadModule('src/components/NewcomerSurveyWizard.tsx', {
   firebaseService: serviceStub,
   publicNewcomerService: `export const newSubmissionId = () => 'new-id'; export const submitPublicNewcomerSurvey = (...a) => globalThis.wizardServices.submit(...a);`,
-  publicEmployeeAutofillService: `export const listPublicEmployeeCandidates = async () => globalThis.wizardServices.candidates?.() ?? []; export const verifyEmployeeAutofill = async () => { throw new Error('Not verified'); };`,
   'react-to-print': `export const useReactToPrint = () => () => {};`,
   SignatureCanvas: `export default () => null;`, NewcomerSurveyPrintLayout: `export default () => null;`,
   ReportPdfButton: `export default () => null;`
@@ -45,6 +44,9 @@ test('public wizard never fetches employees or internal master; locks project/di
   await act(async () => { tree = create(React.createElement(wizard, { isPublicEntry: true, publicForm: form, initialData: { project: form.project, director: form.director }, onBackToMenu() {} })); });
   assert.equal(master, 0); assert.equal(employees, 0);
   const rendered = JSON.stringify(tree.toJSON());
+  assert.ok(rendered.includes('松浦建設株式会社の社員の方も、各項目を入力してください。'));
+  assert.equal(tree.root.findAllByProps({ 'aria-label': '公開社員自動入力' }).length, 0);
+  assert.equal(tree.root.findAllByProps({ 'aria-label': '本人確認用の生年月日' }).length, 0);
   assert.ok(rendered.includes(form.project)); assert.ok(rendered.includes(form.director)); assert.ok(!rendered.includes('社員はこちら'));
   const select = tree.root.findByProps({ 'aria-label': '所属会社' });
   await act(async () => select.props.onChange({ target: { value: '__other__' } }));
@@ -72,7 +74,7 @@ test('staff can display and correct the public form free-text company without lo
 test('public send uses its dedicated create with a stable ID and blocks simultaneous/repeated clicks', async () => {
   let sends = 0, release;
   const received = [];
-  globalThis.wizardServices = { candidates(){ throw new Error('Autofill unavailable'); }, master(){ throw new Error('Private read'); }, employees(){ throw new Error('Private read'); }, save(){ throw new Error('Internal save'); }, submit(id) { sends++; received.push(id); return new Promise(resolve => { release = resolve; }); } };
+  globalThis.wizardServices = { master(){ throw new Error('Private read'); }, employees(){ throw new Error('Private read'); }, save(){ throw new Error('Internal save'); }, submit(id) { sends++; received.push(id); return new Promise(resolve => { release = resolve; }); } };
   const data = { ...INITIAL_NEWCOMER_SURVEY_REPORT, project: form.project, director: form.director, company: '公開会社', nameSei: '山田', nameMei: '太郎', furiganaSei: 'ヤマダ', furiganaMei: 'タロウ', birthYear: 10, birthMonth: 1, birthDay: 1, experienceYears: 1, address: '住所', phone: '000', emergencyContactSei: '山田', emergencyContactMei: '次郎', emergencyContactRelation: '家族', emergencyContactPhone: '000', healthCheckYear: 8, healthCheckMonth: 1, signatureDataUrl: 'data:image/png;base64,YQ==' };
   let tree; await act(async () => { tree = create(React.createElement(wizard, { isPublicEntry: true, publicForm: form, initialData: data, onBackToMenu() {} })); });
   const nextButton = () => tree.root.findAllByType('button').find(b => b.children.includes('次へ '));

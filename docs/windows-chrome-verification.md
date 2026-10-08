@@ -1,5 +1,7 @@
 # Windows Chrome 実機確認記録
 
+> 過去のPR #34時点の記録です。Cloud Functions、Secret Manager、EMPLOYEE_AUTOFILL_KEY、Functions IAM、公開社員氏名一覧・生年月日本人確認は現在未使用・Spark版では廃止しました。旧構成のコマンドや導入条件は適用せず、現行の[Spark導入手順](production-rollout.md)を使用してください。Spark版の新しい実機検証結果として扱わないでください。
+
 2026-10-08に利用者から受領した確認結果。確認対象はPR #34、`integration/access-control-bulk-pdf`、`7f06e65b229c608c36d60551c70de059ee6ed858`。Windows PCのChrome、`demo-core-safe`のAuthentication / Firestore / Functions Emulator、架空データだけを使用した。本番Firebaseには接続していない。以下は**人間による実機確認**であり、Codexのスタブ検証や画面表示だけから推定した結果ではない。
 
 ## 確認できた範囲
