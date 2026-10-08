@@ -1,0 +1,125 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function staff() {
+      return request.auth != null && exists(/databases/$(database)/documents/staffUsers/$(request.auth.uid))
+        && get(/databases/$(database)/documents/staffUsers/$(request.auth.uid)).data.active == true;
+    }
+    function text(v, max) { let x = v; return x is string && x.size() <= max; }
+    function validQualifications() {
+      let q = request.resource.data.data.qualifications;
+      return q is map && q.keys().hasOnly(["electrician", "vehicle_leveling", "vehicle_demolition", "mobile_crane", "slinging", "gas_welding", "earth_retaining", "excavation", "scaffolding", "formwork", "oxygen_deficiency", "rough_terrain", "arc_welding", "grinding_wheel", "low_voltage", "roller", "asbestos", "chainsaw", "foreman", "license_regular", "license_large", "license_large_special", "license_towing", "license_mobile_crane", "otherText1", "otherText2", "otherText3"])
+        && q.electrician is bool && q.vehicle_leveling is bool && q.vehicle_demolition is bool && q.mobile_crane is bool && q.slinging is bool && q.gas_welding is bool && q.earth_retaining is bool && q.excavation is bool && q.scaffolding is bool && q.formwork is bool && q.oxygen_deficiency is bool && q.rough_terrain is bool && q.arc_welding is bool && q.grinding_wheel is bool && q.low_voltage is bool && q.roller is bool && q.asbestos is bool && q.chainsaw is bool && q.foreman is bool && q.license_regular is bool && q.license_large is bool && q.license_large_special is bool && q.license_towing is bool && q.license_mobile_crane is bool && (q.otherText1 is string && q.otherText1.size() <= 200) && (q.otherText2 is string && q.otherText2.size() <= 200) && (q.otherText3 is string && q.otherText3.size() <= 200);
+    }
+    function validSurvey() {
+      let d = request.resource.data.data;
+      return d is map && d.keys().hasOnly(["project", "director", "furiganaSei", "furiganaMei", "nameSei", "nameMei", "company", "subcontractorRank", "jobType", "jobTypeOther", "address", "phone", "emergencyContactSei", "emergencyContactMei", "emergencyContactRelation", "emergencyContactPhone", "bloodType", "birthYear", "birthMonth", "birthDay", "age", "experienceYears", "experienceMonths", "healthCheckYear", "healthCheckMonth", "healthCheckDay", "pledgeDateYear", "pledgeDateMonth", "pledgeDateDay", "birthEra", "gender", "bloodTypeRh", "kentaikyo", "qualifications", "signatureDataUrl", "companyInputType"])
+        && (d.project is string && d.project.size() <= 300)
+        && (d.director is string && d.director.size() <= 100)
+        && (d.furiganaSei is string && d.furiganaSei.size() <= 100)
+        && (d.furiganaMei is string && d.furiganaMei.size() <= 100)
+        && (d.nameSei is string && d.nameSei.size() <= 100)
+        && (d.nameMei is string && d.nameMei.size() <= 100)
+        && (d.company is string && d.company.size() <= 200)
+        && (d.subcontractorRank is string && d.subcontractorRank.size() <= 20)
+        && (d.jobType is string && d.jobType.size() <= 100)
+        && (d.jobTypeOther is string && d.jobTypeOther.size() <= 200)
+        && (d.address is string && d.address.size() <= 500)
+        && (d.phone is string && d.phone.size() <= 50)
+        && (d.emergencyContactSei is string && d.emergencyContactSei.size() <= 100)
+        && (d.emergencyContactMei is string && d.emergencyContactMei.size() <= 100)
+        && (d.emergencyContactRelation is string && d.emergencyContactRelation.size() <= 100)
+        && (d.emergencyContactPhone is string && d.emergencyContactPhone.size() <= 50)
+        && (d.bloodType is string && d.bloodType.size() <= 20)
+        && (d.birthYear is int && d.birthYear >= 0 && d.birthYear <= 64)
+        && (d.birthMonth is int && d.birthMonth >= 0 && d.birthMonth <= 12)
+        && (d.birthDay is int && d.birthDay >= 0 && d.birthDay <= 31)
+        && (d.age is int && d.age >= 0 && d.age <= 120)
+        && (d.experienceYears is int && d.experienceYears >= 0 && d.experienceYears <= 100)
+        && (d.experienceMonths == null || (d.experienceMonths is int && d.experienceMonths >= 0 && d.experienceMonths <= 11))
+        && (d.healthCheckYear is int && d.healthCheckYear >= 0 && d.healthCheckYear <= 2200)
+        && (d.healthCheckMonth is int && d.healthCheckMonth >= 0 && d.healthCheckMonth <= 12)
+        && (d.healthCheckDay == null || (d.healthCheckDay is int && d.healthCheckDay >= 0 && d.healthCheckDay <= 31))
+        && (d.pledgeDateYear == null || (d.pledgeDateYear is int && d.pledgeDateYear >= 0 && d.pledgeDateYear <= 2200))
+        && (d.pledgeDateMonth == null || (d.pledgeDateMonth is int && d.pledgeDateMonth >= 0 && d.pledgeDateMonth <= 12))
+        && (d.pledgeDateDay == null || (d.pledgeDateDay is int && d.pledgeDateDay >= 0 && d.pledgeDateDay <= 31))
+        && d.birthEra in ['Showa', 'Heisei', 'Reiwa']
+        && d.gender in ['Male', 'Female']
+        && d.bloodTypeRh in ['Plus', 'Minus', 'Unknown']
+        && d.kentaikyo in ['Joined', 'NotJoined']
+        && d.companyInputType in ['master', 'other']
+        && d.signatureDataUrl is string && d.signatureDataUrl.size() > 0 && d.signatureDataUrl.size() <= 500000 && d.signatureDataUrl.matches('data:image/png;base64,[A-Za-z0-9+/=]+')
+        && validQualifications();
+    }
+    function validForm(f) {
+      return f.keys().hasAll(['project','director','active','createdAt','createdBy','expiresAt','contractorOptions'])
+        && f.keys().hasOnly(['project','director','active','createdAt','createdBy','expiresAt','contractorOptions'])
+        && text(f.project,300) && f.project.size() > 0 && text(f.director,100) && f.director.size() > 0
+        && f.active is bool && f.createdAt is timestamp && f.createdBy == 'staff'
+        && f.expiresAt is timestamp
+        && f.contractorOptions is list && f.contractorOptions.size() <= 300
+        && f.contractorOptions.toSet().size() == f.contractorOptions.size();
+    }
+    function activeForm(token) {
+      return token is string && token.matches('[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}')
+        && exists(/databases/$(database)/documents/publicNewcomerForms/$(token))
+        && get(/databases/$(database)/documents/publicNewcomerForms/$(token)).data.active == true
+        && get(/databases/$(database)/documents/publicNewcomerForms/$(token)).data.expiresAt > request.time;
+    }
+    function submissionShape() {
+      let s = request.resource.data;
+      return s.keys().hasOnly(['type','token','project','director','company','data','createdAt','lastModified'])
+        && s.type == 'NEWCOMER_SURVEY' && s.token is string && s.createdAt is timestamp && s.lastModified is timestamp
+        && validSurvey() && s.project == s.data.project && s.director == s.data.director
+        && s.company == s.data.company && s.company.size() > 0;
+    }
+    function publicSubmission() {
+      let s = request.resource.data;
+      let f = get(/databases/$(database)/documents/publicNewcomerForms/$(s.token)).data;
+      return s.token is string && s.token.matches('[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}')
+        && f.active == true && f.expiresAt > request.time
+        && s.project == f.project && s.director == f.director
+        && (s.data.companyInputType == 'other' || s.company in f.contractorOptions)
+        && s.createdAt == request.time && s.lastModified == request.time
+        && submissionShape();
+    }
+    match /staffUsers/{uid} {
+      allow get: if request.auth != null && request.auth.uid == uid;
+      allow list, create, update, delete: if false;
+    }
+    match /drafts/{id} { allow read, write: if staff(); }
+    match /employees/{id} { allow read, write: if staff(); }
+    match /masterData/{id} { allow read, write: if staff(); }
+    match /diagramImages/{id} { allow read, write: if staff(); }
+    match /publicNewcomerForms/{token} {
+      allow get: if staff() || activeForm(token);
+      allow list: if staff();
+      allow create: if staff() && validForm(request.resource.data) && request.resource.data.createdAt == request.time && request.resource.data.expiresAt > request.time
+        && token.matches('[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}')
+        && getAfter(/databases/$(database)/documents/publicNewcomerFormAudit/$(token)).data.createdBy == request.auth.uid
+        && getAfter(/databases/$(database)/documents/publicNewcomerFormAudit/$(token)).data.createdAt == request.time;
+      allow update: if staff() && validForm(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active','expiresAt'])
+        && (request.resource.data.expiresAt == resource.data.expiresAt || request.resource.data.expiresAt > request.time);
+      allow delete: if staff();
+    }
+    match /publicNewcomerFormAudit/{token} {
+      allow read: if staff();
+      allow create: if staff() && request.resource.data.keys().hasAll(['createdBy','createdAt'])
+        && request.resource.data.keys().hasOnly(['createdBy','createdAt'])
+        && request.resource.data.createdBy == request.auth.uid && request.resource.data.createdAt == request.time;
+      allow update, delete: if false;
+    }
+    match /publicNewcomerSubmissions/{id} {
+      allow read, delete: if staff();
+      allow create: if publicSubmission();
+      allow update: if staff() && submissionShape()
+        && request.resource.data.token == resource.data.token && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.lastModified == request.time;
+    }
+    // Admin SDK only. No anonymous or authenticated client may use verification counters.
+    match /employeeAutofillRateLimits/{id} { allow read, write: if false; }
+    match /employeeAutofillMappings/{id} { allow read, write: if false; }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

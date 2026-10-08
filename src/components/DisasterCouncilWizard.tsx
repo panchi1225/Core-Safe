@@ -3,6 +3,7 @@ import { MasterData, DisasterCouncilReportData, INITIAL_DISASTER_COUNCIL_REPORT,
 import { getMasterData, saveDraft, fetchEmployees } from '../services/firebaseService';
 import { AGENDA_TEMPLATES, AGENDA_COMMON_ITEM1, AGENDA_FIRST_TIME_ITEM1 } from './disasterCouncilTemplates';
 import DisasterCouncilPrintLayout from './DisasterCouncilPrintLayout';
+import ReportPdfButton from './ReportPdfButton';
 
 interface Props {
   initialData?: any;
@@ -635,6 +636,7 @@ const DisasterCouncilWizard: React.FC<Props> = ({ initialData, initialDraftId, i
             {isDirectPreview ? 'ホームに戻る' : '閉じる'}
           </button>
           <div className="flex items-center gap-3">
+            <ReportPdfButton type="DISASTER_COUNCIL" data={report} />
             {isDirectPreview && (
               <>
                 <button

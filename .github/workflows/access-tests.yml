@@ -1,0 +1,42 @@
+name: Access control and bulk PDF tests
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '21'
+      - run: npm ci --ignore-scripts
+      - run: npm --prefix functions ci --ignore-scripts
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run test:rules
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - run: npm run test:functions
+      - run: npm run typecheck:functions
+      - run: npm run build:functions
+      - run: npm run test:functions:emulator
+      - name: Test CI diff ranges
+        run: node --test .github/scripts/check-diff.test.mjs
+      - name: Check event diff
+        run: node .github/scripts/check-diff.mjs
