@@ -39,7 +39,19 @@
 5. Authenticationのauthorized domainsにホスト名`panchi1225.github.io`が適切に登録されているか確認する（origin文字列や/Core-Safe/ではない）。Auth domainはcore-safe.firebaseapp.comのまま。不要なドメインを広げない。
 6. Functions v2の課金プラン、Cloud Functions/Cloud Run/Cloud Build/Artifact Registry/Secret Manager/Firestore等の必要サービス、組織ポリシー、asia-northeast1、実行SAとビルド/デプロイ主体を管理者が確認する。必要なものだけ有効にする。管理者と実行SAを区別し、Owner/Editorを実行SAに推奨しない。
 7. 下記の方法でSecretを準備する。既存Secretがある場合は勝手に上書き・ローテーションせず、利用関数とバージョンを確認する。
-8. 承認されたPR #34のみをmainへ反映し、mainの正確なSHAとCI成功を記録する。main更新とPages公開は別操作。このworkflowはPR検証だけで、mainのmergeによる自動deployは定義されていない。将来GitHub設定が変わっていないか確認する。ローカルをclean installし、Functions/フロントを事前buildして切替時間を短くする。
+8. **PR #34の最新SHAのPR CI全成功 → 承認されたPR #34のみmainへmerge → main push CI開始 → そのmain SHAのCI全成功を確認 → SHAと実行URLを記録 → 初めてPages deploy**の順序を守る。main CIが失敗・未開始・実行中・キャンセル・未確認の場合はPages deployを禁止する。main更新とPages公開は別操作で、CIに自動deployは含まれない。ローカルをclean installし、Functions/フロントを事前buildして切替時間を短くする。
+
+### CIのイベントと比較範囲
+
+`.github/workflows/access-tests.yml`はmain宛ての`pull_request`、mainへの`push`、`workflow_dispatch`で同じ検証を実行する。checkoutは`fetch-depth: 0`、権限は`contents: read`のみ。フロントNode 24、Functions Node 22、Java 21を維持し、本番Firebase操作やPages deploy、Secret操作は行わない。Rules/Functionsの通信先はテスト用`demo-core-safe` Emulatorだけ。
+
+差分検証は`.github/scripts/check-diff.mjs`がイベントファイルから安全にSHAを取得し、シェルへ補間せず`git diff --check`を実行する。
+
+- PR：`pull_request.base.sha`からcheckout済み`HEAD`（通常はPRの検証用merge commit）まで。
+- main push：`before`から`github.sha`まで。複数コミットを含むpush全体を検証する。旧tipが取得済み履歴にない場合は、そのSHAだけをoriginから取得する。取得できなければ比較不能としてCIを失敗させ、狭い範囲の成功に置き換えない。ブランチ新規作成のゼロSHAだけは対象コミットの第一親、root commitなら空treeとの比較にする。
+- 手動実行：checkout済み`HEAD`の第一親から`HEAD`まで。merge commitも第一親を使用し、root commitは空treeと比較する。過去の全履歴を対象にしない。
+
+比較範囲の回帰テストもCIで実行する。手動実行は補助検証であり、上記のmain push CI成功条件を置き換えない。この変更時点ではmain merge・main pushの実動作・手動イベント実行は未実施で、PR CIとローカルのイベント別テストで検証する。
 
 ### Secret生成・設定例：実行禁止（将来の管理者用）
 
@@ -87,7 +99,7 @@ Secret参照は対象Secretだけへの`roles/secretmanager.secretAccessor`に�
 3. 管理者が台帳の正しいUIDに`staffUsers/{uid}: {active: true}`を登録する。クライアントからの登録は禁止。既存未知UIDを無条件に有効化しない。取消はactive=false、必要に応じAuthアカウント無効化・トークン取消も管理者が行う。
 4. Node 22で下記2Functionsだけdeployする。既存Rulesが新コレクションを確実に保護すると別途確認できた場合だけ事前deployを検討できるが、この調査では確認できていないので先行を推奨しない。
 5. Functionsのregion・ランタイム・実行SA・Secret参照・invokerを確認する。無効/不正tokenが拒否されることをCallable形式で確認する。GETでURLが開くことやCORSの成功だけを正常動作としない。まだ公開有効QRを配布しない。
-6. 下記手順でmainのbuild済みフロントをGitHub Pagesへdeploy。gh-pagesへのpushとPages公開完了は別時点。Pagesのdeployment完了を待ち、/Core-Safe/で新しいハッシュのJSを読み込むことを確認する。キャッシュした旧タブは閉じ、再読込する。
+6. 下記手順で、記録済みmain SHAのmain push CI全成功を再確認したうえで、そのSHAのbuild済みフロントだけをGitHub Pagesへdeploy。main CI失敗時は公開しない。gh-pagesへのpushとPages公開完了は別時点。Pagesのdeployment完了を待ち、/Core-Safe/で新しいハッシュのJSを読み込むことを確認する。キャッシュした旧タブは閉じ、再読込する。
 7. 社員ログイン・通常入力/保存/編集・新旧回答一覧・個別PDF・一括PDFを確認。未許可Authアカウントと匿名が社内データを直接取得できないことも確認する。
 8. 社員画面から現場ごとの期限付きtoken QRを新規発行する。URLは`https://panchi1225.github.io/Core-Safe/?form=newcomer&token=<新規発行token>`。発行監査、会社名候補と氏名公開の承認、現場・所長・期限を確認する。旧tokenなしQRとURL直書きproject/director方式は再利用しない。掲示物・共有リンクを交換し、旧QRは再発行案内になることを確認する。
 9. 実スマートフォンでログインなしQR → 本人照合/手入力 → 署名 → 提出 → 社員一覧 → 一括PDFを確認。誤生年月日・無効token・期限切れも拒否されることを確認する。Functionsは生年月日という推測可能情報で照合するため、強い本人認証として運用しない。
@@ -116,10 +128,10 @@ regionはCLI引数で上書きせず、functions/src/index.tsの`asia-northeast1
 
 ## 5. main → clean install → build → GitHub Pages（未実行）
 
-承認済みPR #34のmain merge後、変更のないcheckoutで実施する。現在の最終候補はDraftのまま。本書作成時点ではmergeしない。
+承認済みPR #34の最新PR CI全成功を確認してから、将来の管理者が実施する。現在の最終候補はDraftのまま。本書作成時点ではmergeしない。merge後のmain push CI全成功を確認し、そのmain SHAを記録するまではPages deployを禁止する。
 
 ```powershell
-# 将来のmerge。mainの差分とCIを確認してから行う。
+# 将来のmerge。PR #34の最新SHA・全CI成功・main差分を確認してから行う。
 gh pr ready 34 --repo panchi1225/Core-Safe
 gh pr merge 34 --merge --repo panchi1225/Core-Safe
 git switch main
@@ -127,6 +139,15 @@ git pull --ff-only origin main
 git status --short
 git rev-parse HEAD
 # 変更が表示されたら止める。reset/cleanで消さない。
+$approvedMainSha = git rev-parse HEAD
+# mergeにより自動開始した、そのmain SHAのpush CIを選ぶ。
+$mainCiRuns = @(gh run list --repo panchi1225/Core-Safe --workflow access-tests.yml --branch main --event push --commit $approvedMainSha --limit 1 --json databaseId,headSha,event | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or $mainCiRuns.Count -ne 1) { throw 'main push CIが未確認です。Pages deployは禁止。' }
+gh run watch $mainCiRuns[0].databaseId --repo panchi1225/Core-Safe --exit-status
+if ($LASTEXITCODE -ne 0) { throw 'main CIが成功していません。Pages deployは禁止。' }
+$mainCi = gh run view $mainCiRuns[0].databaseId --repo panchi1225/Core-Safe --json status,conclusion,headSha,event,url | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0 -or $mainCi.status -ne 'completed' -or $mainCi.conclusion -ne 'success' -or $mainCi.event -ne 'push' -or $mainCi.headSha -ne $approvedMainSha) { throw 'main SHAとCI成功が一致しません。Pages deployは禁止。' }
+# approvedMainShaとmainCi.urlを管理者の記録に残す。
 # フロントの検証条件はNode 24。
 npm ci --ignore-scripts
 npm --prefix functions ci --ignore-scripts
@@ -135,6 +156,7 @@ npm run typecheck
 npm run build
 # distの /Core-Safe/ の資産参照を確認し、承認済みSHAを記録。
 # メンテナンス中、Rules/Functions確認後だけ実行。
+if ((git rev-parse HEAD) -ne $approvedMainSha -or (git status --porcelain)) { throw '検証済みSHAから変更されています。Pages deployは禁止。' }
 npm run deploy
 ```
 
@@ -194,7 +216,7 @@ App Checkは初回は未導入・非強制。後日、管理者がWebアプリ�
 
 ## 9. 人間が完了させる最終チェックリスト
 
-- [ ] 承認済みSHA、CI成功、main差分、Pagesの現行/切戻しSHAを記録。
+- [ ] 最新PR SHAの全CI成功を確認してからmergeし、main push CI全成功を確認。そのmain SHAとCI実行URL、main差分、Pagesの現行/切戻しSHAを記録。失敗・未確認ならPages deploy禁止。
 - [ ] 現行Rulesを保存してレビュー。既存構造・index・新名称の衝突と安全な復旧を確認。
 - [ ] Email/Password、authorized domain、社員UID台帳と登録対象を確認。
 - [ ] 公開氏名/会社候補/本人照合後の返却情報・生年月日照合の限界を運用承認。

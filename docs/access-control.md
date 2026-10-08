@@ -65,7 +65,7 @@ Rulesテストは起動済みサーバーに勝手に本番接続せず、Fireba
 
 ブラウザ検証用にはFunctions依存導入・build:functionsとローカル専用の架空鍵を準備してから、別ターミナルで`npx firebase emulators:start --only auth,firestore,functions --project demo-core-safe`を起動（鍵を上書きしない詳細は[Functionsガイド](public-employee-autofill.md)）。`FIRESTORE_EMULATOR_HOST=127.0.0.1:18080 node tests/seed-local.mjs`で架空データを用意し、`VITE_USE_FIREBASE_EMULATORS=true npm run dev`を実行します。PowerShellでは`$env:変数名='値'`で指定してください。staff@core-safe.local / Local-test-12345!はローカル専用の架空アカウントです。outsider@core-safe.localは同じパスワードでAuth認証できますが社員許可がありません。本番へ作成しないでください。
 
-CIはpull_requestでテストとビルドだけを実行し、Rulesやアプリをデプロイしません。Node/Javaセットアップは[公式Node Action](https://github.com/actions/setup-node)と[公式Java Action](https://github.com/actions/setup-java)を使用します。
+CIはmain宛てのpull_request、mainへのpush、workflow_dispatchでテストとビルドだけを実行し、Rulesやアプリをデプロイしません。権限はcontents: readのみです。最新PR SHAでのCI成功とmerge後のmain SHAでのpush CI全成功を確認し、後者のmain SHAを記録してから、管理者が別操作でPagesを公開します。main CI失敗・未確認時は公開禁止です。イベント別のdiff checkと手順は[本番導入手順](production-rollout.md)を参照してください。Node/Javaセットアップは[公式Node Action](https://github.com/actions/setup-node)と[公式Java Action](https://github.com/actions/setup-java)を使用します。
 
 ## PR #34の最終統合候補
 
