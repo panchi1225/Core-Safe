@@ -190,6 +190,7 @@ const App: React.FC = () => {
     if (!selectedReportType) return;
     setWizardInitialData(undefined);
     setWizardDraftId(null);
+    setWizardInitialStep(1);
     setCurrentView(selectedReportType as ViewState);
     closeSelectionModal();
   };
