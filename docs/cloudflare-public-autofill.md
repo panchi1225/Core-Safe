@@ -2,7 +2,7 @@
 
 ## 今回の範囲
 
-実装・検証は `demo-core-safe`、ローカルworkerd/D1、承認済みCloudflare Free専用ステージング。架空社員だけを使用し、本番Cloudflare作成・デプロイ・実社員同期、Firebase/Rules/Pages/Billing変更、QR再発行は行っていない。既存URL `?form=newcomer&token=...` をそのまま利用する。QR印刷デザインと新規作成STEPリセットは最新mainと同一。
+実装・検証は `demo-core-safe`、ローカルworkerd/D1、承認済みCloudflare Free専用ステージング。架空社員だけを使用する。追加承認により本番専用Worker/D1を停止状態で作成したが、実社員同期・公開有効化、Firebase/Rules/Pages/Billing変更、QR再発行は行っていない。既存URL `?form=newcomer&token=...` をそのまま利用する。QR印刷デザインと新規作成STEPリセットは最新mainと同一。[停止状態の本番準備・追加試験・残作業](cloudflare-production-preparation.md)。
 
 ## 処理
 
@@ -107,12 +107,12 @@ Node24/Java21を使用。rootとworkerで `npm ci --ignore-scripts`。`worker/.d
 
 CIは継続利用・変更順序・同期失敗/消去を含むWorker/rootテスト、型/ビルド、Rules、workerd/D1/Auth/Firestore結合を実行する。時刻テストは架空時刻で24時間・7日・30日を進めて検証する。Cloudflare buildは **deploy --dry-run** のみ。Functions関連の処理なし。
 
-## 本番初期設定（このPRでは未実施）
+## 本番初期設定（停止状態でのリソース準備のみ実施）
 
 1. 管理者が保存対象/委託先/権限/残存リスクを承認。Cloudflare **Workers Free** とD1 Freeを確認、専用DBと限定権限を用意。
 2. production.exampleを非Git管理の設定へコピー、D1 binding設定、独立したPAYLOAD_KEY/MATCH_KEYと管理者UID allowlistのADMIN_UIDSをWorker Secretへ設定。Google秘密鍵は不要。demo専用値 `demo-authorized-staff` はlocal MODEでしか管理者にならない。
 3. 本番有効化前に、別のFreeステージング・demoデータでCPU/rows実測と削除Cronを検証。実社員は使用しない。
-4. 別途本番変更承認が出たら、DB migrations（0001/0002）、Worker配置、SYNC_APPROVEDの有効化、管理者による一回の初期同期と除外件数確認、PUBLIC_ENABLEDとフロントHTTPS URL設定を行う。以降は社員変更時の自動反映だけで日常運用できる。
+4. DB migrations（0001/0002）・停止状態のWorker配置・独立Secret・毎時Cronは追加承認下で準備済み。PUBLIC_ENABLED/SYNC_APPROVED、workers.dev/preview URLは無効、社員0件。別途承認後だけ接続検証、SYNC_APPROVEDの有効化、管理者による一回の初期同期と除外件数確認、PUBLIC_ENABLEDとフロントHTTPS URL設定を行う。以降は社員変更時の自動反映だけで日常運用できる。
 5. フロントリリースは別途承認。QR URL/token/Rulesは更新不要。異常時はPUBLIC_ENABLED=falseまたはフロント接続URLを無効化して従来の手入力を継続する。開放Rulesへ戻さない。
 
 本番DOB read-only監査：31名中2名、元号期間不一致1・年月日の不正値1。実値・氏名は資料/Gitへ保存していない。本番変更/補正は未実施。

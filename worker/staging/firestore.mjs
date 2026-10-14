@@ -18,5 +18,5 @@ export async function employeePage(env,_bearer,state){
  if(!row)return {readTime};
  const raw=JSON.parse(row.fields_json),projection=Object.fromEntries(TRANSFER_FIELDS.filter(k=>k in raw).map(k=>[k,raw[k]]));
  // Exercise the same Firestore-shaped field decoder as production.
- return {readTime,document:{name:'projects/demo-core-safe/databases/(default)/documents/employees/'+row.id,fields:JSON.parse(JSON.stringify(fields(projection)))}};
+ return {readTime,document:{name:'projects/demo-core-safe/databases/(default)/documents/employees/'+row.id,fields:fields(projection)}};
 }

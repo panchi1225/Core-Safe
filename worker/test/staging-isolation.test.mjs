@@ -7,11 +7,20 @@ import {authorize,guard} from '../staging/auth.mjs';
 import {employee,token} from '../staging/fixtures.mjs';
 import {employeePage,validateQR,firestoreBase} from '../staging/firestore.mjs';
 import {transferEmployee} from '../src/data.mjs';
+import stage from '../staging/entry.mjs';
 const env=()=>({...environment(),MODE:'staging',STAGING_ONLY:'synthetic-v1',WORKER_NAME:'core-safe-public-autofill-staging',STAGING_AUTH_KEY:'3'.repeat(64)});
+
+test('native D1 CPU measurement avoids instrumentation without bypassing staging authentication',async()=>{
+ const e={...env(),STAGING_METRICS:'false'};
+ const r=await stage.fetch(new Request('http://localhost/__staging/cron',{method:'POST',headers:{Origin:e.ALLOWED_ORIGINS,'Content-Type':'application/json',Authorization:'Bearer '+jwt(e.STAGING_AUTH_KEY)},body:'{}'}),e);
+ assert.equal(r.status,200);assert.equal(r.headers.get('X-Staging-Instrumented'),'false');assert.equal(r.headers.get('X-D1-Rows-Read'),null);
+ const denied=await stage.fetch(new Request('http://localhost/__staging/cron',{method:'POST',headers:{Origin:e.ALLOWED_ORIGINS,'Content-Type':'application/json'},body:'{}'}),e);assert.equal(denied.status,403);e.DB.sql.close();
+});
 function jwt(key,extra={}){const parts=[{alg:'HS256'},{sub:'staging-admin',role:'staff',iss:'core-safe-synthetic-staging',aud:'core-safe-public-autofill-staging',exp:Math.floor(Date.now()/1000)+3600,...extra}].map(v=>Buffer.from(JSON.stringify(v)).toString('base64url'));return parts.join('.')+'.'+createHmac('sha256',Buffer.from(key,'hex')).update(parts.join('.')).digest('base64url');}
 test('staging credentials require a valid signature, issuer, audience, role and unexpired lifetime',async()=>{
  const e=env(),request=extra=>new Request('https://staging.invalid',{headers:{Authorization:'Bearer '+jwt(e.STAGING_AUTH_KEY,extra)}});
  assert.equal((await authorize(e,request())).subject,'staging-admin');
+ assert.equal((await authorize(e,request({sub:'staging-staff-1'}))).subject,'staging-staff-1');
  for(const extra of [{exp:0},{exp:Math.floor(Date.now()/1000)+10000},{aud:'production'},{iss:'other'},{sub:'outsider'},{role:'other'}])await assert.rejects(authorize(e,request(extra)));
  await assert.rejects(authorize(e,new Request('https://staging.invalid',{headers:{Authorization:'Bearer '+jwt('4'.repeat(64))}})));e.DB.sql.close();
 });

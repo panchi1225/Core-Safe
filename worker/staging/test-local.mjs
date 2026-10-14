@@ -13,6 +13,10 @@ const request=async(route,input,staff=true)=>{const r=await mf.dispatchFetch('ht
 try{
  const db=await mf.getD1Database('DB');for(const file of ['migrations/0001_autofill.sql','migrations/0002_mutation_guard.sql','staging/schema.sql'])for(const sql of fs.readFileSync(path.join(root,file),'utf8').split(';').filter(s=>s.trim()))await db.prepare(sql).run();
  assert.equal((await request('/__staging/seed',{},false)).r.status,403);
+ const peerParts=[{alg:'HS256'},{sub:'staging-staff-1',role:'staff',iss:'core-safe-synthetic-staging',aud:vars.WORKER_NAME,exp:Math.floor(Date.now()/1000)+3600}].map(v=>Buffer.from(JSON.stringify(v)).toString('base64url'));
+ const peerJWT=peerParts.join('.')+'.'+createHmac('sha256',Buffer.from(key,'hex')).update(peerParts.join('.')).digest('base64url');
+ const peer=await mf.dispatchFetch('http://localhost/__staging/seed',{method:'POST',headers:{Origin:vars.ALLOWED_ORIGINS,'Content-Type':'application/json',Authorization:'Bearer '+peerJWT},body:'{}'});
+ assert.equal(peer.status,403);
  assert.equal((await request('/__staging/seed',{})).data.seeded,31);
  const start=await request('/sync/start',{});assert.equal(start.r.status,200);
  let result;for(let i=0;i<33;i++){result=await request('/sync/step',{session:start.data.session});assert.equal(result.r.status,200);if(result.data.done)break;}

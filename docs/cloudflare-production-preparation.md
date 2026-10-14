@@ -1,0 +1,71 @@
+# Cloudflare本番環境の停止状態での準備（2026-10-15）
+
+## 承認範囲と現在の状態
+
+管理者の明示承認により、Workers Freeの `core-safe-public-autofill` とD1 Freeの `core-safe-autofill` を作成した。bindingは `DB`。作成前のリソース一覧とローカル管理記録を照合し、重複作成を防止した。
+
+- `PUBLIC_ENABLED=false` / `SYNC_APPROVED=false`。公開候補取得・DOB照合・同期は停止。
+- workers.dev、preview URLとも無効。独自ドメイン/ルートは設定していない。
+- 本番専用 `PAYLOAD_KEY` / `MATCH_KEY` は別々の32バイト乱数。stagingと異なる鍵をWorker Secretへ設定。
+- `ADMIN_UIDS` は既存の承認済み管理者専用暗号化台帳から設定。UID/鍵はGit・チャット・公開ログへ出していない。本番Auth/Firestoreへ接続して照合したものではない。
+- migrations `0001_autofill.sql` / `0002_mutation_guard.sql` を適用。有効roster・同期セッションは0件。実社員は未登録。
+- Cron `0 * * * *`（UTC毎時）。空の本番DBを掃除するだけでFirebaseへ接続しない。
+- 管理者専用ローカル領域へWindows DPAPIで鍵を退避。所有者/ACLと復号往復を確認。クラウド同期・Git対象にはしない。
+
+本番Firebase/Rules/Auth/帳票/社員/QR、Pages、Billingは変更していない。PR #36はDraft・未merge。既存 `lineworks-proxy` は変更しない。停止状態の本番リソース作成は、実社員同期・公開有効化・フロントリリースの承認を意味しない。
+
+## 保存予定の個人情報と保護
+
+| 保存するもの | 保護と用途 |
+| --- | --- |
+| 氏名・選択用ID | 氏名は平文、IDは秘密鍵付きHMAC。QRから本人が選択するため |
+| DOB照合値 | 選択IDとDOBをHMAC-SHA256。入力DOBはログへ保存しない |
+| 自動入力項目 | 氏名/フリガナ/生年月日/性別/住所/電話/緊急連絡先/職種/経験年月/血液型/健診日/資格をAES-256-GCMで暗号化 |
+| 同期セッション | ページ位置/除外理由等を暗号化。10分の期限 |
+| 変更ticket・試行制限 | 許可社員UID/対象ID/IPをHMAC。変更内容・生IP・入力DOBは保持しない |
+
+電子印・本人署名・管理用項目・Firebase ID token・Googleサービスアカウント秘密鍵はD1へコピーしない。署名は作業員本人が記入する。暗号方式、鍵長、nonce、generation/IDを結び付けるAADは今回弱めていない。
+
+管理用操作はFirebase ID tokenで現行RulesのstaffUsers.activeを確認し、停止/消去はSecretの管理者allowlistも確認する。D1はWorker bindingと限定したCloudflare管理権限で扱う。管理者MFA、CORS、no-store、汎用エラー、QR有効/期限確認を維持。DOB照合前に住所等を返さず、候補は氏名/IDだけ。
+
+10回/社員・5連続失敗で15分ロック、100回/IP/15分、公開2,000回/日・同期1,000回/日の既存制限を維持する。署名済み架空staging認証は本番バンドルに入らない。
+
+社員更新・削除は**公開コピー無効化 → Firestore保存 → 確定通知 → 自動同期 → 全件確認後だけ公開**。同時更新では未完了ticketとgenerationを検査し、旧世代を公開しない。同期失敗時は停止を維持し手入力を案内する。通常の毎日再同期は不要。有効コピーは24時間/7日/30日で失効しない。
+
+削除・再同期で旧rosterを削除する。管理者の停止/全同期データ消去はrosterと同期セッションを削除し、元Firestoreデータは変更しない。Cronは失敗した同期・旧世代・期限切れ試行制限を削除し、有効rosterと未完了書込みticketを保護する。アプリ外でFirestoreを変更する場合は、先に停止し変更後に例外復旧同期する。
+
+**保存先は日本国内限定ではない。** 生年月日だけの照合は強い本人認証ではなく、氏名/DOBを知る人のなりすまし、健康/連絡先情報の取得リスクが残る。平文氏名を扱えるD1管理者、復号できるWorker/Secret編集者の権限を限定し、退職・訂正時に速やかに削除する。D1 Time Travel Freeは過去7日間の復元が可能で、論理削除後の即時物理消去とは扱わない。[Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)
+
+## 無料枠と追加検証
+
+Workers Freeは100,000要求/日・CPU10ms/HTTP要求。D1 Freeは読取5,000,000行/日・書込100,000行/日・合計5GB。今回有料化・Blaze・Functionsは使用していない。無料枠は既存サービスと共有するため、stagingだけの使用量をアカウント全体の残量とは扱わない。[Workers limits](https://developers.cloudflare.com/workers/platform/limits/)、[D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/)
+
+実測はCloudflare GraphQLのCPU（microseconds→ms）とD1行数を使用する。wall timeをCPUに代用しない。適応サンプリング、秒単位の観測窓によるフェーズ重複があるため、フェーズの行数を単純合算しない。
+
+最初の追加試験でCPU11.539ms、再試験で12.089msを観測した。stagingの認証/JSON重複変換を減らし、共用暗号処理のBase64バイト変換・TextDecoder再生成を改善した。AES-GCM/HMACと旧暗号データ互換性のテストを追加。CPUの余裕は小さく、将来や本番Firebase取得経路の上限内動作を保証しない。
+
+最適化後のHTTP試験はUTC2026-10-14 14:57:47〜15:00:07。クライアント299要求、Worker errors 0。候補/DOBのcold試験はコードepochとisolate初回fetchマーカーの両方を確認し、古いコードへの要求をcoldとは扱わない。CPU集計は観測窓全体であり、単一の初回要求に一対一で対応する値ではない。計測ラッパーを外したnative D1経路でも測定した。
+
+| 試験 | 観測CPU最大 | 結果 |
+| --- | ---: | --- |
+| 31名の連続照合（62回） | 7.952ms | 正DOBで成功 |
+| 200名候補 cold / warm | 5.656 / 4.482ms | 初回isolate確認・全200候補 |
+| DOB照合 cold / warm | 8.839 / 9.513ms | 許可転記データのみ取得 |
+| 4 HTTPクライアント同時照合 | 9.513ms | 同じPC/NATから4並行要求。4物理端末の試験ではない |
+| 2許可ユーザーの同時更新・200名同期 | 9.513ms | 未確定更新は409、旧公開は503、古い同期世代は409、最新200名だけ公開 |
+
+この窓のCPU P50/P99は4.274/9.120ms。D1集計は読取5,152行・書込2,935行。最後の200名負荷試験の初期配置は架空暗号fixtureの直接投入で日次同期枠を節約したが、同時更新フェーズで実Workerの200名逐次同期を完了した。最初の別試験でも200名初期同期を完了している。ヘッダー計測の無い要求をD1使用量0とは扱わない。
+
+アカウント直近24時間の2026-10-15 00:15JST集計は約1,165要求、Worker errors 0、D1読取19,990行/書込8,169行。適応サンプリングを含む集計で、日次残量の厳密な保証ではない。要求数と行数に停止ガードを設け、同期1,000/日の製品制限は変更していない。
+
+初回31名試験とローカル架空時刻テストで、24時間超・7日・30日後の取得成功と再同期要求0件、社員追加/更新/削除、誤DOB/5連続失敗ロック、不正/無効/期限切れQR拒否を確認。実クラウドCron発火による削除は確認中であり、管理API経由の手動掃除を実Cronとは扱わない。
+
+Node24/Java21でroot96件、Worker41件、Rules36件、CI差分範囲11件、typecheck/build、staging workerd/D1、Auth/Firestore Emulator結合テストが成功。App.tsx・PR #38回帰テスト・QR印刷3ファイルは最新mainと同一。CIは資格情報を持たず、Cloudflareへのdeployや本番同期を実行しない。
+
+## 本番導入までに残る作業
+
+1. 実社員の保存対象・委託先/保存先・長期保持・削除・DOB認証リスクを管理者が確認し、実社員同期を別途承認する。
+2. 本番Firebaseとの認証/Rules/QR読取・projection取得経路の接続とCPUは未検証。今回本番Firestoreを照会していない。別途承認下で最小限の接続検証とピークの無料枠確認を行う。
+3. DOB不整合2名は既存の管理者専用DPAPI台帳で対象を確認する。今回再照会/補正していない。実値/氏名をGit/ログ/チャットに出さず、推測修正しない。
+4. 停止/消去/例外復旧とアプリ外更新の運用、管理者権限、鍵復旧/ローテーション、バックアップ残存期間を確認する。
+5. **次の明示承認後だけ**、初回実社員同期、除外件数の確認、公開有効化、PR mergeとフロント公開を行う。現在のQRのURL/token/Rulesは変更・再発行不要。

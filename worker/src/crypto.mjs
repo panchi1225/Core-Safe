@@ -1,7 +1,18 @@
 const encoder = new TextEncoder();
+const decoder = new TextDecoder();
 const hex = value => Uint8Array.from(value.match(/../g), x => parseInt(x,16));
-const b64 = value => btoa(String.fromCharCode(...new Uint8Array(value)));
-const unb64 = value => Uint8Array.from(atob(value),c=>c.charCodeAt(0));
+const b64 = value => {
+  const bytes=new Uint8Array(value);
+  if(typeof bytes.toBase64==='function')return bytes.toBase64();
+  return btoa(String.fromCharCode(...bytes));
+};
+const unb64 = value => {
+  if(typeof Uint8Array.fromBase64==='function')return Uint8Array.fromBase64(value);
+  const binary=atob(value),bytes=new Uint8Array(binary.length);
+  // Avoid allocating a string iterator/callback for every ciphertext byte.
+  for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+  return bytes;
+};
 const keys = new Map();
 async function key(secret, algorithm) {
   if (!/^[0-9a-f]{64}$/.test(secret || '')) throw Error('missing-secret');
@@ -21,7 +32,7 @@ export async function encrypt(secret, value, aad) {
 export async function decrypt(secret, value, aad) {
   const [iv,data] = value.split('.');
   const raw = await crypto.subtle.decrypt({name:'AES-GCM',iv:unb64(iv),additionalData:encoder.encode(aad)},await key(secret,'AES-GCM'),unb64(data));
-  return JSON.parse(new TextDecoder().decode(raw));
+  return JSON.parse(decoder.decode(raw));
 }
 export function equalMac(a,b) {
   if (typeof a !== 'string' || a.length !== b.length) return false;
