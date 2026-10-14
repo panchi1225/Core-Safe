@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "core-safe-public-autofill",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-10-14",
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": false },
+  "triggers": { "crons": ["0 * * * *"] },
+  "vars": {
+    "MODE": "production",
+    "FIREBASE_PROJECT_ID": "core-safe",
+    "ALLOWED_ORIGINS": "https://panchi1225.github.io",
+    "PUBLIC_ENABLED": "false",
+    "SYNC_APPROVED": "false"
+  },
+  "d1_databases": [{ "binding": "DB", "database_name": "REPLACE_AFTER_APPROVAL", "database_id": "REPLACE_AFTER_APPROVAL", "migrations_dir": "migrations" }]
+}

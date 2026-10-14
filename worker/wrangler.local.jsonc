@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "core-safe-public-autofill-local",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-10-14",
+  "workers_dev": false,
+  "dev": { "ip": "127.0.0.1", "port": 18787 },
+  "observability": { "enabled": false },
+  "triggers": { "crons": ["0 * * * *"] },
+  "vars": {
+    "MODE": "local",
+    "FIREBASE_PROJECT_ID": "demo-core-safe",
+    "FIRESTORE_EMULATOR_ORIGIN": "http://127.0.0.1:18080",
+    "ALLOWED_ORIGINS": "http://127.0.0.1:5178",
+    "PUBLIC_ENABLED": "true",
+    "SYNC_APPROVED": "true"
+  },
+  "d1_databases": [{ "binding": "DB", "database_name": "core-safe-autofill-local", "database_id": "00000000-0000-0000-0000-000000000000", "migrations_dir": "migrations" }]
+}
