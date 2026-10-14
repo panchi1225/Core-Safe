@@ -7,7 +7,9 @@
     "migrate:local": "wrangler d1 migrations apply DB --local --config wrangler.local.jsonc",
     "test": "node --test test/*.test.mjs",
     "test:local": "node test-local.mjs",
-    "build": "wrangler deploy --dry-run --outdir dist --config wrangler.local.jsonc"
+    "build": "wrangler deploy --dry-run --outdir dist --config wrangler.local.jsonc",
+    "build:staging": "node staging/build.mjs",
+    "test:staging": "node staging/test-local.mjs"
   },
   "devDependencies": { "wrangler": "4.151.0", "miniflare": "5.20261012.0-beta" }
 }

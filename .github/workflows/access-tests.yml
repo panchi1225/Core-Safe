@@ -26,6 +26,8 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm --prefix worker ci --ignore-scripts
       - run: npm --prefix worker test
+      - run: npm --prefix worker run build:staging
+      - run: npm --prefix worker run test:staging
       - run: npm --prefix worker run build
         env:
           WRANGLER_SEND_METRICS: 'false'

@@ -34,6 +34,10 @@ functions/.secret.local
 functions/.env*
 !functions/.env.example
 
+# Synthetic Cloudflare staging: generated bundles and local deployment metadata.
+worker/dist-staging/
+worker/staging/*.private.json
+
 # Cloudflare local state and keys (never commit PII or credentials)
 worker/.wrangler/
 worker/.dev.vars*

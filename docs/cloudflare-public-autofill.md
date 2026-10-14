@@ -2,7 +2,7 @@
 
 ## 今回の範囲
 
-実装・検証は `demo-core-safe` とローカルworkerd/D1、架空社員だけ。本番Cloudflare作成・デプロイ・実社員同期、Firebase/Rules/Pages/Billing変更、QR再発行は行っていない。既存URL `?form=newcomer&token=...` をそのまま利用する。検証済みのA4 QR印刷レイアウトを含む。
+実装・検証は `demo-core-safe`、ローカルworkerd/D1、承認済みCloudflare Free専用ステージング。架空社員だけを使用し、本番Cloudflare作成・デプロイ・実社員同期、Firebase/Rules/Pages/Billing変更、QR再発行は行っていない。既存URL `?form=newcomer&token=...` をそのまま利用する。QR印刷デザインと新規作成STEPリセットは最新mainと同一。
 
 ## 処理
 
@@ -89,7 +89,7 @@ Firebaseの既存ID tokenをリクエストごとに使用し、Workerが `/staf
 
 Firestore Sparkの読取50,000/日も既存アプリと共有。公開QR確認は一覧一回、成功照合では二回、同期では権限確認と一社員取得を各要求で行う。現行Rules内の参照も含め使用量を確認する。上限超過は汎用失敗となり手入力へ誘導する。
 
-CPUは一社員単位・小さなJSON・Web Crypto・I/O待ちの分離で10msを目標とする。**ローカルWindowsのV8サンプリングはネットワーク待ちもtimeDeltasに混ざり、Cloudflareの課金CPUの証明には使えなかった。本番エッジの10ms以内を確認済みとは扱わない。** 有料化せず、Freeの架空データ専用ステージングでcold/warm、最大200名の一覧、同期、正誤照合を測定し、10ms超過が継続する場合は有効化を停止して再設計する。この確認と管理者承認までは本番設定のPUBLIC_ENABLED/SYNC_APPROVEDをfalseのまま維持する。
+CPUは一社員単位・小さなJSON・Web Crypto・I/O待ちの分離で10msを目標とする。Freeステージングの架空31名でCPU観測最大8.625ms、P99 8.207ms、Worker errors 0をCloudflare GraphQLから測定した。D1集計は読取3,054行・書込1,625行で無料枠内。[実測・再現・限界](cloudflare-free-staging.md)を参照。サンプリングを含む結果であり、本番Firebase取得経路・最大200名・cold start・将来負荷の保証ではない。ローカル所要時間を課金CPUとして扱わない。管理者承認と本番条件の追加確認までは本番PUBLIC_ENABLED/SYNC_APPROVEDをfalseのまま維持し、CPU超過時は有料化せず有効化を停止する。
 
 出典：[Workers limits](https://developers.cloudflare.com/workers/platform/limits/)、[D1 pricing](https://developers.cloudflare.com/d1/platform/pricing/)、[D1 limits](https://developers.cloudflare.com/d1/platform/limits/)、[Firestore quotas](https://firebase.google.com/docs/firestore/quotas)。
 
