@@ -5,6 +5,7 @@ import {
   fetchEmployees, saveEmployee, deleteEmployee 
 } from '../services/firebaseService';
 import { EXPERIENCE_REFERENCE_LABEL } from '../utils/experience';
+import EmployeeAutofillSync, { useEmployeeAutofillSync } from './EmployeeAutofillSync';
 
 interface Props {
   onBackToMenu: () => void;
@@ -499,6 +500,7 @@ const MASTER_GROUPS = {
 type TabType = 'BASIC' | 'TRAINING' | 'EMPLOYEES';
 
 const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
+  const autofillSync = useEmployeeAutofillSync();
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
   const [masterLoadState, setMasterLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [isSavingMaster, setIsSavingMaster] = useState(false);
@@ -571,6 +573,7 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
 
   // 社員保存
   const handleSaveEmployee = async (data: EmployeeData) => {
+    if (autofillSync.busy) return;
     // 必須チェック（氏名のみ）
     if (!data.nameSei || !data.nameMei) {
       alert("氏名は必須です");
@@ -585,10 +588,12 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
     setEmployees(newEmps);
     setIsEditingEmployee(false);
     setEditingEmployee(null);
+    await autofillSync.sync();
   };
 
   // 社員削除
   const handleDeleteEmployee = async () => {
+    if (autofillSync.busy) return;
     if (!editingEmployee || !editingEmployee.id) return;
     setConfirmModal({
       isOpen: true,
@@ -600,6 +605,7 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         setIsEditingEmployee(false);
         setEditingEmployee(null);
+        await autofillSync.sync();
       }
     });
   };
@@ -686,11 +692,12 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
                     登録済み社員一覧{" "}
                     <span className="text-xs font-normal text-gray-500 bg-white px-2 py-1 rounded-full ml-2 border">{employees.length}名</span>
                   </h3>
-                  <button onClick={handleNewEmployee} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md">
+                  <button disabled={autofillSync.busy} onClick={handleNewEmployee} className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 font-bold shadow-md disabled:opacity-50">
                     <i className="fa-solid fa-plus mr-1"></i>新規登録
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                  <EmployeeAutofillSync busy={autofillSync.busy} message={autofillSync.message} onSync={autofillSync.sync} />
                   {employees.length === 0 ? (
                     <div className="text-center py-10 text-gray-400">
                       <p className="mb-2">社員データがありません。</p>
@@ -699,7 +706,7 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
                   ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {employees.map((emp) => (
-                        <button key={emp.id} onClick={() => handleEditEmployee(emp)} className="flex items-center p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-400 hover:shadow-md transition-all text-left group">
+                        <button disabled={autofillSync.busy} key={emp.id} onClick={() => handleEditEmployee(emp)} className="flex items-center p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-400 hover:shadow-md transition-all text-left group disabled:opacity-50">
                           <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold mr-3 shrink-0">
                             {emp.nameSei.charAt(0)}
                           </div>

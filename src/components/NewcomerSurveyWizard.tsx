@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, EmployeeData } from '../types';
-import { calculateCurrentExperience } from '../utils/experience';
+import { employeeSurveyFields, MATSUURA_COMPANY } from '../utils/employeeAutofill';
+import PublicEmployeeAutofill from './PublicEmployeeAutofill';
 import { PublicNewcomerForm } from '../utils/newcomerAccess';
 import { newSubmissionId, submitPublicNewcomerSurvey } from '../services/publicNewcomerService';
 import SignatureCanvas from './SignatureCanvas';
@@ -99,6 +100,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
   const submitBusy = useRef(false);
   const submitted = useRef(false);
   const publicSubmissionId = useRef<string | null>(null);
+  const appliedPublicEmployee = useRef(false);
   const [showPreview, setShowPreview] = useState(initialStep === 99);
   const isDirectPreview = initialStep === 99;
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -197,41 +199,18 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
     applyEmployeeAutofill(emp);
   };
 
-  const applyEmployeeAutofill = (emp: EmployeeData) => {
-    const currentExperience = calculateCurrentExperience(emp.experienceYears, emp.experienceMonths);
-
-    const isPreset = PRESET_JOB_TYPES.includes(emp.jobType);
-    const finalJobType = isPreset ? emp.jobType : (emp.jobType ? 'その他' : '');
-    const finalJobTypeOther = isPreset ? '' : emp.jobType;
-
-    updateReport({
-      company: "松浦建設株式会社",
-      nameSei: emp.nameSei,
-      nameMei: emp.nameMei,
-      furiganaSei: emp.furiganaSei,
-      furiganaMei: emp.furiganaMei,
-      birthEra: emp.birthEra as NewcomerSurveyReportData['birthEra'],
-      birthYear: emp.birthYear,
-      birthMonth: emp.birthMonth,
-      birthDay: emp.birthDay,
-      bloodType: emp.bloodType,
-      bloodTypeRh: emp.bloodTypeRh,
-      gender: emp.gender,
-      address: emp.address,
-      phone: emp.phone,
-      emergencyContactSei: emp.emergencyContactSei,
-      emergencyContactMei: emp.emergencyContactMei,
-      emergencyContactRelation: emp.emergencyContactRelation,
-      emergencyContactPhone: emp.emergencyContactPhone,
-      healthCheckYear: emp.healthCheckYear,
-      healthCheckMonth: emp.healthCheckMonth,
-      healthCheckDay: emp.healthCheckDay,
-      experienceYears: currentExperience.years,
-      experienceMonths: currentExperience.months,
-      jobType: finalJobType,
-      jobTypeOther: finalJobTypeOther,
-      qualifications: { ...INITIAL_NEWCOMER_SURVEY_REPORT.qualifications, ...emp.qualifications }
-    });
+  const applyEmployeeAutofill = (emp: Partial<EmployeeData>) => {
+    if (isPublicEntry) appliedPublicEmployee.current = true;
+    updateReport({ ...employeeSurveyFields(emp), ...(isPublicEntry ? {
+      companyInputType: publicForm?.contractorOptions.includes(MATSUURA_COMPANY) ? 'master' : 'other',
+      signatureDataUrl: null,
+    } : {}) });
+  };
+  const resetPublicEmployee = () => {
+    if (!appliedPublicEmployee.current) return;
+    appliedPublicEmployee.current = false;
+    const defaults = Object.fromEntries(Object.keys(employeeSurveyFields({})).map(key => [key, INITIAL_NEWCOMER_SURVEY_REPORT[key]]));
+    updateReport({ ...defaults, age: 0, companyInputType: 'master', signatureDataUrl: null });
   };
 
   const validateStep1 = () => {
@@ -408,7 +387,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
         }
         {isPublicEntry && <div className="bg-purple-50 p-4 rounded"><p>現場名：{publicForm?.project}</p><p>作業所長：{publicForm?.director}</p></div>}
         {/* 社員自動入力 */}
-        {isPublicEntry && <p className="text-sm text-gray-700">松浦建設株式会社の社員の方も、各項目を入力してください。</p>}
+        {isPublicEntry && publicForm && <PublicEmployeeAutofill token={publicForm.token} onAutofill={applyEmployeeAutofill} onReset={resetPublicEmployee} />}
         {!isPublicEntry &&
         <div className="bg-green-50 p-4 rounded border border-green-200 w-full">
            <div className="text-sm text-green-700 font-bold mb-2">
