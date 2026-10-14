@@ -6,6 +6,7 @@ import {
 } from '../services/firebaseService';
 import { EXPERIENCE_REFERENCE_LABEL } from '../utils/experience';
 import EmployeeAutofillSync, { useEmployeeAutofillSync } from './EmployeeAutofillSync';
+import { writeEmployeeOnServer } from '../services/employeeServerWrite';
 
 interface Props {
   onBackToMenu: () => void;
@@ -583,12 +584,11 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
     // 入力時のタイムスタンプを保存（経験年数計算用）
     const dataToSave = { ...data, lastUpdatedExperience: Date.now() };
 
-    await saveEmployee(dataToSave);
+    if (!(await autofillSync.change(token=>token?writeEmployeeOnServer(dataToSave,token):saveEmployee(dataToSave)))) return;
     const newEmps = await fetchEmployees();
     setEmployees(newEmps);
     setIsEditingEmployee(false);
     setEditingEmployee(null);
-    await autofillSync.sync();
   };
 
   // 社員削除
@@ -599,13 +599,14 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
       isOpen: true,
       message: `${editingEmployee.nameSei} ${editingEmployee.nameMei} を削除してもよろしいですか？`,
       onConfirm: async () => {
-        await deleteEmployee(editingEmployee.id);
+        if (!(await autofillSync.change(token=>token?writeEmployeeOnServer(editingEmployee.id,token):deleteEmployee(editingEmployee.id)))) {
+          setConfirmModal(prev=>({...prev,isOpen:false}));return;
+        }
         const newEmps = await fetchEmployees();
         setEmployees(newEmps);
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         setIsEditingEmployee(false);
         setEditingEmployee(null);
-        await autofillSync.sync();
       }
     });
   };
@@ -615,11 +616,12 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
       <header className="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
         <h1 className="text-lg font-bold"><i className="fa-solid fa-gear mr-2"></i>マスタ管理設定</h1>
         <div className="flex gap-2">
-          <button onClick={onBackToMenu} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500 font-bold text-sm">メニューに戻る</button>
+          <button disabled={autofillSync.busy} onClick={onBackToMenu} className="px-4 py-2 bg-gray-600 rounded hover:bg-gray-500 font-bold text-sm disabled:opacity-50">メニューに戻る</button>
         </div>
       </header>
 
       <div className="p-4 max-w-4xl mx-auto w-full flex-1 flex flex-col">
+        {autofillSync.message && <p role="status" className="p-3 mb-3 rounded border bg-green-50 font-bold">{autofillSync.message}</p>}
         {/* 社員編集中ならフォームを表示 */}
         {masterLoadState !== 'ready' ? (
           <div className="bg-white rounded-lg shadow-sm p-6 text-center" role="status">
@@ -634,7 +636,7 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
             )}
           </div>
         ) : isEditingEmployee && editingEmployee ? (
-          <div className="flex-1 overflow-hidden h-full">
+          <fieldset disabled={autofillSync.busy} className="flex-1 overflow-hidden h-full min-w-0 p-0 border-0">
             <EmployeeEditForm
               employee={editingEmployee}
               masterData={masterData}
@@ -642,7 +644,7 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
               onCancel={() => { setIsEditingEmployee(false); setEditingEmployee(null); }}
               onDelete={handleDeleteEmployee}
             />
-          </div>
+          </fieldset>
         ) : selectedMasterKey ? (
           <div className="flex-1 overflow-hidden h-full">
             <MasterSection
@@ -697,7 +699,7 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
                   </button>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                  <EmployeeAutofillSync busy={autofillSync.busy} message={autofillSync.message} onSync={autofillSync.sync} />
+                  <EmployeeAutofillSync busy={autofillSync.busy} admin={autofillSync.admin} onSync={autofillSync.sync} onControl={autofillSync.control} />
                   {employees.length === 0 ? (
                     <div className="text-center py-10 text-gray-400">
                       <p className="mb-2">社員データがありません。</p>

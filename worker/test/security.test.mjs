@@ -68,11 +68,11 @@ test('sync uses staff ID token for Rules-controlled, projected, single-record Fi
 test('staff revocation between sync steps stops copying and leaves public roster unavailable',()=>fixture(async env=>{
   const start=await (await call(worker,env,'/sync/start',{},true)).json();const r=await call(worker,env,'/sync/step',{session:start.session},'outsider');assert.ok(!r.ok);assert.ok(!(await call(worker,env,'/candidates?token='+token)).ok);
 }));
-test('partial staging, sync failure and stale roster never expose an outdated/partial roster',()=>fixture(async(env,mock)=>{
+test('partial staging and sync failure never expose an outdated/partial roster',()=>fixture(async(env,mock)=>{
   await synchronize(worker,env);await candidate(env);
   const start=await (await call(worker,env,'/sync/start',{},true)).json();assert.ok(!(await call(worker,env,'/candidates?token='+token)).ok);
   mock.control.failSync=true;assert.ok(!(await call(worker,env,'/sync/step',{session:start.session},true)).ok);assert.ok(!(await call(worker,env,'/candidates?token='+token)).ok);
-  mock.control.failSync=false;await synchronize(worker,env);env.DB.sql.prepare('UPDATE metadata SET synced_at=0').run();assert.ok(!(await call(worker,env,'/candidates?token='+token)).ok);
+  mock.control.failSync=false;await synchronize(worker,env);env.DB.sql.prepare('UPDATE metadata SET synced_at=0').run();await candidate(env);
 }));
 test('invalid DOBs are excluded with aggregate reasons, never automatically corrected',()=>fixture(async env=>{
   const result=await synchronize(worker,env);assert.equal(result.count,1);assert.equal(result.excluded,2);assert.deepEqual(result.reasons,{outsideEraBoundary:1,invalidComponents:1});
@@ -104,9 +104,9 @@ test('DOB calendar, era boundaries, future dates and qualified payload validatio
   assert.equal(birthDate({...employee,birthEra:'unknown'}).error,'unsupportedEra');
   assert.throws(()=>transferEmployee({...employee,address:'x'.repeat(501)}));
 });
-test('scheduled PII cleanup expires old roster but protects live staging; old rate records removed',()=>fixture(async env=>{
+test('scheduled cleanup retains active roster regardless of age and expires abandoned staging',()=>fixture(async env=>{
   await synchronize(worker,env);env.DB.sql.prepare('UPDATE metadata SET synced_at=0').run();
-  await worker.scheduled({},env);assert.equal(env.DB.sql.prepare('SELECT COUNT(*) n FROM roster').get().n,0);
+  await worker.scheduled({},env);assert.equal(env.DB.sql.prepare('SELECT COUNT(*) n FROM roster').get().n,1);
   const start=await (await call(worker,env,'/sync/start',{},true)).json();await call(worker,env,'/sync/step',{session:start.session},true);
   await worker.scheduled({},env);assert.equal(env.DB.sql.prepare('SELECT COUNT(*) n FROM roster').get().n,1);
   env.DB.sql.prepare('UPDATE sync_state SET expires_at=0').run();await worker.scheduled({},env);assert.equal(env.DB.sql.prepare('SELECT COUNT(*) n FROM roster').get().n,0);

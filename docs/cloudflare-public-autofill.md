@@ -27,21 +27,45 @@
 | 生年月日の照合値 | 選択IDと生年月日を秘密鍵付きHMAC-SHA256。単純hash/平文照合値は保存しない |
 | 氏名・フリガナ・元号年月日・性別・住所・電話・緊急連絡先・職種・経験年月・血液型/RH・健診年月日・資格 | AES-256-GCMで暗号化。照合成功時のアンケート転記に限定 |
 | 同期のページ位置・件数・除外理由 | AES-GCMで暗号化。10分間の同期セッションのみ |
+| 社員変更の安全管理ticket・許可社員UIDのHMAC | コピー無効化と未完了書込みの管理。社員氏名・変更内容は保存しない |
 | 試行制限のキー | IP/選択IDをHMAC。生IP・入力DOBは保存しない。15分の制限管理 |
 
-電子印、本人署名、社員マスタの管理項目、Auth ID token、Googleサービスアカウント秘密鍵は保存しない。Worker SecretのPAYLOAD_KEY/MATCH_KEYはそれぞれ独立した32バイト乱数（64桁hex）。フロント・D1・Gitへ入れない。ログ/トレースは無効、アプリは要求本文・秘密・個人情報をconsole出力しない。
+電子印、本人署名、社員マスタの管理項目、Auth ID token、Googleサービスアカウント秘密鍵は保存しない。Worker SecretのPAYLOAD_KEY/MATCH_KEYはそれぞれ独立した32バイト乱数（64桁hex）。フロント・D1・Gitへ入れない。管理者専用操作は別のWorker Secret `ADMIN_UIDS`（許可管理者のFirebase UID、複数時はカンマ区切り）と現行staffUsers.activeの両方で検証する。秘密値をログ・Git・フロントへ出さない。ログ/トレースは無効、アプリは要求本文・秘密・個人情報をconsole出力しない。
 
 D1はWorker binding経由だけ。D1管理権限、Workerコード/Secret編集権限は管理者に限定しMFAを使用。D1閲覧者でも平文氏名は閲覧可能であり、Worker編集者は復号できるため、暗号化は管理者から情報を隠すものではない。
 
 ## 同期と失敗時
 
-社員名簿の「公開QR用社員情報を再同期」で初期同期/再同期。社員保存・削除後も再同期する。Firebaseの既存ID tokenをリクエストごとに使用し、Workerが `/staffUsers/{sub}` をFirestore RESTでGET。subのdecodeは経路の指定だけで、FirebaseがJWTと現行RulesのUID一致/activeを検証する。各社員取得も同じBearer tokenでRulesに従う。権限失効・ログアウト・別ユーザー・通信失敗で停止。
+**初回導入時に管理者が一回同期する。以降は毎日のログイン・再同期・日付操作を一切要求しない。** 固定24時間の利用期限・日次失効を撤廃し、7日・30日後も同じ有効rosterを継続利用する。公開作業員の操作は従来の氏名選択・DOB照合・内容確認・本人署名・提出のまま。
+
+Core Safeの社員マスタで登録・変更・削除を行うと、次の順序で自動反映する。
+
+1. Worker `/sync/prepare` が公開rosterを無効化・削除し、進行中の古い同期を中止。変更ticketをD1に保持して応答する。
+2. 無効化の確認後だけ、社員のFirebase ID tokenでFirestore REST commitを送る。現行Rulesに従い、setDoc merge相当の更新maskを使用する。署名画像等をWorkerに送らず、Firestoreの元データ/帳票は維持する。
+3. Firestoreの成功応答後、`/sync/settle` で書込みの完了を通知し、ticket付きの一社員単位の同期を自動実行する。利用者が同期ボタンを押す必要はない。
+4. 全取得が完了し、未完了書込みがなく、現在のgeneration/ownerが一致するときだけ原子的に公開する。同時更新で後の同期に置き換わった場合は、その安全な完了を自動で短時間待つ。
+
+無効化に失敗した場合はFirestore変更を開始しない。保存・削除の結果が不明な場合は自動再送せず、旧情報の公開を停止したまま保存結果の確認を依頼する。Firestore成功・同期失敗は明確に区別して画面へ表示し、元の保存を巻き戻さない。公開QRは手入力を案内する。未完了ticketは時間経過で自動解除しないため、同期失敗で旧rosterが復活することはない。
+
+オンラインREST保存を採用する理由は、SDKのオフライン書込みが後日送信され、復旧後のFirestoreだけを更新する状態を避けるため。設定未使用時の既存SDK保存は維持する。Firebase ID tokenの認証・Security Rulesは従来どおり。[Firestore REST認証](https://firebase.google.com/docs/firestore/use-rest-api)。
+
+Firebaseの既存ID tokenをリクエストごとに使用し、Workerが `/staffUsers/{sub}` をFirestore RESTでGET。subのdecodeは経路の指定だけで、FirebaseがJWTと現行RulesのUID一致/activeを検証する。各社員取得も同じBearer tokenでRulesに従う。権限失効・ログアウト・別ユーザー・通信失敗で停止する。
 
 署名/電子印を除くprojectionと、名前順のカーソル/readTimeを使用して**一回に一社員**を取得・暗号化する。上限200名、同期セッション10分。全社員の取得が終わるまで公開しない。更新の同期開始時に公開rosterを無効化し、失敗時は画面に明示して手入力へ誘導する。Firestoreで成功した社員保存を巻き戻さない。
 
-同期済みデータは24時間で公開利用を停止。少なくとも一日一回、ログイン済み社員が再同期する運用が必要。毎時のCronが期限切れの複製を削除（最大25時間）、失敗したステージも期限後に削除。D1 Time TravelではFreeの7日間の過去コピーが残り得る。即時の物理消去とは扱わない。Firebase Console等でアプリ外から社員を修正した場合も再同期が必要。
+有効な社員コピーは更新・削除・管理者停止まで継続保持する。毎時Cronは有効rosterを削除せず、期限切れ/旧ステージ・試行制限データ・確定済み変更ticketだけを掃除する。未完了書込みの安全管理ticketには社員の変更内容を含めず、結果を確認して復旧するまで公開停止を維持する。
 
-不正DOB/転記項目は修復・推測せず除外し、同期結果に件数と理由を返す。社員名簿で正しい元号・年月日、必要項目を人が確認して修正後に再同期する。公開候補には照合できる社員だけを掲載する。
+長期保持により、Firestore外に暗号化された健康・連絡先情報と平文氏名が残る。退職・訂正・削除はCore Safeの社員画面で速やかに行い、Cloudflareアカウント/鍵の管理・アクセス権の棚卸しを行う。コピーの保存目的がなくなれば、管理者専用「公開自動入力を停止」または「全同期データを消去」でroster/同期セッションを消去し、停止状態を維持する。試行制限・未完了書込みticketは安全のため維持し、元のFirestore社員・帳票は削除しない。D1 Time TravelのFreeバックアップには最大7日間過去コピーが残り得る。即時の物理消去とは扱わない。
+
+### 障害復旧・アプリ外変更だけの例外操作
+
+- 通常運用はCore Safe社員マスタ画面から更新する。
+- Firebase Console等で変更する場合は**先に**管理者専用操作で公開自動入力を停止し、Console変更後に「初回同期／例外時の復旧同期」を一回実行する。QR/tokenは変更しない。停止せずアプリ外から変更した内容は自動検出できないため、発見時は直ちに停止し正の社員マスタから復旧する。
+- 未完了ticketがある障害時は、全端末の社員変更処理を止め、ログイン中の管理者がFirestoreで保存/削除結果を確認する。新しい社員変更を再送しない。開始から10分未満の未完了処理がある間は復旧を拒否する。
+- 未完了要求が終了し正のマスタを確認した管理者だけが確認ダイアログに同意して復旧する。これは例外操作であり、日常・毎朝・毎日の操作ではない。自動タイマーでは安全管理ticketを解除しない。
+- 保存済みrosterの全消去やPUBLIC_ENABLED=falseによる停止後、再開は管理者の明示操作による全取得完了後だけ。非管理者は停止・消去・手動再開・未完了状態の強制解除ができない。
+
+不正DOB/転記項目は修復・推測せず除外し、同期結果に件数と理由を返す。社員名簿で正しい元号・年月日、必要項目を人が確認し、Core Safeで修正・保存すると自動同期する。公開候補には照合できる社員だけを掲載する。
 
 ## 防御と残存リスク
 
@@ -57,7 +81,7 @@ D1はWorker binding経由だけ。D1管理権限、Workerコード/Secret編集�
 | --- | --- | --- |
 | Workers | 100,000 requests/day、CPU 10ms/要求、128MB | 公開2,000件/UTC日、同期1,000要求/UTC日。上限でDBカウンタを増やさず拒否 |
 | D1 | 5,000,000読取行/日、100,000書込行/日 | 索引付きキー照会、候補最大200名、期限レコードの削除数も制限 |
-| D1保存 | アカウント計5GB、1DB 500MB | 転記JSON最大8,000文字/社員、署名画像なし、旧rosterを保存し続けない |
+| D1保存 | アカウント計5GB、1DB 500MB | 転記JSON最大8,000文字/社員、最大200名の有効rosterを保持。旧rosterは変更/消去時に削除 |
 | D1 | 最大50 queries/要求、100 bind params/query | 同期一名単位。DBと外部RESTを合わせても50 subrequestsを大幅に下回る |
 | Cron | 5 triggers/account | 一つの毎時削除Cronのみ |
 
@@ -78,17 +102,17 @@ Node24/Java21を使用。rootとworkerで `npm ci --ignore-scripts`。`worker/.d
 3. `FIRESTORE_EMULATOR_HOST=127.0.0.1:18080 node tests/seed-local.mjs`
 4. `npm --prefix worker run dev`（127.0.0.1:18787）
 5. `VITE_USE_FIREBASE_EMULATORS=true VITE_PUBLIC_AUTOFILL_URL=http://127.0.0.1:18787 npm run dev -- --host 127.0.0.1 --port 5178 --strictPort`
-6. 社員 `staff@core-safe.local / Local-test-12345!` で名簿の再同期。
+6. 社員 `staff@core-safe.local / Local-test-12345!` で名簿の初回同期（local専用管理者設定）。以降の追加・変更・削除は保存時に自動反映。
 7. 未ログインで `http://127.0.0.1:5178/Core-Safe/?form=newcomer&token=11111111-1111-4111-8111-111111111111`。架空社員「検証 社員」、DOB19950101。
 
-CIはWorker unit23件、rootの既存68+公開UI3件、型/ビルド、Rules、workerd/D1/Auth/Firestore結合を実行する。Cloudflare buildは **deploy --dry-run** のみ。Functions関連の処理なし。
+CIは継続利用・変更順序・同期失敗/消去を含むWorker/rootテスト、型/ビルド、Rules、workerd/D1/Auth/Firestore結合を実行する。時刻テストは架空時刻で24時間・7日・30日を進めて検証する。Cloudflare buildは **deploy --dry-run** のみ。Functions関連の処理なし。
 
 ## 本番初期設定（このPRでは未実施）
 
 1. 管理者が保存対象/委託先/権限/残存リスクを承認。Cloudflare **Workers Free** とD1 Freeを確認、専用DBと限定権限を用意。
-2. production.exampleを非Git管理の設定へコピー、D1 binding設定、独立したPAYLOAD_KEY/MATCH_KEYをWorker Secretへ設定。Google秘密鍵は不要。
+2. production.exampleを非Git管理の設定へコピー、D1 binding設定、独立したPAYLOAD_KEY/MATCH_KEYと管理者UID allowlistのADMIN_UIDSをWorker Secretへ設定。Google秘密鍵は不要。demo専用値 `demo-authorized-staff` はlocal MODEでしか管理者にならない。
 3. 本番有効化前に、別のFreeステージング・demoデータでCPU/rows実測と削除Cronを検証。実社員は使用しない。
-4. 別途本番変更承認が出たら、DB migration、Worker配置、SYNC_APPROVEDの有効化、許可社員による初期同期と除外件数確認、PUBLIC_ENABLEDとフロントHTTPS URL設定を行う。
+4. 別途本番変更承認が出たら、DB migrations（0001/0002）、Worker配置、SYNC_APPROVEDの有効化、管理者による一回の初期同期と除外件数確認、PUBLIC_ENABLEDとフロントHTTPS URL設定を行う。以降は社員変更時の自動反映だけで日常運用できる。
 5. フロントリリースは別途承認。QR URL/token/Rulesは更新不要。異常時はPUBLIC_ENABLED=falseまたはフロント接続URLを無効化して従来の手入力を継続する。開放Rulesへ戻さない。
 
 本番DOB read-only監査：31名中2名、元号期間不一致1・年月日の不正値1。実値・氏名は資料/Gitへ保存していない。本番変更/補正は未実施。

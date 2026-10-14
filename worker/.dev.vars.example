@@ -1,3 +1,5 @@
 # Fictional LOCAL keys only. Use independent random secrets after administrator approval.
 PAYLOAD_KEY=1111111111111111111111111111111111111111111111111111111111111111
 MATCH_KEY=2222222222222222222222222222222222222222222222222222222222222222
+# Local demo only; production requires actual administrator UID(s) as a Secret.
+ADMIN_UIDS=demo-authorized-staff
