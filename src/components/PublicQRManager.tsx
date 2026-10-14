@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { QRCodeCanvas } from 'qrcode.react';
 import { useReactToPrint } from 'react-to-print';
+import NewcomerQRPrintLayout, { NEWCOMER_QR_PAGE_STYLE } from './NewcomerQRPrintLayout';
 import { getMasterData } from '../services/firebaseService';
 import { MasterData, INITIAL_MASTER_DATA } from '../types';
 import { PublicNewcomerForm } from '../utils/newcomerAccess';
@@ -10,7 +10,7 @@ export default function PublicQRManager({ isOpen, onClose }: { isOpen: boolean; 
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
   const [ready, setReady] = useState(false);
   const printRef = useRef<HTMLElement>(null);
-  const print = useReactToPrint({ contentRef: printRef, documentTitle: '新規入場者QR' });
+  const print = useReactToPrint({ contentRef: printRef, documentTitle: '新規入場者QR', pageStyle: NEWCOMER_QR_PAGE_STYLE });
   const [project, setProject] = useState('');
   const [director, setDirector] = useState('');
   const [expiry, setExpiry] = useState('');
@@ -50,7 +50,14 @@ export default function PublicQRManager({ isOpen, onClose }: { isOpen: boolean; 
     </div>
     <p className="text-sm text-gray-600 my-3 no-print">登録済みの協力会社名だけを公開フォームへコピーします。旧方式のQRは再発行してください。</p>
     {error && <p role="alert" className="text-red-600">{error}</p>}
-    {selected && <section ref={printRef} className="text-center border rounded p-4 my-4"><h3 className="font-bold">{selected.project}</h3><p>作業所長：{selected.director}</p><p>有効期限：{new Date(selected.expiresAt).toLocaleString('ja-JP')}</p><QRCodeCanvas className="mx-auto my-4" value={url.toString()} size={250} level="H" includeMargin /><p>新規入場者アンケート</p><button className="no-print border rounded p-2 mt-3" onClick={() => { const canvas = printRef.current?.querySelector('canvas') as HTMLCanvasElement | null; if (!canvas) return; const a = document.createElement('a'); a.href = canvas.toDataURL(); a.download = '新規入場者QR.png'; a.click(); }}>QR画像を保存</button><button className="no-print border rounded p-2 ml-3" onClick={() => print()}>QRを印刷</button></section>}
+    {selected && <>
+      <NewcomerQRPrintLayout ref={printRef} project={selected.project} director={selected.director} url={url.toString()} />
+      <div className="no-print text-center mb-4">
+        <p className="text-sm text-gray-600">有効期限：{new Date(selected.expiresAt).toLocaleString('ja-JP')}</p>
+        <button className="border rounded p-2 mt-3" onClick={() => { const canvas = printRef.current?.querySelector('canvas') as HTMLCanvasElement | null; if (!canvas) return; const a = document.createElement('a'); a.href = canvas.toDataURL(); a.download = '新規入場者QR.png'; a.click(); }}>QR画像を保存</button>
+        <button className="border rounded p-2 ml-3" onClick={() => print()}>QRを印刷</button>
+      </div>
+    </>}
     <h3 className="font-bold mt-6 no-print">発行済みQR</h3>
     <div className="space-y-3 no-print">{forms.map(form => <div className="border rounded p-3" key={form.token}><p className="font-bold">{form.project}</p><p>作業所長：{form.director}</p><p className="text-sm">発行：{new Date(form.createdAt).toLocaleString('ja-JP')} ／ 期限：{new Date(form.expiresAt).toLocaleString('ja-JP')}</p><p>{!form.active ? '無効' : form.expiresAt <= Date.now() ? '期限切れ' : '有効'}</p>{form.active && <>{form.expiresAt > Date.now() && <button className="border rounded px-3 py-1 mr-3" onClick={() => setSelected(form)}>QRを表示</button>}<button disabled={busy} className="text-red-600 border rounded px-3 py-1" onClick={() => disable(form)}>無効化</button></>}</div>)}</div>
   </div></div>;
