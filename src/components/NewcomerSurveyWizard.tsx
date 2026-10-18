@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { MasterData, NewcomerSurveyReportData, INITIAL_NEWCOMER_SURVEY_REPORT, Qualifications, EmployeeData } from '../types';
 import { employeeSurveyFields, MATSUURA_COMPANY } from '../utils/employeeAutofill';
+import { newcomerStep1Errors, NEWCOMER_REQUIRED_LABELS, NewcomerRequiredField } from '../utils/newcomerValidation';
 import PublicEmployeeAutofill from './PublicEmployeeAutofill';
 import { PublicNewcomerForm } from '../utils/newcomerAccess';
 import { newSubmissionId, submitPublicNewcomerSurvey } from '../services/publicNewcomerService';
@@ -131,6 +132,34 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
   const [previewSigUrl, setPreviewSigUrl] = useState<string | null>(null);
   
   const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const [validationAttempt, setValidationAttempt] = useState(0);
+  const formRef = useRef<HTMLElement>(null);
+  const latestReport = useRef(report);
+  latestReport.current = report;
+  const composingInput = useRef<HTMLInputElement | null>(null);
+  const pendingNext = useRef<{ timeStamp?: number } | null>(null);
+  const lastAdvanceAt = useRef<number | null>(null);
+
+  const focusField = (key: string) => {
+    const field = formRef.current?.querySelector<HTMLElement>(`[data-survey-field="${key}"]`);
+    field?.focus({ preventScroll: true });
+    field?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  };
+  useEffect(() => {
+    if (validationAttempt) {
+      const first = Object.keys(errors)[0];
+      if (first) focusField(first);
+    }
+  }, [validationAttempt]);
+
+  const fieldProps = (key: NewcomerRequiredField) => ({
+    id: `newcomer-${key}`,
+    'data-survey-field': key,
+    'aria-label': NEWCOMER_REQUIRED_LABELS[key],
+    'aria-invalid': !!errors[key],
+    'aria-describedby': errors[key] ? 'newcomer-required-errors' : undefined,
+    style: { scrollMarginBlock: '100px' },
+  });
   
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -180,12 +209,16 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
   }, [report.contractor]);
 
   const updateReport = (updates: Partial<NewcomerSurveyReportData>) => { 
+    // onChange/compositionend and Next can run before React commits a render.
+    const nextReport = { ...latestReport.current, ...updates };
+    latestReport.current = nextReport;
     setReport(prev => ({ ...prev, ...updates })); 
     setSaveStatus('idle'); 
     setHasUnsavedChanges(true); 
-    const newErrors = { ...errors };
-    Object.keys(updates).forEach(key => delete newErrors[key]);
-    setErrors(newErrors);
+    setErrors(previous => {
+      const remaining = newcomerStep1Errors(nextReport);
+      return Object.fromEntries(Object.keys(previous).filter(key => remaining[key]).map(key => [key, true]));
+    });
   };
   
   const updateQual = (key: keyof Qualifications, value: any) => { setReport(prev => ({ ...prev, qualifications: { ...prev.qualifications, [key]: value } })); setSaveStatus('idle'); setHasUnsavedChanges(true); };
@@ -214,51 +247,45 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
   };
 
   const validateStep1 = () => {
-    const newErrors: Record<string, boolean> = {};
-    const r = report;
-
-    if (!r.project) newErrors.project = true;
-    if (!r.director) newErrors.director = true;
-    if (!r.nameSei) newErrors.nameSei = true;
-    if (!r.nameMei) newErrors.nameMei = true;
-    if (!r.furiganaSei) newErrors.furiganaSei = true;
-    if (!r.furiganaMei) newErrors.furiganaMei = true;
-    if (!r.birthYear) newErrors.birthYear = true;
-    if (!r.birthMonth) newErrors.birthMonth = true;
-    if (!r.birthDay) newErrors.birthDay = true;
-    if (!r.company) newErrors.company = true;
-    
-    if (r.experienceYears === undefined || r.experienceYears === null) newErrors.experienceYears = true;
-    
-    if (!r.jobType) newErrors.jobType = true;
-    if (r.jobType === 'その他' && !r.jobTypeOther) newErrors.jobTypeOther = true;
-    
-    if (!r.address) newErrors.address = true;
-    if (!r.phone) newErrors.phone = true;
-    
-    if (!r.emergencyContactSei) newErrors.emergencyContactSei = true;
-    if (!r.emergencyContactMei) newErrors.emergencyContactMei = true;
-    if (!r.emergencyContactRelation) newErrors.emergencyContactRelation = true;
-    if (!r.emergencyContactPhone) newErrors.emergencyContactPhone = true;
-    
-    if (!r.healthCheckYear) newErrors.healthCheckYear = true;
-    if (!r.healthCheckMonth) newErrors.healthCheckMonth = true;
-    
+    const newErrors = newcomerStep1Errors(latestReport.current);
     setErrors(newErrors);
+    if (Object.keys(newErrors).length) setValidationAttempt(attempt => attempt + 1);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => {
-    if (step === 1) {
-      if (!validateStep1()) {
-        alert("未入力の必須項目があります。\n赤枠の項目を確認してください。");
-        return;
-      }
-    }
-    setStep(prev => Math.min(prev + 1, 3));
+  const advanceStep = (timeStamp?: number) => {
+    // Ignore the second tap of a rapid double tap, including after a render.
+    if (timeStamp !== undefined && lastAdvanceAt.current !== null && timeStamp - lastAdvanceAt.current >= 0 && timeStamp - lastAdvanceAt.current < 400) return;
+    if (step === 1 && !validateStep1()) return;
+    if (timeStamp !== undefined) lastAdvanceAt.current = timeStamp;
+    setStep(Math.min(step + 1, 3));
   };
 
-  const handleBack = () => setStep(prev => Math.max(prev - 1, 1));
+  const handleNext = (event?: React.MouseEvent<HTMLButtonElement>) => {
+    if (composingInput.current) {
+      pendingNext.current = { timeStamp: event?.timeStamp };
+      // Let the IME commit before validating; compositionend resumes this tap.
+      composingInput.current.blur();
+      return;
+    }
+    advanceStep(event?.timeStamp);
+  };
+
+  const handleCompositionEnd = (event: React.CompositionEvent<HTMLElement>) => {
+    const input = event.target as HTMLInputElement;
+    if (input !== composingInput.current) return;
+    const key = input.dataset.surveyField as NewcomerRequiredField;
+    composingInput.current = null;
+    updateReport({ [key]: input.value });
+    const pending = pendingNext.current;
+    pendingNext.current = null;
+    if (pending) advanceStep(pending.timeStamp);
+  };
+
+  const handleBack = () => {
+    lastAdvanceAt.current = null;
+    setStep(prev => Math.max(prev - 1, 1));
+  };
   
   const handleSave = async () => { 
     if (submitBusy.current || submitted.current) return;
@@ -352,15 +379,24 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
     return (
       <div className="space-y-6">
         <h2 className="text-xl font-bold text-gray-800 border-l-4 border-purple-600 pl-3">STEP 1: 基本情報</h2>
-        <p className="text-sm text-red-500 font-bold"><i className="fa-solid fa-circle-exclamation mr-1"></i>全ての項目が必須です</p>
+        <p className="text-sm text-red-500 font-bold"><i className="fa-solid fa-circle-exclamation mr-1"></i>基本情報を入力してください。経験年数の月・下請け次数・健康診断の日は任意です。</p>
         
+        {Object.keys(errors).length > 0 && (
+          <div id="newcomer-required-errors" role="alert" className="rounded border-2 border-red-500 bg-red-50 p-4 text-red-800">
+            <p className="font-bold">未入力の必須項目があります。次の項目を入力してください。</p>
+            <ul className="mt-2 list-disc pl-5">
+              {Object.keys(errors).map(key => <li key={key}><button type="button" className="min-h-[44px] text-left underline" onClick={() => focusField(key)}>{key === 'company' && report.companyInputType === 'other' ? '所属会社名（その他・手入力）' : NEWCOMER_REQUIRED_LABELS[key]}</button></li>)}
+            </ul>
+          </div>
+        )}
+
         {/* 現場・作業所選択 */}
         {!isPublicEntry && <div className="bg-purple-50 p-4 rounded border border-purple-100 grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
            <div className="col-span-1 md:col-span-2 text-sm text-purple-700 font-bold mb-1"><i className="fa-solid fa-circle-info mr-1"></i>はじめに現場を選択してください</div>
            
            <div className="w-full overflow-hidden">
              <label className="block text-xs font-bold text-gray-700 mb-1">現場名 (マスタ選択)</label>
-             <select 
+             <select {...fieldProps('project')}
                className={`w-full p-2 border rounded font-bold max-w-full text-ellipsis ${getErrorClass('project')}`} 
                value={report.project} 
                onChange={(e)=>updateReport({project: e.target.value})}
@@ -372,7 +408,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
            
            <div className="w-full overflow-hidden">
              <label className="block text-xs font-bold text-gray-700 mb-1">作業所長名 (マスタ選択)</label>
-             <select 
+             <select {...fieldProps('director')}
                className={`w-full p-2 border rounded max-w-full text-ellipsis ${getErrorClass('director')}`} 
                value={report.director} 
                onChange={(e)=>updateReport({director: e.target.value})}
@@ -385,7 +421,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
         </div>
 
         }
-        {isPublicEntry && <div className="bg-purple-50 p-4 rounded"><p>現場名：{publicForm?.project}</p><p>作業所長：{publicForm?.director}</p></div>}
+        {isPublicEntry && <div className="bg-purple-50 p-4 rounded"><p {...fieldProps('project')} tabIndex={-1}>現場名：{publicForm?.project}</p><p {...fieldProps('director')} tabIndex={-1}>作業所長：{publicForm?.director}</p></div>}
         {/* 社員自動入力 */}
         {isPublicEntry && publicForm && <PublicEmployeeAutofill token={publicForm.token} onAutofill={applyEmployeeAutofill} onReset={resetPublicEmployee} />}
         {!isPublicEntry &&
@@ -412,12 +448,12 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
           <div className="form-control">
             <label className="label font-bold text-gray-700">氏名（フリガナ）</label>
             <div className="flex gap-2 mb-2">
-              <input type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('nameSei')}`} placeholder="氏" value={report.nameSei} onChange={(e) => updateReport({nameSei: e.target.value})} />
-              <input type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('nameMei')}`} placeholder="名" value={report.nameMei} onChange={(e) => updateReport({nameMei: e.target.value})} />
+              <input {...fieldProps('nameSei')} type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('nameSei')}`} placeholder="氏" value={report.nameSei} onChange={(e) => updateReport({nameSei: e.target.value})} />
+              <input {...fieldProps('nameMei')} type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('nameMei')}`} placeholder="名" value={report.nameMei} onChange={(e) => updateReport({nameMei: e.target.value})} />
             </div>
             <div className="flex gap-2">
-              <input type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('furiganaSei')}`} placeholder="セイ" value={report.furiganaSei} onChange={(e) => updateReport({furiganaSei: e.target.value})} />
-              <input type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('furiganaMei')}`} placeholder="メイ" value={report.furiganaMei} onChange={(e) => updateReport({furiganaMei: e.target.value})} />
+              <input {...fieldProps('furiganaSei')} type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('furiganaSei')}`} placeholder="セイ" value={report.furiganaSei} onChange={(e) => updateReport({furiganaSei: e.target.value})} />
+              <input {...fieldProps('furiganaMei')} type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('furiganaMei')}`} placeholder="メイ" value={report.furiganaMei} onChange={(e) => updateReport({furiganaMei: e.target.value})} />
             </div>
           </div>
           
@@ -425,9 +461,9 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
             <label className="label font-bold text-gray-700">生年月日・性別</label>
             <div className="flex gap-2 mb-2 items-center">
               <select className="p-2 border rounded bg-white" value={report.birthEra} onChange={(e)=>updateReport({birthEra: e.target.value as any})}><option value="Showa">昭和</option><option value="Heisei">平成</option><option value="Reiwa">令和</option></select>
-              <select className={`w-16 p-2 border rounded ${getErrorClass('birthYear')}`} value={report.birthYear} onChange={(e)=>updateReport({birthYear:parseInt(e.target.value)||''})}><option value="">-</option>{range(1, 64).map(y=><option key={y} value={y}>{y}</option>)}</select><span>年</span>
-              <select className={`w-14 p-2 border rounded ${getErrorClass('birthMonth')}`} value={report.birthMonth} onChange={(e)=>updateReport({birthMonth:parseInt(e.target.value)||''})}><option value="">-</option>{range(1, 12).map(m=><option key={m} value={m}>{m}</option>)}</select><span>月</span>
-              <select className={`w-14 p-2 border rounded ${getErrorClass('birthDay')}`} value={report.birthDay} onChange={(e)=>updateReport({birthDay:parseInt(e.target.value)||''})}><option value="">-</option>{range(1, 31).map(d=><option key={d} value={d}>{d}</option>)}</select><span>日</span>
+              <select {...fieldProps('birthYear')} className={`w-16 p-2 border rounded ${getErrorClass('birthYear')}`} value={report.birthYear} onChange={(e)=>updateReport({birthYear:parseInt(e.target.value)||''})}><option value="">-</option>{range(1, 64).map(y=><option key={y} value={y}>{y}</option>)}</select><span>年</span>
+              <select {...fieldProps('birthMonth')} className={`w-14 p-2 border rounded ${getErrorClass('birthMonth')}`} value={report.birthMonth} onChange={(e)=>updateReport({birthMonth:parseInt(e.target.value)||''})}><option value="">-</option>{range(1, 12).map(m=><option key={m} value={m}>{m}</option>)}</select><span>月</span>
+              <select {...fieldProps('birthDay')} className={`w-14 p-2 border rounded ${getErrorClass('birthDay')}`} value={report.birthDay} onChange={(e)=>updateReport({birthDay:parseInt(e.target.value)||''})}><option value="">-</option>{range(1, 31).map(d=><option key={d} value={d}>{d}</option>)}</select><span>日</span>
             </div>
             <div className="flex gap-4 items-center">
               <div className="flex gap-2 border p-1 rounded bg-white">
@@ -442,17 +478,17 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="form-control">
             <label className="label font-bold text-gray-700">所属会社名 (マスタ選択)</label>
-            {isPublicEntry ? <><select aria-label="所属会社" className="w-full p-2 border rounded mb-2" value={report.companyInputType === 'other' ? '__other__' : report.company} onChange={e => updateReport(e.target.value === '__other__' ? { company: '', companyInputType: 'other' } : { company: e.target.value, companyInputType: 'master' })}><option value="">選択してください</option>{(publicForm?.contractorOptions || []).map(c => <option key={c} value={c}>{c}</option>)}<option value="__other__">その他（手入力）</option></select>{report.companyInputType === 'other' && <input aria-label="会社名入力" maxLength={200} className="w-full p-2 border rounded mb-2" value={report.company} onChange={e => updateReport({ company: e.target.value })} />}</> : <select className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} value={report.company} onChange={(e) => updateReport({company: e.target.value, companyInputType: 'master'})}><option value="">選択してください</option>{report.company && !masterData.contractors.includes(report.company) && <option value={report.company}>{report.company}</option>}{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select>}
-            {!isPublicEntry && report.companyInputType === 'other' && <input aria-label="会社名修正" maxLength={200} className="w-full p-2 border rounded mb-2" value={report.company} onChange={e => updateReport({company: e.target.value})} />}
+            {isPublicEntry ? <><select {...fieldProps('company')} id="newcomer-company-choice" data-survey-field={report.companyInputType === 'other' ? undefined : 'company'} aria-label="所属会社" className={`w-full p-2 border rounded mb-2 ${getErrorClass('company')}`} value={report.companyInputType === 'other' ? '__other__' : report.company} onChange={e => updateReport(e.target.value === '__other__' ? { company: '', companyInputType: 'other' } : { company: e.target.value, companyInputType: 'master' })}><option value="">選択してください</option>{(publicForm?.contractorOptions || []).map(c => <option key={c} value={c}>{c}</option>)}<option value="__other__">その他（手入力）</option></select>{report.companyInputType === 'other' && <input {...fieldProps('company')} aria-label="会社名入力" maxLength={200} className={`w-full p-2 border rounded mb-2 ${getErrorClass('company')}`} value={report.company} onChange={e => updateReport({ company: e.target.value })} />}</> : <select {...fieldProps('company')} id="newcomer-company-choice" data-survey-field={report.companyInputType === 'other' ? undefined : 'company'} className={`w-full p-2 border rounded mb-2 max-w-full text-ellipsis ${getErrorClass('company')}`} value={report.company} onChange={(e) => updateReport({company: e.target.value, companyInputType: 'master'})}><option value="">選択してください</option>{report.company && !masterData.contractors.includes(report.company) && <option value={report.company}>{report.company}</option>}{masterData.contractors.map(c => <option key={c} value={c}>{c}</option>)}</select>}
+            {!isPublicEntry && report.companyInputType === 'other' && <input {...fieldProps('company')} aria-label="会社名修正" maxLength={200} className={`w-full p-2 border rounded mb-2 ${getErrorClass('company')}`} value={report.company} onChange={e => updateReport({company: e.target.value})} />}
             <div className="flex items-center gap-2 text-sm"><span>(</span><input type="text" className={`w-10 border-b text-center ${getErrorClass('subcontractorRank')}`} value={report.subcontractorRank} onChange={(e)=>updateReport({subcontractorRank: e.target.value})} /><span>次) 下請け</span></div>
           </div>
           <div className="form-control">
             <label className="label font-bold text-gray-700">経験年数</label>
             <div className="flex items-center gap-2 mt-2">
-              <select className={`w-16 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('experienceYears')}`} value={report.experienceYears ?? ''} onChange={(e)=>updateReport({experienceYears: e.target.value === '' ? null : parseInt(e.target.value)})}>
+              <select {...fieldProps('experienceYears')} className={`w-16 p-2 border rounded text-center bg-white appearance-none ${getErrorClass('experienceYears')}`} value={report.experienceYears ?? ''} onChange={(e)=>updateReport({experienceYears: e.target.value === '' ? null : parseInt(e.target.value)})}>
                  <option value="">-</option>{range(0, 60).map(y => <option key={y} value={y}>{y}</option>)}
               </select><span>年</span>
-              <select className="w-16 p-2 border rounded text-center bg-white appearance-none" value={report.experienceMonths ?? ''} onChange={(e)=>updateReport({experienceMonths: e.target.value === '' ? null : parseInt(e.target.value)})}>
+              <select aria-label="経験年数（月・任意）" className="w-16 p-2 border rounded text-center bg-white appearance-none" value={report.experienceMonths ?? ''} onChange={(e)=>updateReport({experienceMonths: e.target.value === '' ? null : parseInt(e.target.value)})}>
                  <option value="">-</option>{range(0, 11).map(m => <option key={m} value={m}>{m}</option>)}
               </select><span>ヶ月</span>
             </div>
@@ -462,7 +498,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
         <div className="form-control">
           <label className="label font-bold text-gray-700">職種</label>
           <div className="flex gap-2">
-            <select 
+            <select {...fieldProps('jobType')}
               className={`w-1/2 p-2 border rounded ${getErrorClass('jobType')}`} 
               value={report.jobType} 
               onChange={(e) => {
@@ -476,7 +512,7 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
               <option value="その他">その他</option>
             </select>
             {report.jobType === 'その他' && (
-              <input 
+              <input {...fieldProps('jobTypeOther')}
                 type="text" 
                 className={`flex-1 p-2 border rounded max-w-full ${getErrorClass('jobTypeOther')}`} 
                 placeholder="詳細を入力" 
@@ -489,29 +525,29 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
 
         <div className="form-control">
           <label className="label font-bold text-gray-700">現住所・電話番号</label>
-          <input type="text" className={`w-full p-2 border rounded mb-2 max-w-full ${getErrorClass('address')}`} placeholder="住所" value={report.address} onChange={(e) => updateReport({address: e.target.value})} />
-          <input type="text" className={`w-48 p-2 border rounded max-w-full ${getErrorClass('phone')}`} placeholder="090-0000-0000" value={report.phone} onChange={(e) => updateReport({phone: e.target.value})} />
+          <input {...fieldProps('address')} type="text" className={`w-full p-2 border rounded mb-2 max-w-full ${getErrorClass('address')}`} placeholder="住所" value={report.address} onChange={(e) => updateReport({address: e.target.value})} />
+          <input {...fieldProps('phone')} type="text" className={`w-48 p-2 border rounded max-w-full ${getErrorClass('phone')}`} placeholder="090-0000-0000" value={report.phone} onChange={(e) => updateReport({phone: e.target.value})} />
         </div>
 
-        <div className="form-control bg-gray-50 p-3 rounded border-2 border-red-500 w-full">
+        <div className="form-control bg-gray-50 p-3 rounded border border-gray-300 w-full">
           <label className="label font-bold text-gray-700 mb-2 block">緊急連絡先</label>
           <div className="mb-2">
             <label className="text-xs text-gray-500 font-bold mb-1 block">氏名</label>
             <div className="flex gap-2">
-              <input type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('emergencyContactSei')}`} placeholder="氏" value={report.emergencyContactSei} onChange={(e) => updateReport({emergencyContactSei: e.target.value})} />
-              <input type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('emergencyContactMei')}`} placeholder="名" value={report.emergencyContactMei} onChange={(e) => updateReport({emergencyContactMei: e.target.value})} />
+              <input {...fieldProps('emergencyContactSei')} type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('emergencyContactSei')}`} placeholder="氏" value={report.emergencyContactSei} onChange={(e) => updateReport({emergencyContactSei: e.target.value})} />
+              <input {...fieldProps('emergencyContactMei')} type="text" className={`w-1/2 p-2 border rounded max-w-full ${getErrorClass('emergencyContactMei')}`} placeholder="名" value={report.emergencyContactMei} onChange={(e) => updateReport({emergencyContactMei: e.target.value})} />
             </div>
           </div>
           <div className="flex flex-wrap gap-3">
             <div className="w-full sm:flex-1">
               <label className="text-xs text-gray-500 font-bold mb-1 block">続柄</label>
-              <select className={`w-full p-2 border rounded max-w-full ${getErrorClass('emergencyContactRelation')}`} value={report.emergencyContactRelation} onChange={(e) => updateReport({emergencyContactRelation: e.target.value})}>
+              <select {...fieldProps('emergencyContactRelation')} className={`w-full p-2 border rounded max-w-full ${getErrorClass('emergencyContactRelation')}`} value={report.emergencyContactRelation} onChange={(e) => updateReport({emergencyContactRelation: e.target.value})}>
                 <option value="">選択してください</option><option value="妻">妻</option><option value="夫">夫</option><option value="父">父</option><option value="母">母</option><option value="子">子</option><option value="兄">兄</option><option value="弟">弟</option><option value="姉">姉</option><option value="妹">妹</option><option value="祖父">祖父</option><option value="祖母">祖母</option><option value="同居人">同居人</option><option value="その他">その他</option>
               </select>
             </div>
             <div className="w-full sm:flex-1">
               <label className="text-xs text-gray-500 font-bold mb-1 block">緊急電話番号</label>
-              <input type="text" className={`w-full p-2 border rounded max-w-full ${getErrorClass('emergencyContactPhone')}`} placeholder="090-0000-0000" value={report.emergencyContactPhone} onChange={(e) => updateReport({emergencyContactPhone: e.target.value})} />
+              <input {...fieldProps('emergencyContactPhone')} type="text" className={`w-full p-2 border rounded max-w-full ${getErrorClass('emergencyContactPhone')}`} placeholder="090-0000-0000" value={report.emergencyContactPhone} onChange={(e) => updateReport({emergencyContactPhone: e.target.value})} />
             </div>
           </div>
         </div>
@@ -528,13 +564,13 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
           <div className="form-control">
             <label className="label font-bold text-gray-700">健康診断受診日 (令和)</label>
             <div className="flex gap-1 items-center">
-              <select className={`w-16 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckYear')}`} value={report.healthCheckYear ?? ''} onChange={(e)=>updateReport({healthCheckYear: e.target.value === '' ? null : parseInt(e.target.value)})}>
+              <select {...fieldProps('healthCheckYear')} className={`w-16 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckYear')}`} value={report.healthCheckYear ?? ''} onChange={(e)=>updateReport({healthCheckYear: e.target.value === '' ? null : parseInt(e.target.value)})}>
                 <option value="">-</option>{range(1, 30).map(y => <option key={y} value={y}>{y}</option>)}
               </select><span>年</span>
-              <select className={`w-14 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckMonth')}`} value={report.healthCheckMonth ?? ''} onChange={(e)=>updateReport({healthCheckMonth: e.target.value === '' ? null : parseInt(e.target.value)})}>
+              <select {...fieldProps('healthCheckMonth')} className={`w-14 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckMonth')}`} value={report.healthCheckMonth ?? ''} onChange={(e)=>updateReport({healthCheckMonth: e.target.value === '' ? null : parseInt(e.target.value)})}>
                 <option value="">-</option>{range(1, 12).map(m => <option key={m} value={m}>{m}</option>)}
               </select><span>月</span>
-              <select className={`w-14 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckDay')}`} value={report.healthCheckDay ?? ''} onChange={(e)=>updateReport({healthCheckDay: e.target.value === '' ? null : parseInt(e.target.value)})}>
+              <select aria-label="健康診断受診日（日・任意）" className={`w-14 p-2 border rounded text-center bg-white appearance-none ${isExpired ? 'border-2 border-red-500 bg-red-50' : getErrorClass('healthCheckDay')}`} value={report.healthCheckDay ?? ''} onChange={(e)=>updateReport({healthCheckDay: e.target.value === '' ? null : parseInt(e.target.value)})}>
                 <option value="">-</option>{range(1, 31).map(d => <option key={d} value={d}>{d}</option>)}
               </select><span>日</span>
             </div>
@@ -691,10 +727,16 @@ const NewcomerSurveyWizard: React.FC<Props> = ({ initialData, initialDraftId, in
           {/* 設定ボタン削除済み */}
         </header>
         <div className="bg-white p-4 shadow-sm mb-4"><div className="flex justify-between text-xs font-bold text-gray-400 mb-2"><span className={step >= 1 ? "text-purple-600" : ""}>基本情報</span><span className={step >= 2 ? "text-purple-600" : ""}>資格</span><span className={step >= 3 ? "text-purple-600" : ""}>誓約・署名</span></div><div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden"><div className="bg-purple-600 h-full transition-all duration-300" style={{ width: `${step * 33.3}%` }}></div></div></div>
-        <main className="mx-auto p-4 bg-white shadow-lg rounded-lg max-w-3xl min-h-[60vh]">
+        <main ref={formRef} onCompositionStart={event => {
+          const input = event.target as HTMLInputElement;
+          if (input.tagName === 'INPUT' && input.dataset.surveyField) {
+            composingInput.current = input;
+            pendingNext.current = null;
+          }
+        }} onCompositionEnd={handleCompositionEnd} className="mx-auto p-4 bg-white shadow-lg rounded-lg max-w-3xl min-h-[60vh]">
            {step === 1 && renderStep1()}{step === 2 && renderStep2()}{step === 3 && renderStep3()}</main>
         <footer className="fixed bottom-0 left-0 w-full bg-white border-t p-4 flex justify-between items-center shadow-md z-20">
-          <div className="flex items-center gap-2"><button onClick={() => setStep(prev => Math.max(1, prev - 1))} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button></div>
+          <div className="flex items-center gap-2"><button onClick={handleBack} disabled={step === 1} className={`px-4 py-3 rounded-lg font-bold ${step === 1 ? 'text-gray-300' : 'text-gray-600 bg-gray-100'}`}>戻る</button></div>
           {step < 3 ? (
              <button onClick={handleNext} className="px-4 sm:px-8 py-3 bg-purple-600 text-white rounded-lg font-bold shadow hover:bg-purple-700 flex items-center">次へ <i className="fa-solid fa-chevron-right ml-2"></i></button>
           ) : (
