@@ -14,7 +14,7 @@ import {
   writeBatch, updateDoc, serverTimestamp, where, limit, getDocFromServer,
   documentId, startAfter, QueryDocumentSnapshot
 } from 'firebase/firestore';
-import { SavedDraft, MasterData, INITIAL_MASTER_DATA, EmployeeData, DiagramImage } from '../types';
+import { SavedDraft, MasterData, INITIAL_MASTER_DATA, EmployeeData, DiagramImage, ReportTypeString } from '../types';
 import { asPublicDraft, reportLocation, surveyPayload } from '../utils/newcomerAccess';
 import { PUBLIC_FORMS, PUBLIC_SUBMISSIONS } from './publicNewcomerService';
 import { exportItem, conditionError, ExportConditions, ExportItem } from '../utils/bulkReports';
@@ -101,12 +101,15 @@ export const fetchExportDraft = async (item: ExportItem, conditions: ExportCondi
   return draft;
 };
 
-// ■ データを全件取得する
-export const fetchDrafts = async (): Promise<SavedDraft[]> => {
+// Report selection only reads the requested type. No argument retains the legacy
+// all-report API. Sort after reading so type filtering needs no composite index.
+export const fetchDrafts = async (type?: ReportTypeString): Promise<SavedDraft[]> => {
   try {
-    const q = query(collection(db, DRAFTS_COLLECTION), orderBy('lastModified', 'desc'));
+    const q = query(collection(db, DRAFTS_COLLECTION), type ? where('type', '==', type) : orderBy('lastModified', 'desc'));
     const [querySnapshot, publicSnapshot] = await Promise.all([
-      getDocs(q), getDocs(query(collection(db, PUBLIC_SUBMISSIONS), orderBy('lastModified', 'desc')))
+      getDocs(q), !type || type === 'NEWCOMER_SURVEY'
+        ? getDocs(query(collection(db, PUBLIC_SUBMISSIONS), orderBy('lastModified', 'desc')))
+        : Promise.resolve({ docs: [] })
     ]);
     const legacy = querySnapshot.docs.map(doc => {
       const data = doc.data();
@@ -399,7 +402,7 @@ export const deleteDraftsByProject = async (projectName: string): Promise<void> 
 // ■ 特定のプロジェクトの「安全管理計画表」だけを探す機能
 export const fetchSafetyPlansByProject = async (projectName: string): Promise<SavedDraft[]> => {
   try {
-    const allDrafts = await fetchDrafts();
+    const allDrafts = await fetchDrafts('SAFETY_PLAN');
     const matchedPlans = allDrafts.filter(draft => 
       draft.type === 'SAFETY_PLAN' && 
       draft.data.project === projectName
