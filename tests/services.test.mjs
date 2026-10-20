@@ -52,6 +52,46 @@ test('staff list merges legacy and public data with unique IDs and timestamp ord
   globalThis.sdkMock = { writes: [], async getDocs(ref) { read.push(ref.collection); return { docs: ref.collection === 'drafts' ? [record('same', { type: 'NEWCOMER_SURVEY', data: { company: '旧会社' }, lastModified: 1 }), record('diary', { type: 'DAILY_SAFETY', data: {}, lastModified: 2 })] : [record('same', { data: { company: '新会社', nameSei: '山田', nameMei: '太郎' }, lastModified: { toMillis: () => 3 } })] }; } };
   const result = await service.fetchDrafts(); assert.deepEqual(read, ['drafts','publicNewcomerSubmissions']); assert.deepEqual(result.map(x=>x.id), ['public-newcomer/same','diary','same']); assert.equal(result[0].data.company, '新会社');
 });
+
+for (const type of ['DAILY_SAFETY','SAFETY_TRAINING','DISASTER_COUNCIL','SAFETY_PLAN','NEWCOMER_SURVEY']) test(`report list queries only ${type} and reads public submissions only for newcomer surveys`, async () => {
+  const reads = [];
+  globalThis.sdkMock = { writes: [], async getDocs(ref) {
+    reads.push(ref);
+    return { docs: ref.collection === 'drafts'
+      ? [record('old', { type, data: { project: '架空現場' }, lastModified: 1 }), record('recent', { type, data: { project: '架空現場' }, lastModified: 3 })]
+      : [record('submitted', { type: 'NEWCOMER_SURVEY', data: { project: '架空現場', nameSei: '架空', nameMei: '作業員' }, lastModified: { toMillis: () => 2 } })] };
+  } };
+  const result = await service.fetchDrafts(type);
+  assert.deepEqual(reads[0], { collection: 'drafts', args: [['type','==',type]] }, 'single-field equality needs no new composite index');
+  assert.deepEqual(reads.map(r => r.collection), type === 'NEWCOMER_SURVEY' ? ['drafts','publicNewcomerSubmissions'] : ['drafts']);
+  assert.deepEqual(result.map(d => d.id), type === 'NEWCOMER_SURVEY' ? ['recent','public-newcomer/submitted','old'] : ['recent','old']);
+  assert.deepEqual(globalThis.sdkMock.writes, []);
+});
+
+test('safety plan attachment lookup filters its type before retaining the requested project', async () => {
+  const reads = [];
+  globalThis.sdkMock = { writes: [], async getDocs(ref) {
+    reads.push(ref);
+    return { docs: ['架空現場','架空別現場'].map((project, i) => record(String(i), { type: 'SAFETY_PLAN', data: { project }, lastModified: i })) };
+  } };
+  const result = await service.fetchSafetyPlansByProject('架空現場');
+  assert.deepEqual(reads, [{ collection: 'drafts', args: [['type','==','SAFETY_PLAN']] }]);
+  assert.deepEqual(result.map(d => d.id), ['0']);
+});
+
+test('filtered list errors propagate; an unrelated public collection is never awaited for diaries', async () => {
+  const reads = [];
+  globalThis.sdkMock = { writes: [], async getDocs(ref) {
+    reads.push(ref.collection);
+    if (ref.collection !== 'drafts') throw Error('Unrelated public query');
+    return { docs: [] };
+  } };
+  assert.deepEqual(await service.fetchDrafts('DAILY_SAFETY'), []);
+  assert.deepEqual(reads, ['drafts']);
+  const denied = Object.assign(new Error('Denied'), { code: 'permission-denied' });
+  globalThis.sdkMock.getDocs = async () => { throw denied; };
+  await assert.rejects(service.fetchDrafts('DAILY_SAFETY'), denied);
+});
 test('existing saves stay in drafts; public staff edits/deletes preserve their source', async () => {
   globalThis.sdkMock = { writes: [] };
   await service.saveDraft(null, 'DAILY_SAFETY', { existing: true });

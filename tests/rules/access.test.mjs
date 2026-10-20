@@ -26,6 +26,18 @@ test('integration export server queries/read deny anonymous and outsiders, allow
   }
 });
 const seed = async (path, data) => env.withSecurityRulesDisabled(c => setDoc(doc(c.firestore(), path), data));
+test('type-filtered report lists preserve staff-only access without a new composite query', async () => {
+  const types = ['NEWCOMER_SURVEY','DAILY_SAFETY','SAFETY_TRAINING','DISASTER_COUNCIL','SAFETY_PLAN'];
+  for (const type of types.slice(1)) await seed(`drafts/${type}`, { type, data: { project: '架空現場' }, lastModified: Timestamp.now() });
+  const reads = db => [
+    ...types.map(type => query(collection(db,'drafts'),where('type','==',type))),
+    query(collection(db,'publicNewcomerSubmissions'),orderBy('lastModified','desc')),
+  ];
+  for (const db of [anon(),user('outsider')]) for (const q of reads(db)) await assertFails(getDocs(q));
+  for (const q of reads(user())) assert.equal((await assertSucceeds(getDocs(q))).size, 1);
+  await seed('staffUsers/staff',{active:false});
+  for (const q of reads(user())) await assertFails(getDocs(q));
+});
 before(async () => {
   const rules = await readFile(new URL('../../firestore.rules', import.meta.url), 'utf8');
   env = await initializeTestEnvironment({ projectId: 'demo-core-safe', firestore: { host: '127.0.0.1', port: 18080, rules } });

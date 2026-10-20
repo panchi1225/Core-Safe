@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import PublicQRManager from './components/PublicQRManager';
 import SafetyTrainingWizard from './components/SafetyTrainingWizard';
 import DisasterCouncilWizard from './components/DisasterCouncilWizard';
@@ -102,6 +102,9 @@ const App: React.FC = () => {
   const [selectedDraftCompany, setSelectedDraftCompany] = useState<string | null>(null);
   
   const [isLoading, setIsLoading] = useState(false);
+  const [draftLoadError, setDraftLoadError] = useState('');
+  const [draftLoadAttempt, setDraftLoadAttempt] = useState(0);
+  const draftLoadVersion = useRef(0);
 
   // QRモーダル開閉ステート
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
@@ -139,17 +142,21 @@ const App: React.FC = () => {
 
   // Firebaseからドラフトデータを読み込む処理
   useEffect(() => {
-    if (isModalOpen) {
+    if (isModalOpen && selectedReportType) {
+      const version = ++draftLoadVersion.current;
       const loadDrafts = async () => {
         setIsLoading(true);
+        setDraftLoadError('');
+        setDrafts([]);
         try {
-          const data = await fetchDrafts();
+          const data = await fetchDrafts(selectedReportType);
+          if (version !== draftLoadVersion.current) return;
           setDrafts(data);
         } catch (error) {
-          console.error("Failed to load drafts", error);
-          alert("保存データの読み込みに失敗しました。");
+          if (version !== draftLoadVersion.current) return;
+          setDraftLoadError('保存データを読み込めませんでした。通信状態を確認して再試行してください。');
         } finally {
-          setIsLoading(false);
+          if (version === draftLoadVersion.current) setIsLoading(false);
         }
       };
       
@@ -160,8 +167,11 @@ const App: React.FC = () => {
       setDiarySelectionStep('project');
       setSelectedDiaryProject(null);
       setSelectedDiaryMonth(null);
+      // An SDK read already in flight cannot be cancelled. Ignore its result,
+      // error and loading state after close/type change/unmount instead.
+      return () => { if (version === draftLoadVersion.current) draftLoadVersion.current++; };
     }
-  }, [isModalOpen]);
+  }, [isModalOpen, selectedReportType, draftLoadAttempt]);
 
   const getNewcomerDraftCompanyKey = (draft: SavedDraft) => {
     const company = (draft.data as Partial<NewcomerSurveyReportData>).company;
@@ -170,6 +180,10 @@ const App: React.FC = () => {
 
   // Handlers
   const openSelectionModal = (type: ReportTypeString) => {
+    draftLoadVersion.current++;
+    setDrafts([]);
+    setDraftLoadError('');
+    setIsLoading(true);
     setSelectedReportType(type);
     setSelectedDraftProject(null);
     setSelectedDraftCompany(null);
@@ -178,7 +192,9 @@ const App: React.FC = () => {
 
   // 【修正3】モーダルを閉じる際に安全衛生日誌用stateもリセット
   const closeSelectionModal = () => {
+    draftLoadVersion.current++;
     setIsModalOpen(false);
+    setDrafts([]);
     setSelectedDraftProject(null);
     setSelectedDraftCompany(null);
     setDiarySelectionStep('project');
@@ -204,13 +220,16 @@ const App: React.FC = () => {
   };
 
   const handleDeleteDraft = (id: string) => {
+    const version = draftLoadVersion.current;
     setConfirmModal({
       isOpen: true,
       message: 'この一時保存データを削除しますか？',
       onConfirm: async () => {
         try {
           await removeDraft(id);
-          const newDrafts = await fetchDrafts();
+          if (version !== draftLoadVersion.current) return;
+          const newDrafts = await fetchDrafts(selectedReportType || undefined);
+          if (version !== draftLoadVersion.current) return;
           setDrafts(newDrafts);
           
           // 【修正3】安全衛生日誌の場合は3階層用のstateで残データチェック
@@ -248,6 +267,7 @@ const App: React.FC = () => {
           }
           setConfirmModal(prev => ({ ...prev, isOpen: false }));
         } catch (error) {
+          if (version !== draftLoadVersion.current) return;
           console.error("Failed to delete draft", error);
           alert("削除に失敗しました。");
         }
@@ -323,6 +343,37 @@ const App: React.FC = () => {
     return <MasterSettings onBackToMenu={() => setCurrentView('HOME')} />;
   }
 
+  const renderStartActions = (daily: boolean) => (
+    <div className="mb-8 space-y-3">
+      <button onClick={handleStartNew}
+        className={`w-full py-4 text-white rounded-lg font-bold shadow-md flex items-center justify-center gap-2 transition-transform transform hover:scale-[1.01] ${daily ? 'bg-pink-600 hover:bg-pink-700' : 'bg-blue-600 hover:bg-blue-700'}`}>
+        <i className="fa-solid fa-file-circle-plus text-xl"></i>新規作成
+      </button>
+      {selectedReportType === 'NEWCOMER_SURVEY' && (
+        <button onClick={() => setIsQRModalOpen(true)} className="w-full py-4 bg-purple-600 text-white rounded-lg font-bold shadow-md hover:bg-purple-700 flex items-center justify-center gap-2 transition-transform transform hover:scale-[1.01]">
+          <i className="fa-solid fa-qrcode text-xl"></i>新規入場者用QRコードを表示
+        </button>
+      )}
+    </div>
+  );
+
+  const renderDraftLoadState = () => draftLoadError ? (
+    <div role="alert" className="border border-red-200 bg-red-50 rounded-lg p-4 space-y-3">
+      <p className="text-red-700">{draftLoadError}</p>
+      <button className="border rounded-lg bg-white px-4 py-3 font-bold" onClick={() => {
+        draftLoadVersion.current++;
+        setIsLoading(true);
+        setDraftLoadError('');
+        setDraftLoadAttempt(attempt => attempt + 1);
+      }}>再読み込み</button>
+    </div>
+  ) : (
+    <div role="status" className="flex justify-center items-center py-10">
+      <div aria-hidden="true" className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-500"></div>
+      <span className="ml-3 text-gray-500">保存データを読み込み中...</span>
+    </div>
+  );
+
   // --- Modal Component ---
   const renderSelectionModal = () => {
     if (!isModalOpen || !selectedReportType) return null;
@@ -386,34 +437,20 @@ const App: React.FC = () => {
                   {diarySelectionStep === 'date' && '対象データの選択'}
                 </h3>
               </div>
-              <button onClick={closeSelectionModal} className="text-pink-200 hover:text-white">
+              <button aria-label="帳票選択を閉じる" onClick={closeSelectionModal} className="text-pink-200 hover:text-white">
                 <i className="fa-solid fa-xmark text-xl"></i>
               </button>
             </div>
 
             <div className="p-6 overflow-y-auto custom-scrollbar">
-              {isLoading ? (
-                <div className="flex justify-center items-center py-10">
-                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-pink-600"></div>
-                  <span className="ml-3 text-gray-500">データを読み込み中...</span>
-                </div>
-              ) : (
+              {diarySelectionStep === 'project' && renderStartActions(true)}
+              {isLoading || draftLoadError ? renderDraftLoadState() : (
                 <>
                   {/* ============================
                       階層1: 現場名選択
                       ============================ */}
                   {diarySelectionStep === 'project' && (
                     <>
-                      <div className="mb-8 space-y-3">
-                        <button
-                          onClick={handleStartNew}
-                          className="w-full py-4 bg-pink-600 text-white rounded-lg font-bold shadow-md hover:bg-pink-700 flex items-center justify-center gap-2 transition-transform transform hover:scale-[1.01]"
-                        >
-                          <i className="fa-solid fa-file-circle-plus text-xl"></i>
-                          新規作成
-                        </button>
-                      </div>
-
                       <div className="border-t pt-4">
                         <h4 className="text-gray-500 text-sm font-bold mb-3 uppercase tracking-wide">一時保存データから再開</h4>
 
@@ -631,42 +668,17 @@ const App: React.FC = () => {
                   : '作成方法の選択'}
               </h3>
             </div>
-            <button onClick={closeSelectionModal} className="text-gray-400 hover:text-white">
+            <button aria-label="帳票選択を閉じる" onClick={closeSelectionModal} className="text-gray-400 hover:text-white">
               <i className="fa-solid fa-xmark text-xl"></i>
             </button>
           </div>
           
           <div className="p-6 overflow-y-auto custom-scrollbar">
-            {isLoading ? (
-              <div className="flex justify-center items-center py-10">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-                <span className="ml-3 text-gray-500">データを読み込み中...</span>
-              </div>
-            ) : (
+            {!selectedDraftProject && renderStartActions(false)}
+            {isLoading || draftLoadError ? renderDraftLoadState() : (
               !selectedDraftProject ? (
                 /* --- VIEW 1: Project List --- */
                 <>
-                  <div className="mb-8 space-y-3">
-                    <button 
-                      onClick={handleStartNew}
-                      className="w-full py-4 bg-blue-600 text-white rounded-lg font-bold shadow-md hover:bg-blue-700 flex items-center justify-center gap-2 transition-transform transform hover:scale-[1.01]"
-                    >
-                      <i className="fa-solid fa-file-circle-plus text-xl"></i>
-                      新規作成
-                    </button>
-
-                    {/* QRコードボタン (新規入場者アンケートの場合のみ) */}
-                    {selectedReportType === 'NEWCOMER_SURVEY' && (
-                      <button 
-                        onClick={() => setIsQRModalOpen(true)}
-                        className="w-full py-4 bg-purple-600 text-white rounded-lg font-bold shadow-md hover:bg-purple-700 flex items-center justify-center gap-2 transition-transform transform hover:scale-[1.01]"
-                      >
-                        <i className="fa-solid fa-qrcode text-xl"></i>
-                        新規入場者用QRコードを表示
-                      </button>
-                    )}
-                  </div>
-
                   <div className="border-t pt-4">
                     <h4 className="text-gray-500 text-sm font-bold mb-3 uppercase tracking-wide">一時保存データから再開</h4>
                     
