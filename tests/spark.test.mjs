@@ -63,10 +63,11 @@ const sdk = `export class Timestamp { constructor(n){this.n=n;} toMillis(){retur
 export const doc=(db,name,id)=>({name,id:id||'manual-survey'});export const collection=(db,name)=>name;
 export const query=(name,...constraints)=>({name,constraints});export const orderBy=field=>({field});export const where=(field,op,value)=>({field,op,value});export const documentId=()=> '__name__';export const limit=n=>n;export const startAfter=x=>x;
 export const serverTimestamp=()=>new Timestamp(100);
+export const arrayUnion=(...values)=>({arrayUnion:values});
 export const setDoc=(ref,data)=>{if(ref.name!=='publicNewcomerSubmissions')throw new Error('Unexpected public write');globalThis.sparkRecords.push({id:ref.id,...data});};
 export const getDocs=async ref=>{globalThis.sparkReads.push(ref.name);if(ref.name==='employees')throw new Error('Private employee read');return {docs:(ref.name==='publicNewcomerSubmissions'?globalThis.sparkRecords:[]).map(raw=>({id:raw.id,data:()=>raw})),size:ref.name==='publicNewcomerSubmissions'?globalThis.sparkRecords.length:0};};
 export const getDoc=async ref=>{globalThis.sparkReads.push(ref.name);const raw=globalThis.sparkRecords.find(x=>x.id===ref.id);return {id:ref.id,exists:()=>!!raw,data:()=>raw};};export const getDocsFromServer=getDocs;export const getDocFromServer=getDoc;
-export const addDoc=()=>{};export const updateDoc=()=>{};export const deleteDoc=()=>{};export const writeBatch=()=>{};export const runTransaction=()=>{throw Error('Unexpected public transaction');};`;
+export const addDoc=()=>{};export const updateDoc=()=>{};export const deleteDoc=()=>{};export const writeBatch=()=>{const writes=[];return {set:(ref,data)=>writes.push({ref,data}),commit:async()=>{globalThis.sparkCompanyWrites=writes.filter(w=>w.ref.name!=='publicNewcomerSubmissions');for(const w of writes)if(w.ref.name==='publicNewcomerSubmissions')setDoc(w.ref,w.data);}};};export const runTransaction=()=>{throw Error('Unexpected public transaction');};`;
 const stubs = { firebase: 'export const db={};export const auth={currentUser:{uid:"fixture-staff"}};', 'firebase/firestore': sdk };
 const publicService = await loadModule('src/services/publicNewcomerService.ts', stubs);
 const staffService = await loadModule('src/services/firebaseService.ts', stubs);
@@ -91,6 +92,8 @@ test('public manual entry and signature reach submissions, staff list and the un
   assert.ok(JSON.stringify(tree.toJSON()).includes('この画面を閉じてください'));
   assert.equal(globalThis.sparkRecords.length,1); assert.deepEqual(globalThis.sparkReads,[]);
   const saved=globalThis.sparkRecords[0];assert.equal(saved.data.companyInputType,'other');assert.equal(saved.data.nameSei,'手入力');assert.equal(saved.data.sealImage,undefined);
+  assert.deepEqual(globalThis.sparkCompanyWrites.map(w=>w.ref.name),['masterData','publicNewcomerCompanyMaster']);
+  assert.deepEqual(globalThis.sparkCompanyWrites[0].data,{contractors:{arrayUnion:['松浦建設株式会社']},lastPublicCompanySubmission:'manual-survey'});
   const [draft]=await staffService.fetchDrafts();assert.equal(draft.id,'public-newcomer/manual-survey');assert.equal(draft.data.company,'松浦建設株式会社');
   const conditions={project:form.project,start:'2026-10-01',end:'2026-10-31',types:['NEWCOMER_SURVEY']};
   const [item]=await staffService.fetchExportItems(conditions);const fetched=await staffService.fetchExportDraft(item,conditions);

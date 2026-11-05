@@ -12,11 +12,11 @@ import {
   addDoc,     
   getDoc,     
   writeBatch, updateDoc, serverTimestamp, where, limit, getDocFromServer,
-  documentId, startAfter, QueryDocumentSnapshot
+  documentId, startAfter, QueryDocumentSnapshot, runTransaction
 } from 'firebase/firestore';
 import { SavedDraft, MasterData, INITIAL_MASTER_DATA, EmployeeData, DiagramImage, ReportTypeString } from '../types';
 import { asPublicDraft, reportLocation, surveyPayload } from '../utils/newcomerAccess';
-import { PUBLIC_FORMS, PUBLIC_SUBMISSIONS, syncPublicNewcomerContractors } from './publicNewcomerService';
+import { PUBLIC_FORMS, PUBLIC_SUBMISSIONS, PUBLIC_COMPANY_MASTER, syncPublicNewcomerContractors } from './publicNewcomerService';
 import { publicContractorOptions } from '../utils/publicContractors';
 import { exportItem, conditionError, ExportConditions, ExportItem } from '../utils/bulkReports';
 
@@ -216,16 +216,32 @@ export const getMasterData = async (): Promise<MasterData> => {
 };
 
 // ■ 変更したマスタ項目だけを保存し、他の項目は上書きしない
-export const saveMasterDataField = async (key: keyof MasterData, items: string[]): Promise<void> => {
+export const saveMasterDataField = async (key: keyof MasterData, items: string[], previousItems?: string[]): Promise<string[]> => {
   try {
-    const savedItems = key === 'contractors' ? publicContractorOptions(items) : items;
-    await setDoc(doc(db, MASTER_COLLECTION, MASTER_DOC_ID), { [key]: savedItems }, { merge: true });
+    let savedItems = key === 'contractors' ? publicContractorOptions(items) : items;
+    if (key === 'contractors') {
+      savedItems = await runTransaction(db, async transaction => {
+        const masterRef = doc(db, MASTER_COLLECTION, MASTER_DOC_ID);
+        const current = await transaction.get(masterRef);
+        const baseline = previousItems && new Set(publicContractorOptions(previousItems));
+        // Preserve companies registered by a survey while the staff editor was
+        // open. Only names present in that editor's baseline may be removed.
+        const concurrent = baseline ? publicContractorOptions(current.data()?.contractors || []).filter(company => !baseline.has(company)) : [];
+        const companies = publicContractorOptions([...items, ...concurrent]);
+        transaction.set(masterRef, { contractors: companies }, { merge: true });
+        transaction.set(doc(db, PUBLIC_COMPANY_MASTER, 'general'), { contractorOptions: companies });
+        return companies;
+      });
+    } else {
+      await setDoc(doc(db, MASTER_COLLECTION, MASTER_DOC_ID), { [key]: savedItems }, { merge: true });
+    }
     if (key === 'contractors') {
       try { await syncPublicNewcomerContractors(); }
       catch {
         throw new Error('会社マスターは保存しましたが、発行済みQRの会社一覧を更新できませんでした。通信状態・権限を確認して再度保存するか、QR発行・管理画面を開き直してください。');
       }
     }
+    return savedItems;
   } catch (error) {
     console.error("マスタデータの保存失敗: ", error);
     throw error;

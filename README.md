@@ -18,6 +18,8 @@ Node 24 / Java 21。npm ci --ignore-scriptsで依存を導入し、npm run dev�
 
 設定手順、データ構造、ローカルEmulatorテスト、PR #32との統合方針は[アクセス制御ガイド](docs/access-control.md)を参照してください。本番Firebaseへのデプロイはこの変更の作業中に実施していません。
 
+発行済みQRの所属会社は最新の会社名共通一覧を参照します。「その他（手入力）」の会社は送信時に回答と同時に自動登録され、他現場の既存QRにも反映します。[会社一覧の仕組みと反映手順](docs/newcomer-company-sync.md)を参照してください。
+
 ## 帳票一括ダウンロード
 
 社員認証と一括PDFを統合したmainを基準に、PR #35で公開社員自動入力だけを廃止したSpark版です。[統合記録](docs/integration-access-bulk-pdf.md)、[Windows Chrome実機確認](docs/windows-chrome-verification.md)、[未実行の本番導入手順](docs/production-rollout.md)、[依存監査](docs/dependency-audit.md)を参照してください。公開QRから一括ダウンロードは利用できません。旧draftsと公開回答の新規入場者アンケートは両方が対象です。

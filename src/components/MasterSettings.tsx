@@ -537,8 +537,8 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
     if (masterLoadState !== 'ready' || isSavingMaster) return false;
     setIsSavingMaster(true);
     try {
-      await saveMasterDataField(key, newItems);
-      setMasterData(prev => ({ ...prev, [key]: newItems }));
+      const savedItems = await saveMasterDataField(key, newItems, masterData[key]);
+      setMasterData(prev => ({ ...prev, [key]: savedItems }));
       return true;
     } catch (error) {
       console.error('マスタデータの保存に失敗しました', error);

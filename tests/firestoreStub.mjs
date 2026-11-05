@@ -45,5 +45,6 @@ export const setDoc = deleteDoc;
 export const addDoc = deleteDoc;
 export const writeBatch = deleteDoc;
 export const runTransaction = deleteDoc;
+export const arrayUnion = deleteDoc;
 export const updateDoc = deleteDoc;
 export const serverTimestamp = () => 'server-time';

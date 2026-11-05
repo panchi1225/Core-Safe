@@ -5,11 +5,12 @@ import { INITIAL_NEWCOMER_SURVEY_REPORT } from '../src/types.ts';
 const sdk = `export class Timestamp { constructor(n) { this.n=n; } toMillis(){ return this.n; } static now(){ return new Timestamp(42); } static fromMillis(n){ return new Timestamp(n); } }
 export const doc=(db,name,id)=>({collection:name,id:id || 'allocated-id'}); export const collection=(db,name)=>({collection:name}); export const query=(ref,...args)=>({...ref,args}); export const orderBy=(...a)=>a; export const where=(...a)=>a; export const limit=n=>n;
 export const serverTimestamp=()=> 'server-time';
+export const arrayUnion=(...values)=>({arrayUnion:values});
 export const documentId=()=> '__name__'; export const startAfter=x=>x; export const getDocsFromServer=(ref)=>globalThis.sdkMock.getDocs(ref);
 export const getDocs=(ref)=>globalThis.sdkMock.getDocs(ref); export const getDoc=(ref)=>globalThis.sdkMock.getDoc(ref); export const getDocFromServer=(ref)=>globalThis.sdkMock.getDoc(ref);
 export const setDoc=(ref,data,...args)=>globalThis.sdkMock.writes.push({op:'set',ref,data,args}); export const updateDoc=(ref,data)=>globalThis.sdkMock.writes.push({op:'update',ref,data}); export const deleteDoc=(ref)=>globalThis.sdkMock.writes.push({op:'delete',ref}); export const addDoc=(ref,data)=>{globalThis.sdkMock.writes.push({op:'add',ref,data});return {id:'legacy-new'};};
-export const runTransaction=async(db,callback)=>{ const operations=[]; const result=await callback({get:ref=>globalThis.sdkMock.getDoc(ref),set(ref,data,...args){operations.push({op:'set',ref,data,args});},update(ref,data){operations.push({op:'update',ref,data});}});globalThis.sdkMock.writes.push(...operations);return result; };
-export const writeBatch=()=>{ const operations=[]; return {set(ref,data){operations.push({op:'set',ref,data});}, update(ref,data){operations.push({op:'update',ref,data});}, delete(ref){operations.push({op:'delete',ref});}, commit:async()=>globalThis.sdkMock.writes.push(...operations)}; };`;
+export const runTransaction=async(db,callback)=>{ const operations=[]; const result=await callback({get:ref=>globalThis.sdkMock.getDoc(ref),set(ref,data,...args){operations.push({op:'set',ref,data,args});},update(ref,data){operations.push({op:'update',ref,data});}});globalThis.sdkMock.commitTransaction?.(operations);globalThis.sdkMock.writes.push(...operations);return result; };
+export const writeBatch=()=>{ const operations=[]; return {set(ref,data,...args){operations.push({op:'set',ref,data,args});}, update(ref,data){operations.push({op:'update',ref,data});}, delete(ref){operations.push({op:'delete',ref});}, commit:async()=>{if(globalThis.sdkMock.failBatch)throw Error('permission-denied');globalThis.sdkMock.writes.push(...operations);}}; };`;
 const firebase = 'export const db={}; export const auth={currentUser:{uid:"issuer"}};';
 const service = await loadModule('src/services/firebaseService.ts', { firebase, 'firebase/firestore': sdk });
 const publicService = await loadModule('src/services/publicNewcomerService.ts', { firebase, 'firebase/firestore': sdk });
@@ -124,6 +125,7 @@ const syncFixture = (count = 2) => {
   state.getDoc = ref => {
     state.reads.push(ref);
     if(ref.collection === 'masterData') return { exists:()=>true, data:()=>({contractors:state.contractors, supervisors:['private']}) };
+    if(ref.collection === 'publicNewcomerCompanyMaster') return {exists:()=>true,data:()=>({contractorOptions:state.contractors})};
     return snapshot(state.forms.find(f => f.token === ref.id));
   };
   state.getDocs = ref => {
@@ -132,13 +134,17 @@ const syncFixture = (count = 2) => {
     const docs = state.forms.filter(f => f.active && f.token > after).slice(0,100).map(snapshot);
     return {docs, size:docs.length, empty:!docs.length};
   };
+  state.commitTransaction = operations => {
+    for(const operation of operations)if(operation.ref.collection==='masterData' && operation.data.contractors)state.contractors=operation.data.contractors;
+  };
   return globalThis.sdkMock = state;
 };
 test('master additions synchronize every existing live QR without changing token or site settings', async () => {
   const state = syncFixture();
   await service.saveMasterDataField('contractors', ['会社', '追加会社']);
-  const [master, ...updates] = state.writes;
+  const [master, projection, ...updates] = state.writes;
   assert.deepEqual(master.data, {contractors:['会社','追加会社']});
+  assert.deepEqual(projection.data,{contractorOptions:['会社','追加会社']});
   assert.equal(updates.length,2);
   for (const write of updates) { assert.equal(write.ref.collection,'publicNewcomerForms'); assert.deepEqual(write.data,{contractorOptions:['会社','追加会社']}); }
   assert.ok(!JSON.stringify(updates).includes('private'));
@@ -169,10 +175,10 @@ test('failed QR synchronization reports that the master was saved and can be ret
   const state = syncFixture(); const read = state.getDocs;
   state.getDocs = () => { throw Error('permission-denied'); };
   await assert.rejects(service.saveMasterDataField('contractors',state.contractors), /会社マスターは保存しましたが/);
-  assert.equal(state.writes.length,1);
+  assert.equal(state.writes.length,2);
   state.getDocs = read;
   await publicService.syncPublicNewcomerContractors();
-  assert.equal(state.writes.length,3);
+  assert.equal(state.writes.length,4);
 });
 test('company validation happens before overwriting the master and an empty master clears live QR options', async () => {
   const state = syncFixture();
@@ -183,9 +189,34 @@ test('company validation happens before overwriting the master and an empty mast
   await publicService.syncPublicNewcomerContractors();
   assert.ok(state.writes.every(w=>w.data.contractorOptions.length === 0));
 });
+test('manual submission atomically appends a trimmed company to master and public choices without reading either', async () => {
+  globalThis.sdkMock={writes:[],getDoc(){throw Error('Private read');},getDocs(){throw Error('Private read');}};
+  await publicService.submitPublicNewcomerSurvey('auto-company',form,{...INITIAL_NEWCOMER_SURVEY_REPORT,company:'  手入力会社　',companyInputType:'other'});
+  const [answer,master,projection]=globalThis.sdkMock.writes;
+  assert.equal(answer.data.company,'手入力会社');assert.equal(answer.data.data.company,'手入力会社');
+  assert.deepEqual(master,{op:'set',ref:{collection:'masterData',id:'general'},data:{contractors:{arrayUnion:['手入力会社']},lastPublicCompanySubmission:'auto-company'},args:[{merge:true}]});
+  assert.deepEqual(projection.data,{contractorOptions:{arrayUnion:['手入力会社']}});
+});
+test('registration failure never reports the answer as saved, and invalid company names write nothing', async () => {
+  globalThis.sdkMock={writes:[],failBatch:true};
+  const report={...INITIAL_NEWCOMER_SURVEY_REPORT,company:'追加会社',companyInputType:'other'};
+  await assert.rejects(publicService.submitPublicNewcomerSurvey('fail',form,report),/permission-denied/);
+  assert.deepEqual(globalThis.sdkMock.writes,[]);
+  for(const company of ['　 ','x'.repeat(201)])await assert.rejects(publicService.submitPublicNewcomerSurvey('invalid',form,{...report,company}),/invalid-company/);
+  assert.deepEqual(globalThis.sdkMock.writes,[]);
+});
+test('staff changes preserve companies automatically registered while the editor was open', async () => {
+  const state=syncFixture();state.contractors=['会社','自動追加会社'];
+  const saved=await service.saveMasterDataField('contractors',['名称変更会社'],['会社']);
+  assert.deepEqual(saved,['名称変更会社','自動追加会社']);
+  assert.deepEqual(state.writes[0].data.contractors,saved);
+  assert.deepEqual(state.writes[1].data.contractorOptions,saved);
+});
 test('public config retrieval does a server get only and rejects disabled or expired results', async () => {
-  let reads=0; globalThis.sdkMock = { getDoc(ref){ reads++; assert.equal(ref.collection,'publicNewcomerForms');return {exists:()=>true,data:()=>({...form,createdAt:{toMillis:()=>1},expiresAt:{toMillis:()=>Date.now()+3600000}})}; } };
-  assert.equal((await publicService.getPublicNewcomerForm(form.token)).project,form.project); assert.equal(reads,1);
+  const reads=[]; globalThis.sdkMock = { getDoc(ref){ reads.push(ref.collection);return {exists:()=>true,data:()=>ref.collection==='publicNewcomerForms'?({...form,createdAt:{toMillis:()=>1},expiresAt:{toMillis:()=>Date.now()+3600000}}):{contractorOptions:['QR発行後の会社']}}; } };
+  const current=await publicService.getPublicNewcomerForm(form.token);
+  assert.equal(current.project,form.project);assert.deepEqual(current.contractorOptions,['QR発行後の会社']);
+  assert.deepEqual(reads,['publicNewcomerForms','publicNewcomerCompanyMaster']);
   globalThis.sdkMock.getDoc=()=>({exists:()=>true,data:()=>({...form,active:false,createdAt:{toMillis:()=>1},expiresAt:{toMillis:()=>0}})});
   await assert.rejects(publicService.getPublicNewcomerForm(form.token)); await assert.rejects(publicService.getPublicNewcomerForm('invalid'));
 });

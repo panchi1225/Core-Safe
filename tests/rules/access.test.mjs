@@ -2,7 +2,7 @@ import { before, after, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, collection, getDoc, getDocs, getDocsFromServer, getDocFromServer, query, where, orderBy, documentId, limit, setDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp, writeBatch, runTransaction } from 'firebase/firestore';
+import { doc, collection, getDoc, getDocs, getDocsFromServer, getDocFromServer, query, where, orderBy, documentId, limit, setDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp, writeBatch, runTransaction, arrayUnion } from 'firebase/firestore';
 import { INITIAL_NEWCOMER_SURVEY_REPORT } from '../../src/types.ts';
 import { surveyPayload } from '../../src/utils/newcomerAccess.ts';
 
@@ -50,6 +50,8 @@ beforeEach(async () => {
     batch.set(doc(db, 'staffUsers/staff'), { active: true });
     batch.set(doc(db, 'staffUsers/disabled'), { active: false });
     batch.set(doc(db, `publicNewcomerForms/${token}`), config());
+    batch.set(doc(db, 'masterData/general'), {contractors:['協力会社A'],supervisors:['PRIVATE']});
+    batch.set(doc(db, 'publicNewcomerCompanyMaster/general'), {contractorOptions:['協力会社A']});
     for (const name of ['drafts','employees','masterData','diagramImages']) batch.set(doc(db, name, 'existing'), { type: 'NEWCOMER_SURVEY', data: payload(), lastModified: Timestamp.now() });
     batch.set(doc(db, 'publicNewcomerSubmissions/existing'), { ...submission(), createdAt: Timestamp.now(), lastModified: Timestamp.now() });
     await batch.commit();
@@ -115,6 +117,7 @@ test('company master and published names can be changed atomically while preserv
   await seed('masterData/general',{contractors:['協力会社A'],supervisors:['PRIVATE']});
   const db=user(), batch=writeBatch(db);
   batch.set(doc(db,'masterData/general'),{contractors:['名称変更会社']},{merge:true});
+  batch.set(doc(db,'publicNewcomerCompanyMaster/general'),{contractorOptions:['名称変更会社']});
   batch.update(doc(db,'publicNewcomerForms',token),{contractorOptions:['名称変更会社']});
   await assertSucceeds(batch.commit());
   assert.deepEqual((await getDoc(doc(db,'masterData/general'))).data().supervisors,['PRIVATE']);
@@ -148,6 +151,71 @@ test('synchronizing company options never reactivates expired or revoked QR code
   }
 });
 test('other company accepts bounded free text', async () => { const body = submission(); body.company = body.data.company = '手入力会社'; body.data.companyInputType = 'other'; await assertSucceeds(send(body)); });
+const registerCompany = (id, company='手入力会社', options={}) => {
+  const db=anon(),batch=writeBatch(db),body=submission();
+  body.company=body.data.company=company;body.data.companyInputType='other';
+  if(options.invalid)body.data.signatureDataUrl='invalid';
+  batch.set(doc(db,'publicNewcomerSubmissions',id),body);
+  batch.set(doc(db,'masterData/general'),{contractors:arrayUnion(company),lastPublicCompanySubmission:id,...options.master},{merge:true});
+  batch.set(doc(db,'publicNewcomerCompanyMaster/general'),{contractorOptions:arrayUnion(options.publicCompany || company)},{merge:true});
+  return batch.commit();
+};
+test('public other-company submission registers the name atomically without any private master read', async () => {
+  await assertSucceeds(registerCompany('auto-added'));
+  const master=(await getDoc(doc(user(),'masterData/general'))).data();
+  assert.deepEqual(master.contractors,['協力会社A','手入力会社']);assert.deepEqual(master.supervisors,['PRIVATE']);
+  const publicNames=(await assertSucceeds(getDoc(doc(anon(),'publicNewcomerCompanyMaster/general')))).data();
+  assert.deepEqual(publicNames,{contractorOptions:['協力会社A','手入力会社']});
+  const next=submission();next.company=next.data.company='手入力会社';
+  await assertSucceeds(send(next,'next-worker'));
+  await assertFails(getDoc(doc(anon(),'masterData/general')));
+  await assertFails(getDocs(collection(anon(),'publicNewcomerCompanyMaster')));
+  await assertFails(getDoc(doc(anon(),'publicNewcomerCompanyMaster/other')));
+});
+test('simultaneous same-company and different-company submissions preserve all names without duplicates', async () => {
+  await Promise.all([assertSucceeds(registerCompany('same-1')),assertSucceeds(registerCompany('same-2')),assertSucceeds(registerCompany('different','別会社'))]);
+  const master=(await getDoc(doc(user(),'masterData/general'))).data().contractors;
+  const names=(await getDoc(doc(anon(),'publicNewcomerCompanyMaster/general'))).data().contractorOptions;
+  assert.equal(master.length,3);assert.deepEqual(new Set(master),new Set(['協力会社A','手入力会社','別会社']));
+  assert.deepEqual(names,master);
+});
+test('invalid or mismatched registrations cannot save either the answer or company', async () => {
+  for(const [id,options] of [['bad-survey',{invalid:true}],['bad-company',{publicCompany:'異なる会社'}],['private-field',{master:{supervisors:['INJECTED']}}],['replace-list',{master:{contractors:['手入力会社']}}]]){
+    await assertFails(registerCompany(id,'手入力会社',options));
+    assert.equal((await getDoc(doc(user(),'publicNewcomerSubmissions',id))).exists(),false);
+    assert.deepEqual((await getDoc(doc(user(),'masterData/general'))).data().contractors,['協力会社A']);
+  }
+});
+test('public registration cannot replay an old answer or append without a new valid answer', async () => {
+  await assertSucceeds(registerCompany('once'));
+  await assertFails(registerCompany('once'));
+  const db=anon(),batch=writeBatch(db);
+  batch.set(doc(db,'masterData/general'),{contractors:arrayUnion('偽会社'),lastPublicCompanySubmission:'once'},{merge:true});
+  batch.set(doc(db,'publicNewcomerCompanyMaster/general'),{contractorOptions:arrayUnion('偽会社')},{merge:true});
+  await assertFails(batch.commit());
+  await assertFails(updateDoc(doc(db,'masterData/general'),{contractors:arrayUnion('偽会社'),lastPublicCompanySubmission:'missing'}));
+});
+test('expired or disabled QR never adds a company, and company capacity failure rolls back its answer', async () => {
+  for(const [id,patch] of [['disabled-auto',{active:false}],['expired-auto',{expiresAt:Timestamp.fromMillis(0)}]]){
+    await seed(`publicNewcomerForms/${token}`,{...config(),...patch});
+    await assertFails(registerCompany(id));
+    assert.equal((await getDoc(doc(user(),'publicNewcomerSubmissions',id))).exists(),false);
+  }
+  await seed(`publicNewcomerForms/${token}`,config());
+  const companies=Array.from({length:300},(_,i)=>`会社${i}`);
+  await seed('masterData/general',{contractors:companies,supervisors:['PRIVATE']});
+  await seed('publicNewcomerCompanyMaster/general',{contractorOptions:companies});
+  await assertFails(registerCompany('over-capacity'));
+  assert.equal((await getDoc(doc(user(),'publicNewcomerSubmissions/over-capacity'))).exists(),false);
+  assert.equal((await getDoc(doc(user(),'masterData/general'))).data().contractors.length,300);
+});
+test('company-only public projection rejects other master fields and arbitrary list changes', async () => {
+  for(const db of [anon(),user('outsider'),user()]){
+    await assertFails(setDoc(doc(db,'publicNewcomerCompanyMaster/general'),{contractorOptions:['協力会社A'],supervisors:['PRIVATE']}));
+    await assertFails(setDoc(doc(db,'publicNewcomerCompanyMaster/general'),{contractorOptions:['偽会社']}));
+  }
+  await assertFails(deleteDoc(doc(anon(),'publicNewcomerCompanyMaster/general')));
+});
 for (const company of ['', 'x'.repeat(201)]) test(`empty/oversized company (${company.length}) is denied`, async () => { const body = submission(); body.company = body.data.company = company; body.data.companyInputType = 'other'; await assertFails(send(body)); });
 test('extra administrative fields cannot be injected', async () => { await assertFails(send({ ...submission(), active: true })); const body = submission(); body.data.employeeId = 'secret'; await assertFails(send(body)); });
 test('invalid type and past client-created timestamp are rejected', async () => { await assertFails(send({ ...submission(), type: 'DAILY_SAFETY' })); await assertFails(send({ ...submission(), createdAt: Timestamp.fromMillis(0) })); });
