@@ -8,6 +8,7 @@ export const serverTimestamp=()=> 'server-time';
 export const documentId=()=> '__name__'; export const startAfter=x=>x; export const getDocsFromServer=(ref)=>globalThis.sdkMock.getDocs(ref);
 export const getDocs=(ref)=>globalThis.sdkMock.getDocs(ref); export const getDoc=(ref)=>globalThis.sdkMock.getDoc(ref); export const getDocFromServer=(ref)=>globalThis.sdkMock.getDoc(ref);
 export const setDoc=(ref,data,...args)=>globalThis.sdkMock.writes.push({op:'set',ref,data,args}); export const updateDoc=(ref,data)=>globalThis.sdkMock.writes.push({op:'update',ref,data}); export const deleteDoc=(ref)=>globalThis.sdkMock.writes.push({op:'delete',ref}); export const addDoc=(ref,data)=>{globalThis.sdkMock.writes.push({op:'add',ref,data});return {id:'legacy-new'};};
+export const runTransaction=async(db,callback)=>{ const operations=[]; const result=await callback({get:ref=>globalThis.sdkMock.getDoc(ref),set(ref,data,...args){operations.push({op:'set',ref,data,args});},update(ref,data){operations.push({op:'update',ref,data});}});globalThis.sdkMock.writes.push(...operations);return result; };
 export const writeBatch=()=>{ const operations=[]; return {set(ref,data){operations.push({op:'set',ref,data});}, update(ref,data){operations.push({op:'update',ref,data});}, delete(ref){operations.push({op:'delete',ref});}, commit:async()=>globalThis.sdkMock.writes.push(...operations)}; };`;
 const firebase = 'export const db={}; export const auth={currentUser:{uid:"issuer"}};';
 const service = await loadModule('src/services/firebaseService.ts', { firebase, 'firebase/firestore': sdk });
@@ -108,10 +109,79 @@ test('public submit writes only dedicated collection and never fetches private d
   assert.equal(globalThis.sdkMock.writes.length, 1); const write = globalThis.sdkMock.writes[0]; assert.equal(write.ref.collection, 'publicNewcomerSubmissions'); assert.equal(write.data.project, form.project); assert.equal(write.data.data.director, form.director); assert.equal(write.data.createdAt, 'server-time');
 });
 test('QR issue uses a random token, public company names only, and private issuer audit', async () => {
-  globalThis.sdkMock = { writes: [] };
-  const token = await publicService.issuePublicNewcomerForm('現場','所長',Date.now()+3600000,['会社','会社',' 他社 ']);
+  globalThis.sdkMock = { writes: [], getDoc(ref) { assert.equal(ref.collection, 'masterData'); return { data: () => ({ contractors: ['会社','会社',' 他社 '], employees: ['private'] }) }; } };
+  const token = await publicService.issuePublicNewcomerForm('現場','所長',Date.now()+3600000);
   assert.match(token,/^[0-9a-f-]{36}$/); const [config,audit] = globalThis.sdkMock.writes;
   assert.equal(config.ref.collection,'publicNewcomerForms'); assert.deepEqual(config.data.contractorOptions,['会社','他社']); assert.equal(config.data.createdBy,'staff'); assert.equal(audit.ref.collection,'publicNewcomerFormAudit'); assert.equal(audit.data.createdBy,'issuer'); assert.equal(config.data.uid,undefined);
+});
+
+const syncFixture = (count = 2) => {
+  const state = { writes: [], reads: [], contractors: ['会社', '追加会社'], forms: Array.from({length:count}, (_, i) => ({
+    ...form, token:String(i).padStart(4, '0'), contractorOptions:['会社'],
+    createdAt:{toMillis:()=>1}, expiresAt:{toMillis:()=>Date.now()+3600000},
+  })) };
+  const snapshot = raw => ({ id:raw.token, ref:{collection:'publicNewcomerForms',id:raw.token}, exists:()=>true, data:()=>raw });
+  state.getDoc = ref => {
+    state.reads.push(ref);
+    if(ref.collection === 'masterData') return { exists:()=>true, data:()=>({contractors:state.contractors, supervisors:['private']}) };
+    return snapshot(state.forms.find(f => f.token === ref.id));
+  };
+  state.getDocs = ref => {
+    state.reads.push(ref);
+    const after = ref.args.length > 3 ? ref.args.at(-1).id : '';
+    const docs = state.forms.filter(f => f.active && f.token > after).slice(0,100).map(snapshot);
+    return {docs, size:docs.length, empty:!docs.length};
+  };
+  return globalThis.sdkMock = state;
+};
+test('master additions synchronize every existing live QR without changing token or site settings', async () => {
+  const state = syncFixture();
+  await service.saveMasterDataField('contractors', ['会社', '追加会社']);
+  const [master, ...updates] = state.writes;
+  assert.deepEqual(master.data, {contractors:['会社','追加会社']});
+  assert.equal(updates.length,2);
+  for (const write of updates) { assert.equal(write.ref.collection,'publicNewcomerForms'); assert.deepEqual(write.data,{contractorOptions:['会社','追加会社']}); }
+  assert.ok(!JSON.stringify(updates).includes('private'));
+});
+test('QR manager reconciliation repairs existing snapshots, skips current, revoked and expired forms, and removes renamed/deleted options', async () => {
+  const state = syncFixture(5); state.contractors = ['名称変更会社'];
+  state.forms[1].contractorOptions = ['名称変更会社'];
+  state.forms[2].active = false;
+  state.forms[3].expiresAt = {toMillis:()=>0};
+  // A concurrent revocation after the query must be checked inside the transaction.
+  const read = state.getDoc;
+  state.getDoc = ref => { if (ref.id === '0004') state.forms[4].active=false; return read(ref); };
+  await publicService.syncPublicNewcomerContractors();
+  assert.deepEqual(state.writes, [{op:'update',ref:{collection:'publicNewcomerForms',id:'0000'},data:{contractorOptions:['名称変更会社']}}]);
+});
+test('synchronization pages more than 100 QR settings and reads the newest master for each page', async () => {
+  const state = syncFixture(201);
+  const query = state.getDocs;
+  state.getDocs = ref => { if (ref.args.length > 3) state.contractors=['さらに追加']; return query(ref); };
+  await publicService.syncPublicNewcomerContractors();
+  assert.equal(state.writes.length,201);
+  assert.deepEqual(state.writes[0].data.contractorOptions,['会社','追加会社']);
+  assert.deepEqual(state.writes[100].data.contractorOptions,['さらに追加']);
+  assert.deepEqual(state.writes[200].data.contractorOptions,['さらに追加']);
+  assert.equal(state.reads.filter(r=>r.collection === 'publicNewcomerForms' && r.args).length,3);
+});
+test('failed QR synchronization reports that the master was saved and can be retried', async () => {
+  const state = syncFixture(); const read = state.getDocs;
+  state.getDocs = () => { throw Error('permission-denied'); };
+  await assert.rejects(service.saveMasterDataField('contractors',state.contractors), /会社マスターは保存しましたが/);
+  assert.equal(state.writes.length,1);
+  state.getDocs = read;
+  await publicService.syncPublicNewcomerContractors();
+  assert.equal(state.writes.length,3);
+});
+test('company validation happens before overwriting the master and an empty master clears live QR options', async () => {
+  const state = syncFixture();
+  await assert.rejects(service.saveMasterDataField('contractors',['a'.repeat(201)]), /200文字/);
+  await assert.rejects(service.saveMasterDataField('contractors',Array.from({length:301},(_,i)=>String(i))), /300件/);
+  assert.equal(state.writes.length,0);
+  state.contractors=[];
+  await publicService.syncPublicNewcomerContractors();
+  assert.ok(state.writes.every(w=>w.data.contractorOptions.length === 0));
 });
 test('public config retrieval does a server get only and rejects disabled or expired results', async () => {
   let reads=0; globalThis.sdkMock = { getDoc(ref){ reads++; assert.equal(ref.collection,'publicNewcomerForms');return {exists:()=>true,data:()=>({...form,createdAt:{toMillis:()=>1},expiresAt:{toMillis:()=>Date.now()+3600000}})}; } };

@@ -2,7 +2,7 @@ import { before, after, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, collection, getDoc, getDocs, getDocsFromServer, getDocFromServer, query, where, orderBy, documentId, limit, setDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp, writeBatch } from 'firebase/firestore';
+import { doc, collection, getDoc, getDocs, getDocsFromServer, getDocFromServer, query, where, orderBy, documentId, limit, setDoc, updateDoc, deleteDoc, serverTimestamp, Timestamp, writeBatch, runTransaction } from 'firebase/firestore';
 import { INITIAL_NEWCOMER_SURVEY_REPORT } from '../../src/types.ts';
 import { surveyPayload } from '../../src/utils/newcomerAccess.ts';
 
@@ -90,6 +90,63 @@ for (const field of ['project','director']) {
   test(`token rejects forged ${field}`, async () => { const body = submission(); body[field] = '別現場'; body.data[field] = '別現場'; await assertFails(send(body)); });
 }
 test('master company must be in token options', async () => { const body = submission(); body.company = body.data.company = '未登録会社'; await assertFails(send(body)); });
+test('an already-issued QR accepts companies added later after staff synchronize its options', async () => {
+  await seed('masterData/general', { contractors:['協力会社A','追加会社'], supervisors:['PRIVATE'] });
+  const body = submission(); body.company = body.data.company = '追加会社';
+  await assertFails(send(body));
+  await assertSucceeds(updateDoc(doc(user(),'publicNewcomerForms',token),{contractorOptions:['協力会社A','追加会社']}));
+  const config = await assertSucceeds(getDocFromServer(doc(anon(),'publicNewcomerForms',token)));
+  assert.deepEqual(config.data().contractorOptions,['協力会社A','追加会社']);
+  assert.equal(config.data().supervisors,undefined);
+  await assertSucceeds(send(body));
+  await assertFails(getDoc(doc(anon(),'masterData/general')));
+});
+test('contractor synchronization is staff-only and can publish only the current company master', async () => {
+  await seed('masterData/general',{contractors:['新会社'],supervisors:['PRIVATE']});
+  for (const db of [anon(),user('outsider'),user('disabled')]) {
+    await assertFails(updateDoc(doc(db,'publicNewcomerForms',token),{contractorOptions:['新会社']}));
+  }
+  await assertFails(updateDoc(doc(user(),'publicNewcomerForms',token),{contractorOptions:['勝手な会社']}));
+  await assertSucceeds(updateDoc(doc(user(),'publicNewcomerForms',token),{contractorOptions:['新会社']}));
+  await assertFails(updateDoc(doc(user(),'publicNewcomerForms',token),{contractorOptions:['新会社'],director:'別所長'}));
+  await assertFails(updateDoc(doc(user(),'publicNewcomerForms',token),{contractorOptions:['新会社'],createdBy:'社員UID'}));
+});
+test('company master and published names can be changed atomically while preserving other master fields', async () => {
+  await seed('masterData/general',{contractors:['協力会社A'],supervisors:['PRIVATE']});
+  const db=user(), batch=writeBatch(db);
+  batch.set(doc(db,'masterData/general'),{contractors:['名称変更会社']},{merge:true});
+  batch.update(doc(db,'publicNewcomerForms',token),{contractorOptions:['名称変更会社']});
+  await assertSucceeds(batch.commit());
+  assert.deepEqual((await getDoc(doc(db,'masterData/general'))).data().supervisors,['PRIVATE']);
+  const old=submission(); await assertFails(send(old));
+  old.company=old.data.company='名称変更会社'; await assertSucceeds(send(old));
+});
+test('a full synchronization page of 100 QR updates stays within Rules transaction access limits', async () => {
+  const tokens=Array.from({length:100},(_,i)=>`00000000-0000-4000-8000-${String(i).padStart(12,'0')}`);
+  await env.withSecurityRulesDisabled(async c=>{
+    const db=c.firestore(),batch=writeBatch(db);
+    batch.set(doc(db,'masterData/general'),{contractors:['追加会社']});
+    for(const id of tokens)batch.set(doc(db,'publicNewcomerForms',id),config());
+    await batch.commit();
+  });
+  const db=user();
+  await assertSucceeds(runTransaction(db,async transaction=>{
+    const master=await transaction.get(doc(db,'masterData/general'));
+    const forms=await Promise.all(tokens.map(id=>transaction.get(doc(db,'publicNewcomerForms',id))));
+    for(const form of forms)transaction.update(form.ref,{contractorOptions:master.data().contractors});
+  }));
+  const form=await assertSucceeds(getDoc(doc(anon(),'publicNewcomerForms',tokens.at(-1))));
+  assert.deepEqual(form.data().contractorOptions,['追加会社']);
+});
+test('synchronizing company options never reactivates expired or revoked QR codes', async () => {
+  await seed('masterData/general',{contractors:['新会社']});
+  for (const patch of [{active:false},{expiresAt:Timestamp.fromMillis(0)}]) {
+    await seed(`publicNewcomerForms/${token}`,{...config(),...patch});
+    await assertSucceeds(updateDoc(doc(user(),'publicNewcomerForms',token),{contractorOptions:['新会社']}));
+    await assertFails(getDoc(doc(anon(),'publicNewcomerForms',token)));
+    const body=submission();body.company=body.data.company='新会社';await assertFails(send(body));
+  }
+});
 test('other company accepts bounded free text', async () => { const body = submission(); body.company = body.data.company = '手入力会社'; body.data.companyInputType = 'other'; await assertSucceeds(send(body)); });
 for (const company of ['', 'x'.repeat(201)]) test(`empty/oversized company (${company.length}) is denied`, async () => { const body = submission(); body.company = body.data.company = company; body.data.companyInputType = 'other'; await assertFails(send(body)); });
 test('extra administrative fields cannot be injected', async () => { await assertFails(send({ ...submission(), active: true })); const body = submission(); body.data.employeeId = 'secret'; await assertFails(send(body)); });

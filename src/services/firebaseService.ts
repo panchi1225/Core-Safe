@@ -16,7 +16,8 @@ import {
 } from 'firebase/firestore';
 import { SavedDraft, MasterData, INITIAL_MASTER_DATA, EmployeeData, DiagramImage, ReportTypeString } from '../types';
 import { asPublicDraft, reportLocation, surveyPayload } from '../utils/newcomerAccess';
-import { PUBLIC_FORMS, PUBLIC_SUBMISSIONS } from './publicNewcomerService';
+import { PUBLIC_FORMS, PUBLIC_SUBMISSIONS, syncPublicNewcomerContractors } from './publicNewcomerService';
+import { publicContractorOptions } from '../utils/publicContractors';
 import { exportItem, conditionError, ExportConditions, ExportItem } from '../utils/bulkReports';
 
 const DRAFTS_COLLECTION = 'drafts';
@@ -217,7 +218,14 @@ export const getMasterData = async (): Promise<MasterData> => {
 // ■ 変更したマスタ項目だけを保存し、他の項目は上書きしない
 export const saveMasterDataField = async (key: keyof MasterData, items: string[]): Promise<void> => {
   try {
-    await setDoc(doc(db, MASTER_COLLECTION, MASTER_DOC_ID), { [key]: items }, { merge: true });
+    const savedItems = key === 'contractors' ? publicContractorOptions(items) : items;
+    await setDoc(doc(db, MASTER_COLLECTION, MASTER_DOC_ID), { [key]: savedItems }, { merge: true });
+    if (key === 'contractors') {
+      try { await syncPublicNewcomerContractors(); }
+      catch {
+        throw new Error('会社マスターは保存しましたが、発行済みQRの会社一覧を更新できませんでした。通信状態・権限を確認して再度保存するか、QR発行・管理画面を開き直してください。');
+      }
+    }
   } catch (error) {
     console.error("マスタデータの保存失敗: ", error);
     throw error;

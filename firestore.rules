@@ -99,7 +99,9 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/publicNewcomerFormAudit/$(token)).data.createdBy == request.auth.uid
         && getAfter(/databases/$(database)/documents/publicNewcomerFormAudit/$(token)).data.createdAt == request.time;
       allow update: if staff() && validForm(request.resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active','expiresAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active','expiresAt','contractorOptions'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['contractorOptions'])
+          || request.resource.data.contractorOptions == getAfter(/databases/$(database)/documents/masterData/general).data.contractors)
         && (request.resource.data.expiresAt == resource.data.expiresAt || request.resource.data.expiresAt > request.time);
       allow delete: if staff();
     }

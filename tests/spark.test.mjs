@@ -66,7 +66,7 @@ export const serverTimestamp=()=>new Timestamp(100);
 export const setDoc=(ref,data)=>{if(ref.name!=='publicNewcomerSubmissions')throw new Error('Unexpected public write');globalThis.sparkRecords.push({id:ref.id,...data});};
 export const getDocs=async ref=>{globalThis.sparkReads.push(ref.name);if(ref.name==='employees')throw new Error('Private employee read');return {docs:(ref.name==='publicNewcomerSubmissions'?globalThis.sparkRecords:[]).map(raw=>({id:raw.id,data:()=>raw})),size:ref.name==='publicNewcomerSubmissions'?globalThis.sparkRecords.length:0};};
 export const getDoc=async ref=>{globalThis.sparkReads.push(ref.name);const raw=globalThis.sparkRecords.find(x=>x.id===ref.id);return {id:ref.id,exists:()=>!!raw,data:()=>raw};};export const getDocsFromServer=getDocs;export const getDocFromServer=getDoc;
-export const addDoc=()=>{};export const updateDoc=()=>{};export const deleteDoc=()=>{};export const writeBatch=()=>{};`;
+export const addDoc=()=>{};export const updateDoc=()=>{};export const deleteDoc=()=>{};export const writeBatch=()=>{};export const runTransaction=()=>{throw Error('Unexpected public transaction');};`;
 const stubs = { firebase: 'export const db={};export const auth={currentUser:{uid:"fixture-staff"}};', 'firebase/firestore': sdk };
 const publicService = await loadModule('src/services/publicNewcomerService.ts', stubs);
 const staffService = await loadModule('src/services/firebaseService.ts', stubs);

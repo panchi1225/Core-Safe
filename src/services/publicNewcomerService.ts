@@ -1,7 +1,8 @@
-import { collection, doc, getDocFromServer, getDocs, orderBy, query, serverTimestamp, setDoc, Timestamp, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, documentId, getDocFromServer, getDocs, getDocsFromServer, limit, orderBy, query, runTransaction, serverTimestamp, setDoc, startAfter, Timestamp, updateDoc, where, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { NewcomerSurveyReportData } from '../types';
 import { PublicNewcomerForm, surveyPayload, TOKEN_PATTERN } from '../utils/newcomerAccess';
+import { publicContractorOptions } from '../utils/publicContractors';
 
 export const PUBLIC_FORMS = 'publicNewcomerForms';
 export const PUBLIC_SUBMISSIONS = 'publicNewcomerSubmissions';
@@ -17,18 +18,46 @@ export async function getPublicNewcomerForm(token: string): Promise<PublicNewcom
   return form;
 }
 
-export async function issuePublicNewcomerForm(project: string, director: string, expiresAt: number, contractors: string[]): Promise<string> {
+export async function issuePublicNewcomerForm(project: string, director: string, expiresAt: number): Promise<string> {
   const uid = auth.currentUser?.uid;
   if (!uid || !project || !director || expiresAt <= Date.now()) throw new Error('invalid-form');
   const token = crypto.randomUUID();
-  const contractorOptions = [...new Set(contractors.map(c => c.trim()).filter(Boolean))];
-  if (contractorOptions.length > 300 || contractorOptions.some(c => c.length > 200)) throw new Error('invalid-contractor-options');
-  const batch = writeBatch(db);
-  batch.set(doc(db, PUBLIC_FORMS, token), { project, director, active: true, createdAt: serverTimestamp(), createdBy: 'staff', expiresAt: Timestamp.fromMillis(expiresAt), contractorOptions });
-  // The public configuration contains no issuer UID. Keep that in a private audit record.
-  batch.set(doc(db, 'publicNewcomerFormAudit', token), { createdBy: uid, createdAt: serverTimestamp() });
-  await batch.commit();
+  await runTransaction(db, async transaction => {
+    // The manager may have been open while another employee changed the master.
+    const master = await transaction.get(doc(db, 'masterData', 'general'));
+    const contractorOptions = publicContractorOptions(master.data()?.contractors || []);
+    transaction.set(doc(db, PUBLIC_FORMS, token), { project, director, active: true, createdAt: serverTimestamp(), createdBy: 'staff', expiresAt: Timestamp.fromMillis(expiresAt), contractorOptions });
+    // The public configuration contains no issuer UID. Keep that in a private audit record.
+    transaction.set(doc(db, 'publicNewcomerFormAudit', token), { createdBy: uid, createdAt: serverTimestamp() });
+  });
   return token;
+}
+
+// Staff-only synchronization. Existing token URLs, projects, directors and expiry
+// remain unchanged. Re-running repairs old QR snapshots or an interrupted sync.
+export async function syncPublicNewcomerContractors(): Promise<void> {
+  let cursor: QueryDocumentSnapshot | undefined;
+  do {
+    const page = await getDocsFromServer(query(collection(db, PUBLIC_FORMS), where('active', '==', true), orderBy(documentId()), limit(100), ...(cursor ? [startAfter(cursor)] : [])));
+    if (!page.empty) await runTransaction(db, async transaction => {
+      const master = await transaction.get(doc(db, 'masterData', 'general'));
+      const contractorOptions = publicContractorOptions(master.data()?.contractors || []);
+      const forms = await Promise.all(page.docs.map(form => transaction.get(form.ref)));
+      if (JSON.stringify(master.data()?.contractors || []) !== JSON.stringify(contractorOptions)) {
+        transaction.set(doc(db, 'masterData', 'general'), { contractors: contractorOptions }, { merge: true });
+      }
+      for (const form of forms) {
+        const current = form.data();
+        if (current?.active && current.expiresAt.toMillis() > Date.now()
+          && JSON.stringify(current.contractorOptions) !== JSON.stringify(contractorOptions)) {
+          // Reading the master and form in the transaction prevents an older
+          // synchronization from overwriting a concurrent master edit/revocation.
+          transaction.update(form.ref, { contractorOptions });
+        }
+      }
+    });
+    cursor = page.size === 100 ? page.docs[page.docs.length - 1] : undefined;
+  } while (cursor);
 }
 
 export async function listPublicNewcomerForms(): Promise<PublicNewcomerForm[]> {
