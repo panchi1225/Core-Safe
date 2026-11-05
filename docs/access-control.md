@@ -24,7 +24,7 @@ React 19 / TypeScript / Vite / Firebase Web SDKを使用。`firebase.ts`はFires
 
 Rulesはトップレベルと本体のキー、型、数値範囲、文字列長、資格の型、PNG署名500,000文字上限を検証します。会社名は1〜200文字。masterの場合はtokenの候補内に限ります。createdAt/lastModifiedはserverTimestampとrequest.time一致を必須にしています。多数の数値が入力済みのデータと490KB署名でも評価上限に達しない実テストを含みます。
 
-会社候補は発行時のmasterData.contractorsから会社名だけをコピーします（最大300社、1社200文字）。匿名に社内マスタ全体を取得させません。候補にない場合は「その他（手入力）」を表示し、従来どおりcompanyには文字列を保存します。公開時のproject/directorは固定表示で、Rulesでも設定との一致を検証します。
+会社候補は会社名だけの共通一覧 `publicNewcomerCompanyMaster/general` から最新値を取得します（最大300社、1社200文字）。QR内の旧一覧も社員用同期処理で更新します。匿名に社内マスタ全体を取得させません。「その他（手入力）」は、送信する新規回答と同一バッチで当該会社だけをマスターと共通一覧へ追加します。匿名から社内マスターの他項目変更・読取・既存会社削除はできません。公開時のproject/directorは固定表示で、Rulesでも設定との一致を検証します。詳細と本番初期化手順は[会社一覧同期](newcomer-company-sync.md)を参照してください。
 
 ## 画面と保存
 

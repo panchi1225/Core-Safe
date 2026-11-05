@@ -4,7 +4,7 @@ import NewcomerQRPrintLayout, { NEWCOMER_QR_PAGE_STYLE } from './NewcomerQRPrint
 import { getMasterData } from '../services/firebaseService';
 import { MasterData, INITIAL_MASTER_DATA } from '../types';
 import { PublicNewcomerForm } from '../utils/newcomerAccess';
-import { deactivatePublicNewcomerForm, issuePublicNewcomerForm, listPublicNewcomerForms } from '../services/publicNewcomerService';
+import { deactivatePublicNewcomerForm, issuePublicNewcomerForm, listPublicNewcomerForms, syncPublicNewcomerContractors } from '../services/publicNewcomerService';
 
 export default function PublicQRManager({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const [masterData, setMasterData] = useState<MasterData>(INITIAL_MASTER_DATA);
@@ -21,7 +21,7 @@ export default function PublicQRManager({ isOpen, onClose }: { isOpen: boolean; 
   const refresh = async () => { const items = await listPublicNewcomerForms(); setForms(items); return items; };
   useEffect(() => {
     let current = true; setReady(false); setSelected(null);
-    if (isOpen) { setError(''); Promise.all([getMasterData(), listPublicNewcomerForms()]).then(([master, items]) => { if (current) { setMasterData(master); setForms(items); setReady(true); } }).catch(() => { if (current) setError('マスタまたは発行済みQRを取得できませんでした。'); }); }
+    if (isOpen) { setError(''); syncPublicNewcomerContractors().then(() => Promise.all([getMasterData(), listPublicNewcomerForms()])).then(([master, items]) => { if (current) { setMasterData(master); setForms(items); setReady(true); } }).catch(() => { if (current) setError('会社一覧の更新、または発行済みQRの取得ができませんでした。通信状態・権限を確認して画面を開き直してください。'); }); }
     return () => { current = false; };
   }, [isOpen]);
   if (!isOpen) return null;
@@ -30,7 +30,7 @@ export default function PublicQRManager({ isOpen, onClose }: { isOpen: boolean; 
   const issue = async () => {
     setBusy(true); setError('');
     try {
-      const token = await issuePublicNewcomerForm(project, director, new Date(expiry).getTime(), masterData.contractors);
+      const token = await issuePublicNewcomerForm(project, director, new Date(expiry).getTime());
       const items = await refresh(); setSelected(items.find(f => f.token === token) || null);
     } catch { setError('QRを発行できませんでした。入力値・権限・通信状況をご確認ください。'); }
     finally { setBusy(false); }
@@ -48,7 +48,7 @@ export default function PublicQRManager({ isOpen, onClose }: { isOpen: boolean; 
       <label>有効期限（必須）<input className="border rounded p-2 w-full" type="datetime-local" value={expiry} onChange={e => setExpiry(e.target.value)} /></label>
       <button disabled={!ready || busy || !project || !director || !expiry || !(new Date(expiry).getTime() > Date.now())} className="bg-purple-600 text-white rounded p-3 disabled:opacity-40" onClick={issue}>QRを発行</button>
     </div>
-    <p className="text-sm text-gray-600 my-3 no-print">登録済みの協力会社名だけを公開フォームへコピーします。旧方式のQRは再発行してください。</p>
+    <p className="text-sm text-gray-600 my-3 no-print">会社マスターの変更は発行済みQRにも反映されます。この画面を開くと会社一覧を最新に更新します。印刷済みの有効なQRはそのまま使えます。</p>
     {error && <p role="alert" className="text-red-600">{error}</p>}
     {selected && <>
       <NewcomerQRPrintLayout ref={printRef} project={selected.project} director={selected.director} url={url.toString()} />

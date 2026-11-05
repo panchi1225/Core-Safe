@@ -537,12 +537,12 @@ const MasterSettings: React.FC<Props> = ({ onBackToMenu }) => {
     if (masterLoadState !== 'ready' || isSavingMaster) return false;
     setIsSavingMaster(true);
     try {
-      await saveMasterDataField(key, newItems);
-      setMasterData(prev => ({ ...prev, [key]: newItems }));
+      const savedItems = await saveMasterDataField(key, newItems, masterData[key]);
+      setMasterData(prev => ({ ...prev, [key]: savedItems }));
       return true;
     } catch (error) {
       console.error('マスタデータの保存に失敗しました', error);
-      alert('保存に失敗しました。変更は反映されていません。通信状態を確認して、もう一度お試しください。');
+      alert(key === 'contractors' && error instanceof Error ? error.message : '保存に失敗しました。変更は反映されていません。通信状態を確認して、もう一度お試しください。');
       return false;
     } finally {
       setIsSavingMaster(false);

@@ -79,9 +79,37 @@ service cloud.firestore {
       return s.token is string && s.token.matches('[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}')
         && f.active == true && f.expiresAt > request.time
         && s.project == f.project && s.director == f.director
-        && (s.data.companyInputType == 'other' || s.company in f.contractorOptions)
+        && (s.data.companyInputType == 'other' || s.company in f.contractorOptions
+          || s.company in get(/databases/$(database)/documents/publicNewcomerCompanyMaster/general).data.contractorOptions)
         && s.createdAt == request.time && s.lastModified == request.time
         && submissionShape();
+    }
+    // A public client may only append the company from a new accepted survey in
+    // the same atomic batch. No master read, deletion, replacement or other field
+    // update is granted. The projection must match the resulting master exactly.
+    function newPublicCompany(surveyId) {
+      let s = getAfter(/databases/$(database)/documents/publicNewcomerSubmissions/$(surveyId)).data;
+      return surveyId is string && surveyId.matches('[A-Za-z0-9_-]{1,128}')
+        && !exists(/databases/$(database)/documents/publicNewcomerSubmissions/$(surveyId))
+        && s.createdAt == request.time && s.lastModified == request.time
+        && s.data.companyInputType == 'other'
+        && text(s.company, 200) && s.company.size() > 0 && s.company == s.data.company;
+    }
+    function validPublicCompanyMaster(m) {
+      return m.keys().hasOnly(['contractorOptions'])
+        && m.contractorOptions is list && m.contractorOptions.size() <= 300
+        && m.contractorOptions.toSet().size() == m.contractorOptions.size()
+        && m.contractorOptions == getAfter(/databases/$(database)/documents/masterData/general).data.contractors;
+    }
+    function appendPublicCompany() {
+      let m = request.resource.data;
+      let s = getAfter(/databases/$(database)/documents/publicNewcomerSubmissions/$(m.lastPublicCompanySubmission)).data;
+      return newPublicCompany(m.lastPublicCompanySubmission)
+        && m.diff(resource.data).affectedKeys().hasOnly(['contractors','lastPublicCompanySubmission'])
+        && m.contractors is list && m.contractors.size() <= 300
+        && m.contractors.size() == m.contractors.toSet().size()
+        && m.contractors.toSet() == resource.data.get('contractors', []).toSet().union([s.company].toSet())
+        && m.contractors == getAfter(/databases/$(database)/documents/publicNewcomerCompanyMaster/general).data.contractorOptions;
     }
     match /staffUsers/{uid} {
       allow get: if request.auth != null && request.auth.uid == uid;
@@ -89,7 +117,18 @@ service cloud.firestore {
     }
     match /drafts/{id} { allow read, write: if staff(); }
     match /employees/{id} { allow read, write: if staff(); }
-    match /masterData/{id} { allow read, write: if staff(); }
+    match /masterData/{id} {
+      allow read, write: if staff();
+      allow update: if id == 'general' && appendPublicCompany();
+    }
+    match /publicNewcomerCompanyMaster/{id} {
+      // Contains company names only. Internal master/employee fields are absent.
+      allow get: if id == 'general';
+      allow list: if false;
+      allow create, update: if id == 'general' && validPublicCompanyMaster(request.resource.data)
+        && (staff() || newPublicCompany(getAfter(/databases/$(database)/documents/masterData/general).data.lastPublicCompanySubmission));
+      allow delete: if staff();
+    }
     match /diagramImages/{id} { allow read, write: if staff(); }
     match /publicNewcomerForms/{token} {
       allow get: if staff() || activeForm(token);
@@ -99,7 +138,9 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/publicNewcomerFormAudit/$(token)).data.createdBy == request.auth.uid
         && getAfter(/databases/$(database)/documents/publicNewcomerFormAudit/$(token)).data.createdAt == request.time;
       allow update: if staff() && validForm(request.resource.data)
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active','expiresAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active','expiresAt','contractorOptions'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['contractorOptions'])
+          || request.resource.data.contractorOptions == getAfter(/databases/$(database)/documents/masterData/general).data.contractors)
         && (request.resource.data.expiresAt == resource.data.expiresAt || request.resource.data.expiresAt > request.time);
       allow delete: if staff();
     }
